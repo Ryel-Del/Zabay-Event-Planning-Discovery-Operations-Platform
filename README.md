@@ -6,9 +6,7 @@ Beyond basic CRUD, ZABAY derives and evaluates information from these relationsh
 
 ## 📐 Schema Design
 
-Full ERD (20 tables, generated from the live DDL): **[View schema diagram](https://claude.ai/artifact/Hirtp532ustAdE463RtzWY)**
-
-SQL source: [`db/zabay_schema.sql`](./db/zabay_schema.sql)
+The schema consists of 20 tables covering users, events, venues, tasks, resources, personnel, registrations, payments, attendance, and audit logs.
 
 ## Problem Statement
 
@@ -118,7 +116,4 @@ zabay/
 - [ ] Analytics dashboard (Recharts)
 
 ## License
-[MIT](./LICENSE) — or replace with your course/institution's required license.
-
-## Authors
-_Add your team names here._
+[MIT](./LICENSE)
