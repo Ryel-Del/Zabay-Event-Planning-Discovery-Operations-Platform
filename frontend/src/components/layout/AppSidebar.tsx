@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -28,7 +29,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
-  const { currentRole, tasks, registrations } = useApp();
+  const { currentRole, setCurrentRole, tasks, registrations } = useApp();
 
   const conflictCount = tasks.filter((t) => t.has_conflict).length;
   const pendingCheckIn = registrations.filter((r) => r.status === 'confirmed').length;
@@ -183,6 +184,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
       {/* Bottom Sidebar Info & DB Status */}
       <div className="p-3 border-t border-stone-200/80 dark:border-stone-800/80 space-y-2">
+        <button
+          onClick={() => setCurrentRole('attendee')}
+          className="w-full flex items-center gap-2 p-2 rounded-xl text-xs text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
+          title="Switch to Public Attendee View"
+        >
+          <ExternalLink className="w-3.5 h-3.5 text-[#B68366] dark:text-[#D4A58C] shrink-0" />
+          {!isCollapsed && <span className="font-semibold truncate">View Public Feed ↗</span>}
+        </button>
+
         {!isCollapsed ? (
           <div className="bg-[#FAF9F5] dark:bg-[#171513] p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 text-[11px] space-y-1">
             <div className="flex items-center justify-between font-medium">

@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import {
   mockCurrentUser,
+  mockUsers,
   mockEvents,
   mockVenues,
   mockVenueBookings,
@@ -78,6 +79,12 @@ const minutesToTime = (mins: number) => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
   const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
+
+  const setRoleWithUser = (role: UserRole) => {
+    setCurrentRole(role);
+    const user = mockUsers.find((u) => u.role === role);
+    if (user) setCurrentUser(user);
+  };
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = typeof window !== 'undefined' ? localStorage.getItem('zabay-theme') : null;
@@ -450,7 +457,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser,
       setCurrentUser,
       currentRole,
-      setCurrentRole,
+      setCurrentRole: setRoleWithUser,
       theme,
       toggleTheme,
       events,
