@@ -10,30 +10,30 @@ interface EventMapViewProps {
   onSelectEvent: (event: ZabayEvent) => void;
 }
 
-// Custom modern warm marker icon for Leaflet
+// Custom modern marker icon for Leaflet
 const createCustomIcon = (_category?: string) => {
   return L.divIcon({
     className: 'custom-leaflet-marker',
     html: `
       <div style="
-        background: #201D1A;
-        color: #FAF9F5;
+        background: #1E293B;
+        color: #F8FAFD;
         padding: 6px;
         border-radius: 50%;
-        width: 32px;
-        height: 32px;
+        width: 34px;
+        height: 34px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 12px rgba(32, 29, 26, 0.35);
-        border: 2px solid #FAF9F5;
+        box-shadow: 0 4px 14px rgba(30, 41, 59, 0.4);
+        border: 2px solid #86ABDF;
       ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D5A78E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86ABDF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-    popupAnchor: [0, -32],
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -34],
   });
 };
 
@@ -73,13 +73,13 @@ export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSe
                     <MapPin className="w-3 h-3 text-stone-400" />
                     {venue.name}
                   </p>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-200 text-xs">
-                    <span className="font-bold text-stone-900">${event.ticket_price}</span>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 text-xs">
+                    <span className="font-bold text-slate-900">${event.ticket_price}</span>
                     <button
                       onClick={() => onSelectEvent(event)}
-                      className="px-2.5 py-1 bg-stone-900 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 hover:bg-stone-800 transition-colors"
+                      className="px-2.5 py-1 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      Tickets <ArrowRight className="w-3 h-3" />
+                      Details & Tickets <ArrowRight className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
