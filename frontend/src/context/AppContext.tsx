@@ -30,6 +30,9 @@ interface AppContextType {
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
 
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+
   events: ZabayEvent[];
   selectedEvent: ZabayEvent;
   setSelectedEvent: (event: ZabayEvent) => void;
@@ -75,6 +78,26 @@ const minutesToTime = (mins: number) => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
   const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
+
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('zabay-theme') : null;
+    return saved === 'light' ? 'light' : 'dark';
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('zabay-theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   const [events] = useState<ZabayEvent[]>(mockEvents);
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent>(mockEvents[0]);
@@ -428,6 +451,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser,
       currentRole,
       setCurrentRole,
+      theme,
+      toggleTheme,
       events,
       selectedEvent,
       setSelectedEvent,
@@ -450,6 +475,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [
       currentUser,
       currentRole,
+      theme,
       events,
       selectedEvent,
       venues,

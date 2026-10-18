@@ -1,7 +1,9 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 @import "leaflet/dist/leaflet.css";
 
 :root {
+  color-scheme: light;
   --bg-canvas: #FAF9F5;
   --bg-surface: #FFFFFF;
   --bg-elevated: #F4F1EA;
@@ -22,6 +24,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --bg-canvas: #161513;
   --bg-surface: #1E1C19;
   --bg-elevated: #272420;
@@ -42,12 +45,20 @@
 }
 
 @layer base {
+  html, body {
+    width: 100%;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 

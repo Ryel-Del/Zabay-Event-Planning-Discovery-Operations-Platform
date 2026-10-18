@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   CalendarDays,
   ShieldCheck,
@@ -20,17 +20,9 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) => {
-  const { currentRole, setCurrentRole, currentUser, auditLogs, resetTasksToDefault } = useApp();
+  const { currentRole, setCurrentRole, currentUser, auditLogs, resetTasksToDefault, theme, toggleTheme } = useApp();
   const [resetConfirm, setResetConfirm] = useState(false);
-  const [isDark, setIsDark] = useState(true);
-
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDark]);
+  const isDark = theme === 'dark';
 
   const roleTabs: { role: UserRole; label: string; icon: React.ReactNode; desc: string }[] = [
     {
@@ -60,8 +52,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FAF9F5]/90 dark:bg-[#171513]/90 backdrop-blur-md border-b border-stone-200/70 dark:border-stone-800/80 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 bg-[#FAF9F5]/90 dark:bg-[#171513]/90 backdrop-blur-md border-b border-stone-200/70 dark:border-stone-800/80 transition-colors duration-200 w-full">
+      <div className="w-full px-4 sm:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo - Luma / Editorial Style */}
           <div className="flex items-center gap-3">
@@ -92,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
                 <button
                   key={tab.role}
                   onClick={() => setCurrentRole(tab.role)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-white dark:bg-[#2B2723] text-stone-900 dark:text-stone-100 shadow-sm border border-stone-200/60 dark:border-stone-700/60 font-semibold'
                       : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200 hover:bg-black/5 dark:hover:bg-white/5'
@@ -110,8 +102,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
           <div className="flex items-center gap-2">
             {/* Theme Toggle (Light / Dark) */}
             <button
-              onClick={() => setIsDark(!isDark)}
-              className="p-2 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40"
+              onClick={toggleTheme}
+              className="p-2 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40 cursor-pointer"
               title={isDark ? "Switch to Light Mode: 'Inviting Pastel & Organics'" : "Switch to Dark Mode: 'Premium Slate & Subdued Pastel'"}
             >
               {isDark ? <Sun className="w-4 h-4 text-[#D4A58C]" /> : <Moon className="w-4 h-4 text-stone-600" />}
@@ -120,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
             {/* QR Scanner Trigger */}
             <button
               onClick={onOpenScanner}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-800 dark:text-stone-200 bg-stone-200/70 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700/80 rounded-lg hover:bg-stone-300/50 dark:hover:bg-stone-700 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-stone-800 dark:text-stone-200 bg-stone-200/70 dark:bg-stone-800/80 border border-stone-300/80 dark:border-stone-700/80 rounded-lg hover:bg-stone-300/50 dark:hover:bg-stone-700 transition-colors shadow-sm cursor-pointer"
               title="Open QR Pass Verification Scanner"
             >
               <QrCode className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" />
@@ -130,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
             {/* Audit Log Trigger */}
             <button
               onClick={onOpenAudit}
-              className="relative p-2 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40"
+              className="relative p-2 text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40 cursor-pointer"
               title="View Relational Audit Logs"
             >
               <History className="w-4 h-4" />
@@ -144,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
             {/* Reset Scenario Baseline */}
             <button
               onClick={handleReset}
-              className="p-2 text-stone-600 dark:text-stone-400 hover:text-[#B68366] dark:hover:text-[#D4A58C] bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40"
+              className="p-2 text-stone-600 dark:text-stone-400 hover:text-[#B68366] dark:hover:text-[#D4A58C] bg-stone-200/50 dark:bg-stone-800/60 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg transition-colors border border-stone-300/40 dark:border-stone-700/40 cursor-pointer"
               title="Reset Tasks & Scenario to Baseline"
             >
               <RotateCcw className={`w-4 h-4 ${resetConfirm ? 'text-[#B68366] animate-spin' : ''}`} />

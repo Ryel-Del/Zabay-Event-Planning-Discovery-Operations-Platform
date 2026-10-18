@@ -31,8 +31,8 @@ const MainContent: React.FC = () => {
         onOpenScanner={() => setIsScannerOpen(true)}
       />
 
-      {/* Main App Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      {/* Main App Workspace (Fluid Edge-to-Edge with generous padding) */}
+      <main className="flex-1 w-full px-4 sm:px-8 lg:px-12 py-6 space-y-6">
         {/* Organizer Sub-View */}
         {currentRole === 'organizer' && (
           <div className="space-y-6">
@@ -140,7 +140,7 @@ const MainContent: React.FC = () => {
 
       {/* Footer */}
       <footer className="border-t border-stone-200/80 dark:border-stone-800/80 bg-[#FAF9F5]/80 dark:bg-[#171513]/80 py-6 text-center text-xs text-stone-500 dark:text-stone-400">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="w-full px-4 sm:px-8 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
             <strong className="text-stone-700 dark:text-stone-300">ZABAY</strong> — Relational-Database-Driven Event Planning & Discovery
           </p>
