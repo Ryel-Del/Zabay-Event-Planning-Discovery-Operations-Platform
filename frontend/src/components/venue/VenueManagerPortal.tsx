@@ -26,27 +26,27 @@ export const VenueManagerPortal: React.FC = () => {
   const handleTestBooking = () => {
     const res = bookVenue(selectedVenue.id, 'test-conflict-check', testStart, testEnd);
     setBookingStatus(res);
-    setTimeout(() => setBookingStatus(null), 5000);
+    setTimeout(() => setBookingStatus(null), 4500);
   };
 
   return (
     <div className="space-y-6">
       {/* Venue Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-stone-200/80 dark:border-stone-800/80">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-              <Building2 className="w-5 h-5 text-indigo-400" />
+            <div className="p-2.5 bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700/60 rounded-xl">
+              <Building2 className="w-5 h-5 text-[#B68366] dark:text-[#D4A58C]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                 Venue Operations & Calendar Manager
-                <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800/80 font-mono">
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 font-mono">
                   EXCLUDE Constraint Guard
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Manage venue specs, operational hours, facilities, and database-enforced non-overlapping bookings.
+              <p className="text-xs text-stone-500 dark:text-stone-400">
+                Manage physical specifications, certified facilities, and database-enforced non-overlapping time slots.
               </p>
             </div>
           </div>
@@ -58,11 +58,11 @@ export const VenueManagerPortal: React.FC = () => {
               const v = venues.find((x) => x.id === e.target.value);
               if (v) setSelectedVenue(v);
             }}
-            className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="bg-[#FAF9F5] dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs font-semibold text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
           >
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
-                {v.name} ({v.capacity.toLocaleString()} cap)
+                {v.name} ({v.capacity.toLocaleString()} guests)
               </option>
             ))}
           </select>
@@ -70,55 +70,55 @@ export const VenueManagerPortal: React.FC = () => {
 
         {/* Venue Profile Summary */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-indigo-400" /> Max Seating Capacity
+          <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-1">
+            <span className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
+              <Users className="w-3.5 h-3.5 text-[#B68366] dark:text-[#D4A58C]" /> Max Seating Capacity
             </span>
-            <p className="text-xl font-black text-white">{selectedVenue.capacity.toLocaleString()} guests</p>
-            <p className="text-[11px] text-slate-500">{selectedVenue.is_indoor ? 'Indoor Facility' : 'Outdoor Amphitheater'}</p>
+            <p className="text-xl font-black text-stone-900 dark:text-stone-100">{selectedVenue.capacity.toLocaleString()} guests</p>
+            <p className="text-[11px] text-stone-500">{selectedVenue.is_indoor ? 'Indoor Facility' : 'Outdoor Amphitheater'}</p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 text-amber-400" /> Power Grid Capacity
+          <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-1">
+            <span className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
+              <Zap className="w-3.5 h-3.5 text-[#C28E3A] dark:text-[#E5BE7E]" /> Power Grid Capacity
             </span>
-            <p className="text-xl font-black text-white">{selectedVenue.power_kw_capacity} kW</p>
-            <p className="text-[11px] text-slate-500">Dedicated 3-phase substation</p>
+            <p className="text-xl font-black text-stone-900 dark:text-stone-100">{selectedVenue.power_kw_capacity} kW</p>
+            <p className="text-[11px] text-stone-500">Dedicated 3-phase substation</p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-cyan-400" /> Operating Window
+          <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-1">
+            <span className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-stone-400" /> Operating Window
             </span>
-            <p className="text-xl font-black text-white">
+            <p className="text-xl font-black text-stone-900 dark:text-stone-100">
               {selectedVenue.operating_hours.open} - {selectedVenue.operating_hours.close}
             </p>
-            <p className="text-[11px] text-slate-500">Hourly Rate: ${selectedVenue.hourly_rate}/hr</p>
+            <p className="text-[11px] text-stone-500">Hourly Rate: ${selectedVenue.hourly_rate}/hr</p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Lock className="w-3.5 h-3.5 text-emerald-400" /> Overlap Protection
+          <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-1">
+            <span className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
+              <Lock className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" /> Overlap Protection
             </span>
-            <p className="text-xl font-black text-emerald-400">PostgreSQL GiST</p>
-            <p className="text-[11px] text-slate-500">EXCLUDE USING gist(tsrange)</p>
+            <p className="text-xl font-black text-[#455C42] dark:text-[#A7C2A4]">PostgreSQL GiST</p>
+            <p className="text-[11px] text-stone-500">EXCLUDE USING gist(tsrange)</p>
           </div>
         </div>
       </div>
 
       {/* Facilities & Equipment Inventory */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          <Layers className="w-4 h-4 text-violet-400" />
-          Certified Facilities & Hardware Infrastructure
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4 transition-colors">
+        <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-2">
+          <Layers className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
+          Certified Facilities & Infrastructure Checklist
         </h3>
         <div className="flex flex-wrap gap-2">
           {selectedVenue.facilities.map((fac, idx) => (
             <span
               key={idx}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-950 border border-slate-800 text-slate-200 flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800 text-stone-700 dark:text-stone-300 flex items-center gap-1.5"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" />
               {fac}
             </span>
           ))}
@@ -126,14 +126,14 @@ export const VenueManagerPortal: React.FC = () => {
       </div>
 
       {/* Booking Calendar & Temporal Non-Overlap Demonstrator */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-6 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
               Scheduled Venue Bookings ({bookingsForVenue.length} Confirmed)
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-stone-500 dark:text-stone-400">
               Database blocks overlapping time intervals automatically via PostgreSQL EXCLUDE constraint.
             </p>
           </div>
@@ -144,34 +144,34 @@ export const VenueManagerPortal: React.FC = () => {
           {bookingsForVenue.map((booking) => (
             <div
               key={booking.id}
-              className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              className="p-4 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             >
               <div>
-                <span className="text-xs font-bold text-white flex items-center gap-2">
+                <span className="text-xs font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                   {booking.event_title}
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-semibold uppercase">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border border-[#5F7D5B]/20 font-semibold uppercase">
                     {booking.status}
                   </span>
                 </span>
-                <p className="text-xs font-mono text-slate-400 mt-1">
+                <p className="text-xs font-mono text-stone-500 dark:text-stone-400 mt-1">
                   Interval: {new Date(booking.start_time).toLocaleDateString()} {new Date(booking.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} → {new Date(booking.end_time).toLocaleDateString()} {new Date(booking.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
 
-              <div className="text-right text-[11px] text-slate-500 font-mono">
-                Booking ID: {booking.id}
+              <div className="text-right text-[11px] text-stone-400 font-mono">
+                Ref: {booking.id}
               </div>
             </div>
           ))}
         </div>
 
         {/* EXCLUDE Constraint Test Suite */}
-        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
-          <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-cyan-400" />
+        <div className="p-4 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800 space-y-3">
+          <h4 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-[#5F7D5B] dark:text-[#97B394]" />
             Test Double-Booking Prevention (Simulate Database Conflict)
           </h4>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             Attempt to schedule an overlapping event booking during an existing slot to see the database EXCLUDE constraint actively block it:
           </p>
 
@@ -180,20 +180,20 @@ export const VenueManagerPortal: React.FC = () => {
               type="text"
               value={testStart}
               onChange={(e) => setTestStart(e.target.value)}
-              className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-white focus:outline-none"
+              className="bg-white dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 px-3 py-1.5 rounded-lg text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
               title="Booking Start Time"
             />
-            <span className="text-slate-500 text-xs font-bold">to</span>
+            <span className="text-stone-400 text-xs font-bold">to</span>
             <input
               type="text"
               value={testEnd}
               onChange={(e) => setTestEnd(e.target.value)}
-              className="bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-mono text-white focus:outline-none"
+              className="bg-white dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 px-3 py-1.5 rounded-lg text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
               title="Booking End Time"
             />
             <button
               onClick={handleTestBooking}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
+              className="px-4 py-1.5 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-lg text-xs font-semibold transition-all shadow-sm cursor-pointer"
             >
               Verify DB Conflict Check
             </button>
@@ -203,14 +203,14 @@ export const VenueManagerPortal: React.FC = () => {
             <div
               className={`p-3 rounded-lg text-xs flex items-center gap-2 border ${
                 bookingStatus.success
-                  ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300'
-                  : 'bg-rose-950/60 border-rose-500/50 text-rose-300'
+                  ? 'bg-[#EEF3ED] dark:bg-[#222D21] border-[#5F7D5B]/30 text-[#455C42] dark:text-[#A7C2A4]'
+                  : 'bg-[#F9ECE9] dark:bg-[#341D1A] border-[#BA4E3E]/30 text-[#822E22] dark:text-[#E48D80]'
               }`}
             >
               {bookingStatus.success ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#5F7D5B] dark:text-[#A7C2A4] shrink-0" />
               ) : (
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-[#BA4E3E] dark:text-[#E48D80] shrink-0" />
               )}
               <span>{bookingStatus.message}</span>
             </div>

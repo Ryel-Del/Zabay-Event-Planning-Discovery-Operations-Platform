@@ -24,7 +24,7 @@ const MainContent: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#FAF9F5] dark:bg-[#171513] text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
       {/* Top Main Navbar */}
       <Navbar
         onOpenAudit={() => setIsAuditOpen(true)}
@@ -37,13 +37,13 @@ const MainContent: React.FC = () => {
         {currentRole === 'organizer' && (
           <div className="space-y-6">
             {/* Event Switcher Bar */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+            <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-                  <Calendar className="w-5 h-5 text-indigo-400" />
+                <div className="p-2 bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700/60 rounded-xl">
+                  <Calendar className="w-5 h-5 text-[#B68366] dark:text-[#D4A58C]" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Active Operational Workspace
                   </span>
                   <div className="flex items-center gap-2">
@@ -53,10 +53,10 @@ const MainContent: React.FC = () => {
                         const found = events.find((x) => x.id === e.target.value);
                         if (found) setSelectedEvent(found);
                       }}
-                      className="bg-transparent font-bold text-white text-base focus:outline-none cursor-pointer hover:text-indigo-300 transition-colors"
+                      className="bg-transparent font-bold text-stone-900 dark:text-stone-100 text-base focus:outline-none cursor-pointer hover:text-[#B68366] dark:hover:text-[#D4A58C] transition-colors"
                     >
                       {events.map((evt) => (
-                        <option key={evt.id} value={evt.id} className="bg-slate-900 text-white">
+                        <option key={evt.id} value={evt.id} className="bg-white dark:bg-[#1E1C19] text-stone-900 dark:text-stone-100">
                           {evt.title} ({evt.category})
                         </option>
                       ))}
@@ -66,13 +66,13 @@ const MainContent: React.FC = () => {
               </div>
 
               {/* Sub-navigation tabs for Organizer */}
-              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+              <div className="flex items-center bg-[#EBE7DF] dark:bg-[#272420] p-1 rounded-xl border border-stone-200/70 dark:border-stone-700/60 shadow-inner">
                 <button
                   onClick={() => setOrganizerSubTab('impact')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     organizerSubTab === 'impact'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white dark:bg-[#34302B] text-stone-900 dark:text-stone-100 font-semibold shadow-sm'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   <GitBranch className="w-3.5 h-3.5" />
@@ -81,10 +81,10 @@ const MainContent: React.FC = () => {
 
                 <button
                   onClick={() => setOrganizerSubTab('matcher')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     organizerSubTab === 'matcher'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white dark:bg-[#34302B] text-stone-900 dark:text-stone-100 font-semibold shadow-sm'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   <Building2 className="w-3.5 h-3.5" />
@@ -93,10 +93,10 @@ const MainContent: React.FC = () => {
 
                 <button
                   onClick={() => setOrganizerSubTab('tasks')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     organizerSubTab === 'tasks'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white dark:bg-[#34302B] text-stone-900 dark:text-stone-100 font-semibold shadow-sm'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   <ListTodo className="w-3.5 h-3.5" />
@@ -105,10 +105,10 @@ const MainContent: React.FC = () => {
 
                 <button
                   onClick={() => setOrganizerSubTab('analytics')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     organizerSubTab === 'analytics'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-white dark:bg-[#34302B] text-stone-900 dark:text-stone-100 font-semibold shadow-sm'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
                   }`}
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
@@ -139,13 +139,13 @@ const MainContent: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-stone-200/80 dark:border-stone-800/80 bg-[#FAF9F5]/80 dark:bg-[#171513]/80 py-6 text-center text-xs text-stone-500 dark:text-stone-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>
-            <strong>ZABAY</strong> — Relational-Database-Driven Event Planning, Discovery & Operations
+            <strong className="text-stone-700 dark:text-stone-300">ZABAY</strong> — Relational-Database-Driven Event Planning & Discovery
           </p>
-          <p className="font-mono text-[11px]">
-            PostgreSQL • Express.js • Prisma • React • Tailwind • Leaflet • Recharts
+          <p className="font-mono text-[11px] text-stone-400 dark:text-stone-500">
+            PostgreSQL • Express.js • Prisma • React 19 • Tailwind CSS v4 • Recharts
           </p>
         </div>
       </footer>

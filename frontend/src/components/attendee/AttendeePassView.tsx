@@ -15,14 +15,14 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Ticket className="w-5 h-5 text-indigo-400" />
+          <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+            <Ticket className="w-5 h-5 text-[#B68366] dark:text-[#D4A58C]" />
             My Digital QR Event Passes ({registrations.length})
           </h2>
-          <p className="text-xs text-slate-400">
-            Database-backed biometric / QR passes for rapid contactless gate admission.
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Database-backed digital admission passes for rapid contactless gate verification.
           </p>
         </div>
       </div>
@@ -36,27 +36,27 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           return (
             <div
               key={reg.id}
-              className={`rounded-2xl border overflow-hidden shadow-2xl relative transition-all ${
+              className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${
                 isCheckedIn
-                  ? 'bg-slate-900/90 border-slate-700/80'
-                  : 'bg-gradient-to-b from-slate-900 to-slate-950 border-indigo-500/40 ring-1 ring-indigo-500/20'
+                  ? 'bg-stone-100 dark:bg-[#1A1815] border-stone-300/80 dark:border-stone-800'
+                  : 'bg-white dark:bg-[#1E1C19] border-stone-200/90 dark:border-stone-800'
               }`}
             >
               {/* Pass Header Banner */}
-              <div className="bg-gradient-to-r from-indigo-900/60 via-violet-900/60 to-slate-900 p-4 border-b border-slate-800 flex justify-between items-start">
+              <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 border-b border-stone-200/80 dark:border-stone-800/80 flex justify-between items-start">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-300">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Official Event Pass
                   </span>
-                  <h3 className="text-sm font-bold text-white leading-tight mt-0.5">
+                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight mt-0.5">
                     {reg.event_title}
                   </h3>
                 </div>
                 <div
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                  className={`px-2.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider border ${
                     isCheckedIn
-                      ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                      : 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                      ? 'bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border-[#5F7D5B]/30'
+                      : 'bg-[#F6EFE9] dark:bg-[#2B231D] text-[#885B43] dark:text-[#DEC0B0] border-[#B88568]/30'
                   }`}
                 >
                   {isCheckedIn ? 'Admitted (Checked In)' : 'Active / Valid'}
@@ -69,31 +69,30 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   {/* Attendee Info */}
                   <div className="space-y-2 text-xs w-full">
                     <div>
-                      <span className="text-slate-500 text-[10px] uppercase font-bold">Attendee</span>
-                      <p className="font-bold text-white text-sm">{reg.attendee_name}</p>
-                      <p className="text-[11px] text-slate-400">{reg.attendee_email}</p>
+                      <span className="text-stone-400 text-[10px] uppercase font-bold">Attendee</span>
+                      <p className="font-bold text-stone-900 dark:text-stone-100 text-sm">{reg.attendee_name}</p>
+                      <p className="text-[11px] text-stone-500">{reg.attendee_email}</p>
                     </div>
 
                     <div>
-                      <span className="text-slate-500 text-[10px] uppercase font-bold">Ticket Tier</span>
-                      <p className="font-semibold text-indigo-400">{reg.ticket_type}</p>
+                      <span className="text-stone-400 text-[10px] uppercase font-bold">Ticket Tier</span>
+                      <p className="font-semibold text-[#885B43] dark:text-[#D5A78E]">{reg.ticket_type}</p>
                     </div>
 
                     {venue && (
-                      <div className="flex items-center gap-1.5 text-slate-400 text-[11px] pt-1">
-                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <div className="flex items-center gap-1.5 text-stone-500 text-[11px] pt-1">
+                        <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                         <span className="truncate">{venue.name}</span>
                       </div>
                     )}
                   </div>
 
                   {/* QR Box */}
-                  <div className="bg-white p-3 rounded-xl shadow-lg flex flex-col items-center justify-center shrink-0">
-                    {/* Visual QR representation */}
-                    <div className="w-24 h-24 bg-slate-950 p-1.5 rounded-lg flex items-center justify-center relative">
-                      <QrCode className="w-20 h-20 text-white" />
+                  <div className="bg-white dark:bg-[#FAF9F5] p-3 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 flex flex-col items-center justify-center shrink-0">
+                    <div className="w-24 h-24 bg-stone-900 p-1.5 rounded-lg flex items-center justify-center relative">
+                      <QrCode className="w-20 h-20 text-stone-100" />
                     </div>
-                    <span className="text-[9px] font-mono font-bold text-slate-800 mt-1">
+                    <span className="text-[9px] font-mono font-bold text-stone-800 mt-1">
                       {reg.qr_pass_code}
                     </span>
                   </div>
@@ -101,21 +100,21 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
 
                 {/* Perforation Divider */}
                 <div className="relative py-2">
-                  <div className="border-t-2 border-dashed border-slate-800" />
-                  <div className="absolute -left-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-950 border border-slate-800" />
-                  <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-950 border border-slate-800" />
+                  <div className="border-t border-dashed border-stone-300 dark:border-stone-800" />
+                  <div className="absolute -left-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200 dark:border-stone-800" />
+                  <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200 dark:border-stone-800" />
                 </div>
 
                 {/* Gate Instructions & Quick Test Scanner trigger */}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    ID: {reg.id} • Registered: {new Date(reg.registered_at).toLocaleDateString()}
+                  <span className="text-[10px] text-stone-400 font-mono">
+                    Pass Serial: {reg.id} • Registered: {new Date(reg.registered_at).toLocaleDateString()}
                   </span>
 
                   {onScanPass && (
                     <button
                       onClick={() => onScanPass(reg.qr_pass_code)}
-                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded text-xs font-medium transition-colors"
+                      className="px-2.5 py-1 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-medium transition-colors"
                     >
                       Test Scan Pass
                     </button>

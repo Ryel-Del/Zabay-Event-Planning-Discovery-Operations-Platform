@@ -40,36 +40,36 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
   return (
     <div className="space-y-6">
       {/* Top Banner & Tab Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
         <div>
-          <h2 className="text-xl font-black text-white flex items-center gap-2">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
             Public Event Discovery & Passes
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             Explore public events, discover venues on OpenStreetMap, and claim your digital QR pass.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 bg-[#EBE7DF] dark:bg-[#1F1C19] p-1 rounded-xl border border-stone-200/80 dark:border-stone-800/80 shadow-inner">
           <button
             onClick={() => setActiveTab('browse')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               activeTab === 'browse'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-white dark:bg-[#2B2723] text-stone-900 dark:text-stone-100 shadow-sm border border-stone-200/60 dark:border-stone-700/60'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
             }`}
           >
             Browse Events
           </button>
           <button
             onClick={() => setActiveTab('passes')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeTab === 'passes'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                ? 'bg-white dark:bg-[#2B2723] text-stone-900 dark:text-stone-100 shadow-sm border border-stone-200/60 dark:border-stone-700/60'
+                : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-200'
             }`}
           >
-            <Ticket className="w-3.5 h-3.5" />
+            <Ticket className="w-3.5 h-3.5 text-[#B68366] dark:text-[#D4A58C]" />
             My Event Passes
           </button>
         </div>
@@ -78,16 +78,16 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
       {activeTab === 'browse' ? (
         <>
           {/* Search, Filter & View Controls */}
-          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-white dark:bg-[#1E1C19] p-3 rounded-2xl border border-stone-200/80 dark:border-stone-800/80 shadow-sm">
             {/* Search Input */}
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search events, topics, or keynotes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-300/80 dark:border-stone-700 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
               />
             </div>
 
@@ -97,10 +97,10 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${
                     selectedCategory === cat
-                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
-                      : 'text-slate-400 hover:text-white bg-slate-950 border border-slate-800'
+                      ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 font-semibold shadow-sm'
+                      : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200 dark:border-stone-800'
                   }`}
                 >
                   {cat}
@@ -109,11 +109,13 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
             </div>
 
             {/* Grid / Map Toggle */}
-            <div className="flex items-center bg-slate-950 p-1 rounded-lg border border-slate-800 shrink-0">
+            <div className="flex items-center bg-[#EBE7DF] dark:bg-[#1F1C19] p-1 rounded-xl border border-stone-200/80 dark:border-stone-800/80 shrink-0">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded text-xs font-medium ${
-                  viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 rounded-lg text-xs font-medium ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-[#2B2723] text-stone-900 dark:text-stone-100 shadow-sm'
+                    : 'text-stone-500 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
                 title="Grid Cards View"
               >
@@ -121,8 +123,10 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
               </button>
               <button
                 onClick={() => setViewMode('map')}
-                className={`p-1.5 rounded text-xs font-medium ${
-                  viewMode === 'map' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 rounded-lg text-xs font-medium ${
+                  viewMode === 'map'
+                    ? 'bg-white dark:bg-[#2B2723] text-stone-900 dark:text-stone-100 shadow-sm'
+                    : 'text-stone-500 hover:text-stone-900 dark:hover:text-stone-200'
                 }`}
                 title="OpenStreetMap Map View"
               >
@@ -146,37 +150,37 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                 return (
                   <div
                     key={event.id}
-                    className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg hover:border-slate-700 transition-all flex flex-col justify-between group"
+                    className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                   >
                     <div>
                       {/* Banner Image */}
-                      <div className="relative h-44 overflow-hidden bg-slate-950">
+                      <div className="relative h-44 overflow-hidden bg-stone-100 dark:bg-stone-900">
                         <img
                           src={event.banner_url}
                           alt={event.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
-                        <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-900/80 backdrop-blur-md text-indigo-400 border border-slate-700">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                        <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-white/90 dark:bg-stone-900/90 backdrop-blur-md text-stone-900 dark:text-stone-100 shadow-sm">
                           {event.category}
                         </span>
-                        <span className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-xs font-black bg-indigo-600 text-white shadow-md">
+                        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-md text-xs font-bold bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 shadow-sm">
                           ${event.ticket_price}
                         </span>
                       </div>
 
                       {/* Content */}
                       <div className="p-5 space-y-3">
-                        <h3 className="text-base font-bold text-white group-hover:text-indigo-400 transition-colors leading-snug">
+                        <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 group-hover:text-[#B68366] dark:group-hover:text-[#D4A58C] transition-colors leading-snug">
                           {event.title}
                         </h3>
-                        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2 leading-relaxed">
                           {event.description}
                         </p>
 
-                        <div className="space-y-1.5 text-xs text-slate-400 pt-2 border-t border-slate-800">
+                        <div className="space-y-1.5 text-xs text-stone-600 dark:text-stone-400 pt-2 border-t border-stone-200/60 dark:border-stone-800/60">
                           <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                            <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                             <span>
                               {new Date(event.start_date).toLocaleDateString(undefined, {
                                 month: 'short',
@@ -193,13 +197,13 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
 
                           {venue && (
                             <div className="flex items-center gap-1.5 truncate">
-                              <MapPin className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                               <span className="truncate">{venue.name}</span>
                             </div>
                           )}
 
                           <div className="flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                            <Users className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                             <span>
                               {event.tickets_sold} / {event.max_capacity} registered
                             </span>
@@ -212,9 +216,9 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                     <div className="p-5 pt-0">
                       <button
                         onClick={() => setSelectedEventForCheckout(event)}
-                        className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                        className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
                       >
-                        <Ticket className="w-4 h-4" />
+                        <Ticket className="w-4 h-4 text-[#B68366] dark:text-[#885B43]" />
                         Register & Pay with Stripe
                       </button>
                     </div>

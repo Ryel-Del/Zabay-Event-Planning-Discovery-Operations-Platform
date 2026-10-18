@@ -43,30 +43,29 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulate Stripe payment intent & webhook round-trip
     setTimeout(() => {
       setIsProcessing(false);
       const res = registerForEvent(event.id, ticketTier, name, email);
       setCompletedReg(res.registration);
 
-      // Trigger celebratory confetti
       confetti({
-        particleCount: 80,
-        spread: 70,
+        particleCount: 60,
+        spread: 60,
         origin: { y: 0.6 },
+        colors: ['#B68366', '#5F7D5B', '#A36B75', '#FAF9F5'],
       });
 
       onSuccess(res.registration);
-    }, 1400);
+    }, 1200);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-200 dark:border-stone-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-5 transition-colors">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 p-1.5 text-stone-500 hover:text-stone-900 dark:hover:text-white rounded-lg hover:bg-stone-200/60 dark:hover:bg-stone-800 transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -75,17 +74,17 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
           <form onSubmit={handlePay} className="space-y-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-                <CreditCard className="w-6 h-6 text-indigo-400" />
+              <div className="p-2.5 bg-stone-200/60 dark:bg-stone-800/80 border border-stone-300/60 dark:border-stone-700/60 rounded-xl">
+                <CreditCard className="w-6 h-6 text-[#B68366] dark:text-[#D4A58C]" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                   Stripe Checkout
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800 font-mono">
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-200/80 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700 font-mono">
                     256-Bit SSL
                   </span>
                 </h3>
-                <p className="text-xs text-slate-400 truncate max-w-sm">
+                <p className="text-xs text-stone-500 dark:text-stone-400 truncate max-w-sm">
                   Registration for {event.title}
                 </p>
               </div>
@@ -96,41 +95,41 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               <button
                 type="button"
                 onClick={() => setTicketTier('General Admission')}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-2xl border text-left transition-all ${
                   ticketTier === 'General Admission'
-                    ? 'bg-indigo-950/60 border-indigo-500 ring-2 ring-indigo-500/20 text-white'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-[#25221E] border-[#B68366] dark:border-[#D4A58C] ring-2 ring-[#B68366]/20 shadow-sm'
+                    : 'bg-white dark:bg-[#1E1C19] border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 hover:border-stone-300'
                 }`}
               >
-                <div className="text-xs font-bold">General Admission</div>
-                <div className="text-sm font-black text-indigo-400 mt-1">${event.ticket_price}</div>
-                <p className="text-[10px] text-slate-500 mt-0.5">Keynotes & Expo Floor</p>
+                <div className="text-xs font-semibold text-stone-900 dark:text-stone-100">General Admission</div>
+                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">${event.ticket_price}</div>
+                <p className="text-[10px] text-stone-500 mt-0.5">Keynotes & Expo Floor</p>
               </button>
 
               <button
                 type="button"
                 onClick={() => setTicketTier('VIP Access')}
-                className={`p-3 rounded-xl border text-left transition-all ${
+                className={`p-3 rounded-2xl border text-left transition-all ${
                   ticketTier === 'VIP Access'
-                    ? 'bg-violet-950/60 border-violet-500 ring-2 ring-violet-500/20 text-white'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-[#25221E] border-[#B68366] dark:border-[#D4A58C] ring-2 ring-[#B68366]/20 shadow-sm'
+                    : 'bg-white dark:bg-[#1E1C19] border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 hover:border-stone-300'
                 }`}
               >
-                <div className="text-xs font-bold flex items-center justify-between">
+                <div className="text-xs font-semibold text-stone-900 dark:text-stone-100 flex items-center justify-between">
                   <span>VIP Access</span>
-                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <Sparkles className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C]" />
                 </div>
-                <div className="text-sm font-black text-violet-400 mt-1">
+                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">
                   ${Math.round(event.ticket_price * 1.4)}
                 </div>
-                <p className="text-[10px] text-slate-500 mt-0.5">VIP Lounge + Afterparty</p>
+                <p className="text-[10px] text-stone-500 mt-0.5">VIP Lounge + Afterparty</p>
               </button>
             </div>
 
             {/* Contact Details */}
             <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block mb-1">
                   Full Attendee Name
                 </label>
                 <input
@@ -138,12 +137,12 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block mb-1">
                   Ticket Confirmation Email
                 </label>
                 <input
@@ -151,18 +150,18 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
                 />
               </div>
             </div>
 
             {/* Payment Fields */}
-            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span className="flex items-center gap-1 font-semibold text-slate-300">
-                  <Lock className="w-3.5 h-3.5 text-emerald-400" /> Encrypted Card Payment
+            <div className="bg-white dark:bg-[#171513] p-3.5 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
+              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
+                <span className="flex items-center gap-1 font-semibold text-stone-700 dark:text-stone-300">
+                  <Lock className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" /> Encrypted Card Payment
                 </span>
-                <span className="text-[11px] font-mono text-slate-500">Stripe Webhook Verified</span>
+                <span className="text-[11px] font-mono text-stone-400">Stripe Webhook Verified</span>
               </div>
 
               <div>
@@ -170,7 +169,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   type="text"
                   value={cardNumber}
                   onChange={(e) => setCardNumber(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-white focus:outline-none"
+                  className="w-full bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
                   placeholder="Card number"
                 />
               </div>
@@ -180,30 +179,30 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   type="text"
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-white focus:outline-none"
+                  className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
                   placeholder="MM/YY"
                 />
                 <input
                   type="text"
                   value={cvc}
                   onChange={(e) => setCvc(e.target.value)}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono text-white focus:outline-none"
+                  className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
                   placeholder="CVC"
                 />
               </div>
             </div>
 
-            {/* Submit button */}
+            {/* Submit button - High contrast & trustworthy */}
             <button
               type="submit"
               disabled={isProcessing}
-              className="w-full py-3 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              className="w-full py-3 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               {isProcessing ? (
                 <span>Confirming via Stripe Webhook...</span>
               ) : (
                 <>
-                  <span>Pay ${price} & Generate QR Pass</span>
+                  <span>Pay ${price} & Receive Digital Pass</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -212,36 +211,36 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
         ) : (
           /* Confirmation & Pass Screen */
           <div className="text-center py-4 space-y-4">
-            <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
+            <div className="w-12 h-12 bg-[#EEF3ED] dark:bg-[#222D21] text-[#5F7D5B] dark:text-[#A7C2A4] rounded-full flex items-center justify-center mx-auto border border-[#5F7D5B]/30">
               <CheckCircle2 className="w-6 h-6" />
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-white">Payment & Registration Succeeded!</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Stripe webhook recorded transaction <code className="text-indigo-400">{completedReg.payment_id}</code>
+              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">Payment & Registration Confirmed</h3>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                Stripe webhook recorded transaction <code className="text-[#885B43] dark:text-[#D5A78E] font-mono">{completedReg.payment_id}</code>
               </p>
             </div>
 
             {/* Digital Pass Preview Box */}
-            <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-left">
+            <div className="p-4 bg-white dark:bg-[#171513] border border-stone-200 dark:border-stone-800 rounded-xl space-y-2 text-left">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Attendee:</span>
-                <span className="font-bold text-white">{completedReg.attendee_name}</span>
+                <span className="text-stone-500">Attendee:</span>
+                <span className="font-bold text-stone-900 dark:text-stone-100">{completedReg.attendee_name}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Ticket Tier:</span>
-                <span className="text-indigo-400 font-bold">{completedReg.ticket_type}</span>
+                <span className="text-stone-500">Ticket Tier:</span>
+                <span className="text-[#B68366] dark:text-[#D4A58C] font-semibold">{completedReg.ticket_type}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">QR Pass Code:</span>
-                <span className="font-mono text-cyan-300 font-bold">{completedReg.qr_pass_code}</span>
+                <span className="text-stone-500">QR Pass Code:</span>
+                <span className="font-mono text-stone-900 dark:text-stone-100 font-bold">{completedReg.qr_pass_code}</span>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="w-full py-2.5 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               Close & View My Passes
             </button>

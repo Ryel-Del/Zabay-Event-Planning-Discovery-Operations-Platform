@@ -61,30 +61,30 @@ export const AnalyticsDashboard: React.FC = () => {
     { name: 'Zachary (Net)', scheduledHours: 5.5, capacityHours: 8 },
   ];
 
-  // Chart 4: Revenue by Tier (v_event_revenue)
+  // Chart 4: Revenue by Tier with matte organic tones
   const revenueTierData = [
-    { name: 'General Admission ($349)', value: 1040 * 349, color: '#6366f1' },
-    { name: 'VIP All-Access ($499)', value: 380 * 499, color: '#a855f7' },
-    { name: 'Sponsorship Exhibits', value: 85000, color: '#06b6d4' },
+    { name: 'General Admission ($349)', value: 1040 * 349, color: '#B68366' },
+    { name: 'VIP All-Access ($499)', value: 380 * 499, color: '#A36B75' },
+    { name: 'Sponsorship Exhibits', value: 85000, color: '#5F7D5B' },
   ];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+    <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-6 transition-colors">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-stone-200/80 dark:border-stone-800/80">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
-            <BarChart3 className="w-5 h-5 text-indigo-400" />
+          <div className="p-2.5 bg-stone-100 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700/60 rounded-xl">
+            <BarChart3 className="w-5 h-5 text-[#B68366] dark:text-[#D4A58C]" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
               Business & Operational Analytics
-              <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-800/80 font-mono">
-                PostgreSQL Reporting Views
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 font-mono">
+                PostgreSQL Views
               </span>
             </h2>
-            <p className="text-xs text-slate-400">
-              Real-time KPIs derived from registrations, task readiness, and resource allocations for {selectedEvent.title}.
+            <p className="text-xs text-stone-500 dark:text-stone-400">
+              Key indicators derived from registrations, task readiness, and resource allocations for {selectedEvent.title}.
             </p>
           </div>
         </div>
@@ -93,146 +93,146 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1 */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
+          <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
             <span>Capacity Fill Rate</span>
-            <Users className="w-4 h-4 text-indigo-400" />
+            <Users className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-white">{capacityPercent}%</span>
-            <span className="text-xs text-indigo-400 font-medium">
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{capacityPercent}%</span>
+            <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
               {selectedEvent.tickets_sold} / {selectedEvent.max_capacity}
             </span>
           </div>
-          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${capacityPercent}%` }} />
+          <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-[#B68366] dark:bg-[#D4A58C] h-full rounded-full" style={{ width: `${capacityPercent}%` }} />
           </div>
         </div>
 
         {/* KPI 2 */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
+          <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
             <span>Gross Ticket Revenue</span>
-            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <DollarSign className="w-4 h-4 text-[#5F7D5B] dark:text-[#97B394]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-white">${totalRevenue.toLocaleString()}</span>
-            <span className="text-xs text-emerald-400 font-medium">+18% vs budget</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">${totalRevenue.toLocaleString()}</span>
+            <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">+18% vs budget</span>
           </div>
-          <p className="text-[11px] text-slate-500">Stripe Checkout confirmed</p>
+          <p className="text-[11px] text-stone-500">Stripe Checkout confirmed</p>
         </div>
 
         {/* KPI 3 */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
+          <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
             <span>Operational Readiness</span>
-            <CheckCircle className="w-4 h-4 text-cyan-400" />
+            <CheckCircle className="w-4 h-4 text-[#A36B75] dark:text-[#D8A5AD]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-white">{taskReadiness}%</span>
-            <span className="text-xs text-cyan-400 font-medium">
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{taskReadiness}%</span>
+            <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
               {completedTasks}/{tasks.length} tasks ready
             </span>
           </div>
-          <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-cyan-500 h-full rounded-full" style={{ width: `${taskReadiness}%` }} />
+          <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-[#A36B75] dark:bg-[#D8A5AD] h-full rounded-full" style={{ width: `${taskReadiness}%` }} />
           </div>
         </div>
 
         {/* KPI 4 */}
-        <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
-            <span>Check-in Verification</span>
-            <Clock className="w-4 h-4 text-violet-400" />
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
+          <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
+            <span>Gate Check-in Rate</span>
+            <Clock className="w-4 h-4 text-[#C28E3A] dark:text-[#E5BE7E]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-white">{attendanceRate}%</span>
-            <span className="text-xs text-violet-400 font-medium">
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{attendanceRate}%</span>
+            <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
               {checkedInCount} checked in
             </span>
           </div>
-          <p className="text-[11px] text-slate-500">Zero duplicate entries allowed</p>
+          <p className="text-[11px] text-stone-500">Zero duplicate entries allowed</p>
         </div>
       </div>
 
       {/* 2-Column Visual Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Arrival Flow */}
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Attendee Check-In Flow (v_attendance_hourly)</span>
-            <span className="text-[10px] text-slate-500 font-mono">Area Curve</span>
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
+          <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
+            <span>Attendee Arrival Flow (v_attendance_hourly)</span>
+            <span className="text-[10px] text-stone-400 font-mono">Area Curve</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={hourlyFlowData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="flowGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
+                  <linearGradient id="flowGradWarm" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#B68366" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#B68366" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-stone-200 dark:text-stone-800" />
+                <XAxis dataKey="time" stroke="#8C8478" fontSize={11} />
+                <YAxis stroke="#8C8478" fontSize={11} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: '12px', fontSize: '12px' }}
                 />
-                <Area type="monotone" dataKey="arrivals" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#flowGrad)" name="Arrivals / hr" />
+                <Area type="monotone" dataKey="arrivals" stroke="#B68366" strokeWidth={2} fillOpacity={1} fill="url(#flowGradWarm)" name="Arrivals / hr" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 2: Resource Utilization */}
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
+          <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
             <span>Equipment Allocation (v_resource_utilization)</span>
-            <span className="text-[10px] text-slate-500 font-mono">Allocated vs Free</span>
+            <span className="text-[10px] text-stone-400 font-mono">Allocated vs Free</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={resourceData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-stone-200 dark:text-stone-800" />
+                <XAxis dataKey="name" stroke="#8C8478" fontSize={11} />
+                <YAxis stroke="#8C8478" fontSize={11} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} />
-                <Bar dataKey="allocated" stackId="a" fill="#06b6d4" name="Allocated to Tasks" />
-                <Bar dataKey="available" stackId="a" fill="#334155" name="Surplus Available" />
+                <Bar dataKey="allocated" stackId="a" fill="#5F7D5B" name="Allocated to Tasks" />
+                <Bar dataKey="available" stackId="a" fill="#DCD6CA" className="dark:fill-[#38332E]" name="Surplus Available" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 3: Personnel Workload */}
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
+          <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
             <span>Personnel Shift Allocation (v_personnel_workload)</span>
-            <span className="text-[10px] text-slate-500 font-mono">Hours Scheduled</span>
+            <span className="text-[10px] text-stone-400 font-mono">Hours Scheduled</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={personnelWorkloadData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-stone-200 dark:text-stone-800" />
+                <XAxis dataKey="name" stroke="#8C8478" fontSize={11} />
+                <YAxis stroke="#8C8478" fontSize={11} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: '12px', fontSize: '12px' }}
                 />
-                <Bar dataKey="scheduledHours" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Assigned Hours" />
+                <Bar dataKey="scheduledHours" fill="#A36B75" radius={[6, 6, 0, 0]} name="Assigned Hours" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Chart 4: Revenue Distribution */}
-        <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-3">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+        <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
+          <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
             <span>Gross Revenue Stream (v_event_revenue)</span>
-            <span className="text-[10px] text-slate-500 font-mono">Tiers & Sponsors</span>
+            <span className="text-[10px] text-stone-400 font-mono">Tiers & Sponsors</span>
           </h3>
           <div className="h-60 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -252,7 +252,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 </Pie>
                 <Tooltip
                   formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Revenue']}
-                  contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px', fontSize: '12px' }}
+                  contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />
               </PieChart>
