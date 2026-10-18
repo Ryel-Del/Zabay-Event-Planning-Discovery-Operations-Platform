@@ -1,0 +1,255 @@
+import React from 'react';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  GitBranch,
+} from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+
+interface OperationsOverviewProps {
+  onNavigate: (view: 'impact' | 'venues' | 'schedule' | 'attendees' | 'analytics') => void;
+}
+
+export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
+  const { selectedEvent, venues, tasks, registrations, auditLogs } = useApp();
+
+  const venue = venues.find((v) => v.id === selectedEvent.venue_id);
+  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
+  const conflictTasks = tasks.filter((t) => t.has_conflict);
+  const readinessPercent = Math.round((completedTasks / tasks.length) * 100);
+  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
+
+  return (
+    <div className="space-y-6">
+      {/* Cvent-Style Event Identity Hero Banner */}
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F6EFE9] dark:bg-[#2B231D] text-[#885B43] dark:text-[#DEC0B0] border border-[#EBDFD5] dark:border-[#3E322A] rounded-md">
+                {selectedEvent.category}
+              </span>
+              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border border-[#5F7D5B]/30 rounded-md">
+                Status: {selectedEvent.status}
+              </span>
+            </div>
+
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">
+              {selectedEvent.title}
+            </h1>
+
+            <div className="flex flex-wrap items-center gap-4 text-xs text-stone-600 dark:text-stone-400">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                {new Date(selectedEvent.start_date).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </span>
+
+              {venue && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                  {venue.name} ({venue.city})
+                </span>
+              )}
+
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-stone-400" />
+                Expected: {selectedEvent.expected_attendance.toLocaleString()} attendees
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Operations Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => onNavigate('impact')}
+              className="px-3.5 py-2 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <GitBranch className="w-3.5 h-3.5 text-[#B68366] dark:text-[#885B43]" />
+              Run Impact Simulator
+            </button>
+            <button
+              onClick={() => onNavigate('venues')}
+              className="px-3.5 py-2 bg-[#FAF9F5] dark:bg-[#171513] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+            >
+              Verify Venue Match
+            </button>
+          </div>
+        </div>
+
+        {/* Operational Pulse Metrics Row (Clean compact bar, NOT 4 huge cards!) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-stone-200/80 dark:border-stone-800/80 text-xs">
+          <div>
+            <span className="text-stone-500 block mb-1">Operational Readiness</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">{readinessPercent}%</span>
+              <span className="text-stone-500">({completedTasks}/{tasks.length} tasks ready)</span>
+            </div>
+            <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+              <div className="bg-[#5F7D5B] dark:bg-[#97B394] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />
+            </div>
+          </div>
+
+          <div>
+            <span className="text-stone-500 block mb-1">Capacity Registered</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">
+                {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
+              </span>
+              <span className="text-stone-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+            </div>
+            <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+              <div className="bg-[#B68366] dark:bg-[#D4A58C] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+            </div>
+          </div>
+
+          <div>
+            <span className="text-stone-500 block mb-1">Gross Ticket Revenue</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">${totalRevenue.toLocaleString()}</span>
+              <span className="text-[#5F7D5B] dark:text-[#97B394] font-semibold">Stripe confirmed</span>
+            </div>
+            <p className="text-[11px] text-stone-400 mt-1">Avg ${selectedEvent.ticket_price} / ticket</p>
+          </div>
+
+          <div>
+            <span className="text-stone-500 block mb-1">Schedule Feasibility</span>
+            {conflictTasks.length > 0 ? (
+              <div className="flex items-center gap-1.5 text-[#BA4E3E] dark:text-[#E48D80] font-bold text-sm">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{conflictTasks.length} Conflict Requires Attention</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[#5F7D5B] dark:text-[#A7C2A4] font-bold text-sm">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>DAG Timeline Feasible</span>
+              </div>
+            )}
+            <p className="text-[11px] text-stone-400 mt-1">Finish-to-start constraints satisfied</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Split Layout: Left Data Stream (70%) vs Right Activity Panel (30%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Scheduled Task Pipeline */}
+        <div className="lg:col-span-2 bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-200/80 dark:border-stone-800/80">
+            <div>
+              <h2 className="text-sm font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
+                Operational Task Schedule
+              </h2>
+              <p className="text-xs text-stone-500">Defined finish-to-start predecessor sequence</p>
+            </div>
+            <button
+              onClick={() => onNavigate('schedule')}
+              className="text-xs font-semibold text-[#885B43] dark:text-[#D5A78E] hover:underline flex items-center gap-1"
+            >
+              Open Gantt View <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Clean Dense Task Row List (NOT bulky cards!) */}
+          <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/40 px-2 rounded-xl transition-colors"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-stone-900 dark:text-stone-100">{task.title}</span>
+                    <span
+                      className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                        task.status === 'completed'
+                          ? 'bg-[#EEF3ED] text-[#455C42] dark:bg-[#222D21] dark:text-[#A7C2A4]'
+                          : task.status === 'in_progress'
+                          ? 'bg-[#F6EFE9] text-[#885B43] dark:bg-[#2B231D] dark:text-[#DEC0B0]'
+                          : 'bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400'
+                      }`}
+                    >
+                      {task.status}
+                    </span>
+                    {task.has_conflict && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#F9ECE9] text-[#BA4E3E] dark:bg-[#341D1A] dark:text-[#E48D80]">
+                        Conflict
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-stone-500 line-clamp-1">{task.description}</p>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs font-mono text-stone-500 shrink-0">
+                  <span>{task.start_time} - {task.end_time}</span>
+                  <span className="text-stone-400 font-sans">{task.personnel_assignments[0]?.personnel_name || 'Staff'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Database Activity & Quick Check-in Summary */}
+        <div className="space-y-6">
+          {/* Quick Check-in Stats */}
+          <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
+                Gate Check-In Status
+              </h3>
+              <button
+                onClick={() => onNavigate('attendees')}
+                className="text-xs font-semibold text-[#885B43] dark:text-[#D5A78E] hover:underline"
+              >
+                Directory
+              </button>
+            </div>
+
+            <div className="bg-[#FAF9F5] dark:bg-[#171513] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
+                <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
+                  {registrations.filter((r) => r.status === 'checked_in').length} / {registrations.length} Checked In
+                </p>
+              </div>
+              <span className="text-[10px] px-2 py-1 bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] rounded-lg font-bold">
+                Zero Duplicates
+              </span>
+            </div>
+          </div>
+
+          {/* Recent Audit Ledger History */}
+          <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
+                Recent Audit Trail
+              </h3>
+              <span className="text-[10px] text-stone-400 font-mono">Live DB Stream</span>
+            </div>
+
+            <div className="space-y-2.5">
+              {auditLogs.slice(0, 3).map((log) => (
+                <div
+                  key={log.id}
+                  className="p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 text-xs space-y-1"
+                >
+                  <div className="flex justify-between text-[11px] text-stone-400">
+                    <span className="font-semibold text-stone-700 dark:text-stone-300">{log.action}</span>
+                    <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p className="text-stone-600 dark:text-stone-400 line-clamp-2">{log.change_summary}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

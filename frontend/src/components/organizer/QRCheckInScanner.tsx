@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   QrCode,
   X,
@@ -11,10 +11,11 @@ import { useApp } from '../../context/AppContext';
 
 interface QRCheckInScannerProps {
   isOpen: boolean;
+  initialCode?: string;
   onClose: () => void;
 }
 
-export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, onClose }) => {
+export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose }) => {
   const { checkInAttendee } = useApp();
   const [passCodeInput, setPassCodeInput] = useState('');
   const [result, setResult] = useState<{
@@ -23,6 +24,17 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, onCl
     isDuplicate?: boolean;
     registration?: any;
   } | null>(null);
+
+  useEffect(() => {
+    if (initialCode) {
+      setPassCodeInput(initialCode);
+      const res = checkInAttendee(initialCode);
+      setResult(res);
+    } else {
+      setPassCodeInput('');
+      setResult(null);
+    }
+  }, [initialCode, isOpen]);
 
   if (!isOpen) return null;
 
