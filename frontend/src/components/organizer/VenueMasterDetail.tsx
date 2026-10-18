@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Building2,
   Check,
@@ -7,19 +7,118 @@ import {
   CalendarCheck,
   CheckCircle2,
   MapPin,
+  Sliders,
+  DollarSign,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
 
 export const VenueMasterDetail: React.FC = () => {
   const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
+
+  // Interactive Requirement Controls for Student Orgs & Planners
+  const [targetAttendance, setTargetAttendance] = useState<number>(
+    selectedEvent.requirements?.min_capacity || 500
+  );
+  const [maxBudgetPerHour, setMaxBudgetPerHour] = useState<number>(650);
+  const [selectedCity, setSelectedCity] = useState<string>('All');
+  const [powerKwNeeded, setPowerKwNeeded] = useState<number>(
+    selectedEvent.requirements?.power_kw_needed || 80
+  );
+
+  // Available facilities student orgs can toggle
+  const availableFacilityOptions = [
+    'Dedicated Gigabit Fiber WiFi',
+    'Concert PA & Audio System',
+    '4K LED Wall & Displays',
+    'Catering Prep Kitchen',
+    'Breakout Workshop Rooms',
+    'Wheelchair & ADA Accessible',
+    'Loading Dock & Staging Bay',
+    'Security Turnstiles & Access Control',
+  ];
+
+  const [requiredFacilities, setRequiredFacilities] = useState<string[]>([
+    'Dedicated Gigabit Fiber WiFi',
+    '4K LED Wall & Displays',
+    'Catering Prep Kitchen',
+    'Wheelchair & ADA Accessible',
+  ]);
+
   const [selectedVenueId, setSelectedVenueId] = useState<string>(venues[0]?.id);
   const [bookingFeedback, setBookingFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  const matchResults = venues.map((venue) => ({
-    venue,
-    result: fnMatchVenueToEvent(selectedEvent.id, venue.id),
-  }));
+  const toggleFacility = (facility: string) => {
+    setRequiredFacilities((prev) =>
+      prev.includes(facility) ? prev.filter((f) => f !== facility) : [...prev, facility]
+    );
+  };
+
+  // Dynamic Matching Engine
+  const matchResults = useMemo(() => {
+    return venues
+      .map((venue) => {
+        // Base DB check for schedule exclusion
+        const baseDbMatch = fnMatchVenueToEvent(selectedEvent.id, venue.id);
+
+        // 1. Capacity Score (35%)
+        const capacityRatio = venue.capacity / targetAttendance;
+        let capacityScore = 100;
+        if (capacityRatio < 1) {
+          capacityScore = Math.max(20, Math.round(capacityRatio * 80));
+        }
+
+        // 2. Budget Score (20%)
+        let budgetScore = 100;
+        if (venue.hourly_rate > maxBudgetPerHour) {
+          const overage = venue.hourly_rate - maxBudgetPerHour;
+          budgetScore = Math.max(10, 100 - Math.round((overage / maxBudgetPerHour) * 100));
+        }
+
+        // 3. Power Score (15%)
+        const powerScore = venue.power_kw_capacity >= powerKwNeeded ? 100 : 50;
+
+        // 4. Facilities Checklist (30%)
+        const matchedFacilities = requiredFacilities.filter((f) =>
+          venue.facilities.some((vf) => vf.toLowerCase().includes(f.toLowerCase().slice(0, 8)))
+        );
+        const missingFacilities = requiredFacilities.filter((f) => !matchedFacilities.includes(f));
+        const facilitiesScore =
+          requiredFacilities.length > 0
+            ? Math.round((matchedFacilities.length / requiredFacilities.length) * 100)
+            : 100;
+
+        // Overall Weighted Match %
+        const overallScore = Math.min(
+          100,
+          Math.round(
+            capacityScore * 0.35 +
+            facilitiesScore * 0.35 +
+            budgetScore * 0.15 +
+            powerScore * 0.15
+          )
+        );
+
+        // City filter check
+        const matchesCity = selectedCity === 'All' || venue.city.toLowerCase() === selectedCity.toLowerCase();
+
+        return {
+          venue,
+          overallScore,
+          capacityScore,
+          budgetScore,
+          facilitiesScore,
+          matchedFacilities,
+          missingFacilities,
+          scheduleStatus: baseDbMatch.schedule_status,
+          matchesCity,
+        };
+      })
+      .filter((m) => m.matchesCity)
+      .sort((a, b) => b.overallScore - a.overallScore);
+  }, [venues, targetAttendance, maxBudgetPerHour, powerKwNeeded, requiredFacilities, selectedCity, selectedEvent, fnMatchVenueToEvent]);
 
   const activeVenueMatch = matchResults.find((m) => m.venue.id === selectedVenueId) || matchResults[0];
 
@@ -29,85 +128,250 @@ export const VenueMasterDetail: React.FC = () => {
     setTimeout(() => setBookingFeedback(null), 4500);
   };
 
+  const cities = ['All', 'San Francisco', 'San Jose', 'Oakland'];
+
   return (
-    <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-6">
+    <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 transition-colors">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
         <div>
-          <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
-            Requirement-Based Venue Matcher & Booking
+          <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+            Student & Organization Venue Matcher
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] font-mono">
+              fn_match_venue_to_event()
+            </span>
           </h2>
-          <p className="text-xs text-stone-500">
-            Compares event requirements against candidate venue capabilities and database EXCLUDE constraints.
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Customize requirements (attendees, budget, equipment, facilities) and evaluate real-time compatibility.
           </p>
         </div>
 
-        <div className="text-xs bg-[#FAF9F5] dark:bg-[#171513] px-3 py-1.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 text-stone-600 dark:text-stone-400">
-          Target: ≥ <strong>{selectedEvent.requirements.min_capacity.toLocaleString()}</strong> capacity • <strong>{selectedEvent.requirements.power_kw_needed} kW</strong> power
+        <div className="text-xs bg-[#F8FAFD] dark:bg-[#111722] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+          Target: <strong>{targetAttendance.toLocaleString()}</strong> attendees • Max <strong>${maxBudgetPerHour}/hr</strong>
         </div>
       </div>
 
       {bookingFeedback && (
         <div
-          className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
+          className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border transition-all animate-in fade-in ${
             bookingFeedback.success
-              ? 'bg-[#EEF3ED] dark:bg-[#222D21] border-[#5F7D5B]/30 text-[#455C42] dark:text-[#A7C2A4]'
-              : 'bg-[#F9ECE9] dark:bg-[#341D1A] border-[#BA4E3E]/30 text-[#822C20] dark:text-[#E48D80]'
+              ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'
+              : 'bg-[#FDF1EF] dark:bg-[#2E1A17] border-[#F5C2BC] dark:border-[#52251F] text-[#C45547] dark:text-[#E07D70]'
           }`}
         >
           {bookingFeedback.success ? (
-            <CheckCircle2 className="w-4 h-4 text-[#5F7D5B] dark:text-[#A7C2A4] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
           ) : (
-            <ShieldAlert className="w-4 h-4 text-[#BA4E3E] dark:text-[#E48D80] shrink-0" />
+            <ShieldAlert className="w-4 h-4 text-[#C45547] dark:text-[#E07D70] shrink-0" />
           )}
           <span>{bookingFeedback.message}</span>
         </div>
       )}
 
-      {/* Cvent-Style Master-Detail Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Venue Master Directory List (4 cols) */}
-        <div className="lg:col-span-4 space-y-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 px-1">
-            Candidate Venues ({venues.length})
+      {/* Interactive Requirements Configurator (Slider + Checkbox Matrix) */}
+      <div className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <Sliders className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+            Event Needs & Specification Controls
           </span>
+          <span className="text-[11px] text-slate-400">Drag to recalculate compatibility</span>
+        </div>
+
+        {/* 3 Main Sliders */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* 1. Expected Attendance */}
+          <div className="space-y-1.5 bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500 font-semibold flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-[#3E6CB5]" /> Attendees:
+              </span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">{targetAttendance.toLocaleString()}</span>
+            </div>
+            <input
+              type="range"
+              min={50}
+              max={2500}
+              step={25}
+              value={targetAttendance}
+              onChange={(e) => setTargetAttendance(Number(e.target.value))}
+              className="w-full accent-[#3E6CB5] cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400">
+              <span>50 (Workshop)</span>
+              <span>2.5k (Summit)</span>
+            </div>
+          </div>
+
+          {/* 2. Max Hourly Budget */}
+          <div className="space-y-1.5 bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500 font-semibold flex items-center gap-1">
+                <DollarSign className="w-3.5 h-3.5 text-[#4E8268]" /> Max Budget:
+              </span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">${maxBudgetPerHour}/hr</span>
+            </div>
+            <input
+              type="range"
+              min={100}
+              max={1500}
+              step={50}
+              value={maxBudgetPerHour}
+              onChange={(e) => setMaxBudgetPerHour(Number(e.target.value))}
+              className="w-full accent-[#3E6CB5] cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400">
+              <span>$100/hr (Club)</span>
+              <span>$1,500/hr</span>
+            </div>
+          </div>
+
+          {/* 3. Power Grid KW */}
+          <div className="space-y-1.5 bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <div className="flex justify-between text-xs">
+              <span className="text-slate-500 font-semibold flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 text-[#E07D70]" /> Power Grid:
+              </span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">{powerKwNeeded} kW</span>
+            </div>
+            <input
+              type="range"
+              min={20}
+              max={150}
+              step={10}
+              value={powerKwNeeded}
+              onChange={(e) => setPowerKwNeeded(Number(e.target.value))}
+              className="w-full accent-[#3E6CB5] cursor-pointer"
+            />
+            <div className="flex justify-between text-[10px] text-slate-400">
+              <span>20 kW (Acoustic)</span>
+              <span>150 kW (Rig)</span>
+            </div>
+          </div>
+
+          {/* 4. Location Filter */}
+          <div className="space-y-1.5 bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+            <span className="text-slate-500 font-semibold text-xs flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-[#3E6CB5]" /> Location Area:
+            </span>
+            <div className="flex flex-wrap gap-1">
+              {cities.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCity(c)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+                    selectedCity === c
+                      ? 'bg-[#3E6CB5] text-white'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Facility Checklist Toggles */}
+        <div className="space-y-2 pt-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Must-Have Facilities & Technical Amenities ({requiredFacilities.length} selected):
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {availableFacilityOptions.map((facility) => {
+              const isChecked = requiredFacilities.includes(facility);
+              return (
+                <button
+                  key={facility}
+                  onClick={() => toggleFacility(facility)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    isChecked
+                      ? 'bg-[#EBF3FC] text-[#244A85] border-[#C8DCF7] dark:bg-[#1E293B] dark:text-[#8BB0E8] dark:border-[#2D4160] shadow-xs'
+                      : 'bg-white dark:bg-[#171E2B] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                  }`}
+                >
+                  <div
+                    className={`w-3.5 h-3.5 rounded flex items-center justify-center border text-[9px] ${
+                      isChecked
+                        ? 'bg-[#3E6CB5] border-[#3E6CB5] text-white'
+                        : 'border-slate-300 dark:border-slate-600'
+                    }`}
+                  >
+                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                  </div>
+                  <span>{facility}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Master-Detail Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Venue Match List (5 cols) */}
+        <div className="lg:col-span-5 space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Matched Venues ({matchResults.length})
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono">Ranked by Compatibility</span>
+          </div>
 
           <div className="space-y-2">
-            {matchResults.map(({ venue, result }) => {
-              const isSelected = venue.id === selectedVenueId;
-              const isHigh = result.overall_score >= 80;
+            {matchResults.map(({ venue, overallScore, scheduleStatus }) => {
+              const isSelected = venue.id === (activeVenueMatch?.venue.id || selectedVenueId);
+              const isHigh = overallScore >= 75;
 
               return (
                 <div
                   key={venue.id}
                   onClick={() => setSelectedVenueId(venue.id)}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+                  className={`p-4 rounded-xl border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-stone-100 dark:bg-[#25221E] border-stone-900 dark:border-stone-100 ring-1 ring-stone-900/10 dark:ring-stone-100/10 shadow-sm'
-                      : 'bg-[#FAF9F5] dark:bg-[#171513] border-stone-200/80 dark:border-stone-800/80 hover:border-stone-300 dark:hover:border-stone-700'
+                      ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border-[#3E6CB5] dark:border-[#7EA6E0] shadow-xs'
+                      : 'bg-white dark:bg-[#171E2B] border-slate-200/80 dark:border-slate-800 hover:border-slate-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 truncate">
-                      {venue.name}
-                    </h3>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                        isHigh
-                          ? 'bg-[#EEF3ED] text-[#455C42] dark:bg-[#222D21] dark:text-[#A7C2A4]'
-                          : 'bg-[#FBF4E8] text-[#7C5517] dark:bg-[#332615] dark:text-[#E5BE7E]'
-                      }`}
-                    >
-                      {result.overall_score}% Match
-                    </span>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        {venue.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        {venue.city} • Capacity: {venue.capacity.toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded-md inline-block ${
+                          isHigh
+                            ? 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]'
+                            : 'bg-[#FEF8EC] text-[#8C6212] dark:bg-[#2B2314] dark:text-[#E8BD68]'
+                        }`}
+                      >
+                        {overallScore}% Match
+                      </span>
+                      <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                        ${venue.hourly_rate}/hr
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-[11px] text-stone-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> {venue.city}
+                  {/* Micro Indicators */}
+                  <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 text-[10px]">
+                    <span className={venue.capacity >= targetAttendance ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}>
+                      {venue.capacity >= targetAttendance ? '✓ Fits Attendees' : '✗ Under Capacity'}
                     </span>
-                    <span>{venue.capacity.toLocaleString()} cap</span>
+                    <span className={venue.hourly_rate <= maxBudgetPerHour ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}>
+                      {venue.hourly_rate <= maxBudgetPerHour ? '✓ In Budget' : '✗ Over Budget'}
+                    </span>
+                    <span className={scheduleStatus.available ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}>
+                      {scheduleStatus.available ? '✓ Slot Free' : '✗ Booked'}
+                    </span>
                   </div>
                 </div>
               );
@@ -115,79 +379,85 @@ export const VenueMasterDetail: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Deep Inspection Panel (8 cols) */}
+        {/* Right Column: Deep Inspection Panel (7 cols) */}
         {activeVenueMatch && (
-          <div className="lg:col-span-8 bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 space-y-6">
+          <div className="lg:col-span-7 bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 space-y-6">
             {/* Banner Header with Photo & Key Specs */}
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
+            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
               <div>
-                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#3E6CB5] dark:text-[#7EA6E0]">
+                  {activeVenueMatch.overallScore}% Overall Compatibility
+                </span>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                   {activeVenueMatch.venue.name}
                 </h3>
-                <p className="text-xs text-stone-500 flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
                   {activeVenueMatch.venue.address}, {activeVenueMatch.venue.city}
                 </p>
               </div>
 
               <div className="text-right">
-                <span className="text-base font-black text-stone-900 dark:text-stone-100">
+                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                   ${activeVenueMatch.venue.hourly_rate}/hr
                 </span>
-                <p className="text-[10px] text-stone-400 font-mono">
-                  {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Hours: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
                 </p>
               </div>
             </div>
 
-            {/* Requirement Comparison Grid */}
+            {/* Criteria Comparison Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-white dark:bg-[#1E1C19] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-xs space-y-1">
-                <span className="text-stone-500">Attendance Capacity</span>
-                <p className="font-bold text-stone-900 dark:text-stone-100">
-                  {activeVenueMatch.venue.capacity.toLocaleString()} / {selectedEvent.requirements.min_capacity.toLocaleString()}
+              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                <span className="text-slate-500">Attendee Fit</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100">
+                  {activeVenueMatch.venue.capacity.toLocaleString()} / {targetAttendance.toLocaleString()}
                 </p>
-                <span className="text-[10px] text-[#5F7D5B] dark:text-[#97B394] font-semibold">
-                  ✓ Capacity Satisfied
+                <span className={activeVenueMatch.venue.capacity >= targetAttendance ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                  {activeVenueMatch.venue.capacity >= targetAttendance ? '✓ Capacity Satisfied' : '✗ Capacity Shortfall'}
                 </span>
               </div>
 
-              <div className="bg-white dark:bg-[#1E1C19] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-xs space-y-1">
-                <span className="text-stone-500">Power Substation</span>
-                <p className="font-bold text-stone-900 dark:text-stone-100">
-                  {activeVenueMatch.venue.power_kw_capacity} kW (need {selectedEvent.requirements.power_kw_needed} kW)
+              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                <span className="text-slate-500">Power Grid</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100">
+                  {activeVenueMatch.venue.power_kw_capacity} kW (need {powerKwNeeded} kW)
                 </p>
-                <span className="text-[10px] text-[#5F7D5B] dark:text-[#97B394] font-semibold">
-                  ✓ Power Grid Satisfied
+                <span className={activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                  {activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? '✓ Power Sufficient' : '✗ Substation Too Small'}
                 </span>
               </div>
 
-              <div className="bg-white dark:bg-[#1E1C19] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-xs space-y-1">
-                <span className="text-stone-500">EXCLUDE Constraint</span>
-                <p className="font-bold text-stone-900 dark:text-stone-100">
-                  {activeVenueMatch.result.schedule_status.available ? 'No Overlap' : 'Slot Clashed'}
+              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                <span className="text-slate-500">EXCLUDE Constraint</span>
+                <p className="font-bold text-slate-900 dark:text-slate-100">
+                  {activeVenueMatch.scheduleStatus.available ? 'No Conflict' : 'Clash Blocked'}
                 </p>
-                <span className={activeVenueMatch.result.schedule_status.available ? 'text-[10px] text-[#5F7D5B] dark:text-[#97B394] font-semibold' : 'text-[10px] text-[#BA4E3E] font-semibold'}>
-                  {activeVenueMatch.result.schedule_status.available ? '✓ Slot Free to Book' : '✗ Overlap Blocked'}
+                <span className={activeVenueMatch.scheduleStatus.available ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                  {activeVenueMatch.scheduleStatus.available ? '✓ Slot Free' : '✗ Overlap Blocked'}
                 </span>
               </div>
             </div>
 
-            {/* Facilities Checklist Breakdown */}
+            {/* Checklist Comparison */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300">
-                Facility Requirements Checklist
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Facilities Checklist Status</span>
+                <span className="text-[10px] text-[#3E6CB5] dark:text-[#7EA6E0] font-normal">
+                  {activeVenueMatch.matchedFacilities.length} of {requiredFacilities.length} matched
+                </span>
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                {activeVenueMatch.result.facilities_status.matched.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border border-[#5F7D5B]/20">
+                {activeVenueMatch.matchedFacilities.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-[#BDE3CF]/40">
                     <Check className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{f}</span>
                   </div>
                 ))}
-                {activeVenueMatch.result.facilities_status.missing.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#F9ECE9] dark:bg-[#341D1A] text-[#822E22] dark:text-[#E48D80] border border-[#BA4E3E]/20">
+                {activeVenueMatch.missingFacilities.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#FDF1EF] dark:bg-[#2E1A17] text-[#C45547] dark:text-[#E07D70] border border-[#F5C2BC]/40">
                     <X className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">Missing: {f}</span>
                   </div>
@@ -195,15 +465,34 @@ export const VenueMasterDetail: React.FC = () => {
               </div>
             </div>
 
+            {/* Estimated 8-Hour Budget Quote */}
+            <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+              <div>
+                <span className="text-slate-400 font-semibold block">Estimated 8-Hour Event Rental:</span>
+                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  ${(activeVenueMatch.venue.hourly_rate * 8).toLocaleString()}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-400 text-[11px] block">Your 8h Target Budget:</span>
+                <span className={`text-xs font-bold ${activeVenueMatch.venue.hourly_rate <= maxBudgetPerHour ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}`}>
+                  ${(maxBudgetPerHour * 8).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
             {/* Action Bar */}
-            <div className="pt-2 border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-end gap-3">
+            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400">
+                Protected by PostgreSQL <code className="font-mono text-[10px]">EXCLUDE USING gist</code>
+              </span>
               <button
                 onClick={() => handleBook(activeVenueMatch.venue)}
-                disabled={!activeVenueMatch.result.schedule_status.available}
-                className={`py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-                  activeVenueMatch.result.schedule_status.available
-                    ? 'bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900'
-                    : 'bg-stone-300 dark:bg-stone-800 text-stone-500 cursor-not-allowed'
+                disabled={!activeVenueMatch.scheduleStatus.available}
+                className={`py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                  activeVenueMatch.scheduleStatus.available
+                    ? 'bg-[#3E6CB5] hover:bg-[#325896] text-white'
+                    : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
                 }`}
               >
                 <CalendarCheck className="w-4 h-4" />

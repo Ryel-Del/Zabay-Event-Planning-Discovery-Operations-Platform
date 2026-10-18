@@ -92,14 +92,14 @@ export const TaskGanttView: React.FC = () => {
                   </div>
 
                   {/* Horizontal Timeline Bar */}
-                  <div className="relative h-7 w-full bg-[#FAF9F5] dark:bg-[#141210] rounded-lg border border-stone-200/80 dark:border-stone-800/80 overflow-hidden">
+                  <div className="relative h-7 w-full bg-[#F8FAFD] dark:bg-[#111722] rounded-lg border border-slate-200/80 dark:border-slate-800 overflow-hidden">
                     <div
-                      className={`absolute top-1 bottom-1 rounded-md px-2 flex items-center justify-between text-[10px] font-bold transition-all shadow-sm ${
+                      className={`absolute top-1 bottom-1 rounded-md px-2 flex items-center justify-between text-[10px] font-bold transition-all shadow-xs ${
                         task.has_conflict
-                          ? 'bg-[#BA4E3E] text-white'
+                          ? 'bg-[#C45547] text-white'
                           : task.status === 'completed'
-                          ? 'bg-[#5F7D5B] text-white'
-                          : 'bg-[#B68366] text-white'
+                          ? 'bg-[#4E8268] text-white'
+                          : 'bg-[#3E6CB5] text-white'
                       }`}
                       style={{ left: `${left}%`, width: `${width}%` }}
                     >
@@ -114,21 +114,21 @@ export const TaskGanttView: React.FC = () => {
         </div>
 
         {/* Task Inspector Panel (Cvent-Style Right Drawer) */}
-        <div className="bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-5 space-y-4">
-          <div className="flex items-start justify-between pb-3 border-b border-stone-200/80 dark:border-stone-800/80">
+        <div className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+          <div className="flex items-start justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
             <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Task Inspector
               </span>
-              <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 mt-0.5">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
                 {selectedTask.title}
               </h3>
             </div>
             <span
               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
                 selectedTask.status === 'completed'
-                  ? 'bg-[#EEF3ED] text-[#455C42] dark:bg-[#222D21] dark:text-[#A7C2A4]'
-                  : 'bg-[#F6EFE9] text-[#885B43] dark:bg-[#2B231D] dark:text-[#DEC0B0]'
+                  ? 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]'
+                  : 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]'
               }`}
             >
               {selectedTask.status}

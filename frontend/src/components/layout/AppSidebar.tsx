@@ -149,14 +149,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => onSelectView(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 font-semibold shadow-sm'
-                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800/60'
+                    ? 'bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-bold border border-[#C8DCF7] dark:border-[#2D4160] shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                 } ${isCollapsed ? 'justify-center px-2' : ''}`}
                 title={item.label}
               >
-                <span className={isActive ? 'text-white dark:text-stone-900' : 'text-stone-500'}>
+                <span className={isActive ? 'text-[#3E6CB5] dark:text-[#7EA6E0]' : 'text-slate-400'}>
                   {item.icon}
                 </span>
 
@@ -167,8 +167,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                           isActive
-                            ? 'bg-white/20 text-white dark:bg-black/20 dark:text-stone-900'
-                            : item.badgeColor || 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
+                            ? 'bg-[#3E6CB5]/15 text-[#244A85] dark:bg-[#7EA6E0]/20 dark:text-[#8BB0E8]'
+                            : item.badgeColor || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                         }`}
                       >
                         {item.badge}

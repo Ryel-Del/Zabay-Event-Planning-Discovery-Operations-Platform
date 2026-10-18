@@ -29,7 +29,7 @@ const MainContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F5] dark:bg-[#171513] text-stone-900 dark:text-stone-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-[#F8FAFD] dark:bg-[#0E131C] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* Universal Top Workspace Header */}
       <AppHeader
         onOpenAudit={() => setIsAuditOpen(true)}

@@ -26,25 +26,25 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   return (
     <div className="space-y-6">
       {/* Cvent-Style Event Identity Hero Banner */}
-      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#F6EFE9] dark:bg-[#2B231D] text-[#885B43] dark:text-[#DEC0B0] border border-[#EBDFD5] dark:border-[#3E322A] rounded-md">
+              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] rounded-md">
                 {selectedEvent.category}
               </span>
-              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border border-[#5F7D5B]/30 rounded-md">
+              <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] rounded-md">
                 Status: {selectedEvent.status}
               </span>
             </div>
 
-            <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
               {selectedEvent.title}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-stone-600 dark:text-stone-400">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-400">
               <span className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
                 {new Date(selectedEvent.start_date).toLocaleDateString(undefined, {
                   month: 'short',
                   day: 'numeric',
@@ -54,13 +54,13 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
               {venue && (
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-stone-400" />
+                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
                   {venue.name} ({venue.city})
                 </span>
               )}
 
               <span className="flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-stone-400" />
+                <Users className="w-3.5 h-3.5 text-slate-400" />
                 Expected: {selectedEvent.expected_attendance.toLocaleString()} attendees
               </span>
             </div>
@@ -70,69 +70,69 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onNavigate('impact')}
-              className="px-3.5 py-2 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
-              <GitBranch className="w-3.5 h-3.5 text-[#B68366] dark:text-[#885B43]" />
+              <GitBranch className="w-3.5 h-3.5 text-[#D4E4F7]" />
               Run Impact Simulator
             </button>
             <button
               onClick={() => onNavigate('venues')}
-              className="px-3.5 py-2 bg-[#FAF9F5] dark:bg-[#171513] hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               Verify Venue Match
             </button>
           </div>
         </div>
 
-        {/* Operational Pulse Metrics Row (Clean compact bar, NOT 4 huge cards!) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-stone-200/80 dark:border-stone-800/80 text-xs">
+        {/* Operational Pulse Metrics Row */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-800 text-xs">
           <div>
-            <span className="text-stone-500 block mb-1">Operational Readiness</span>
+            <span className="text-slate-500 block mb-1">Operational Readiness</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">{readinessPercent}%</span>
-              <span className="text-stone-500">({completedTasks}/{tasks.length} tasks ready)</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent}%</span>
+              <span className="text-slate-500">({completedTasks}/{tasks.length} tasks ready)</span>
             </div>
-            <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#5F7D5B] dark:bg-[#97B394] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+              <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />
             </div>
           </div>
 
           <div>
-            <span className="text-stone-500 block mb-1">Capacity Registered</span>
+            <span className="text-slate-500 block mb-1">Capacity Registered</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
               </span>
-              <span className="text-stone-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+              <span className="text-slate-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
             </div>
-            <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#B68366] dark:bg-[#D4A58C] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+            <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
             </div>
           </div>
 
           <div>
-            <span className="text-stone-500 block mb-1">Gross Ticket Revenue</span>
+            <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-stone-900 dark:text-stone-100">${totalRevenue.toLocaleString()}</span>
-              <span className="text-[#5F7D5B] dark:text-[#97B394] font-semibold">Stripe confirmed</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">${totalRevenue.toLocaleString()}</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Stripe confirmed</span>
             </div>
-            <p className="text-[11px] text-stone-400 mt-1">Avg ${selectedEvent.ticket_price} / ticket</p>
+            <p className="text-[11px] text-slate-400 mt-1">Avg ${selectedEvent.ticket_price} / ticket</p>
           </div>
 
           <div>
-            <span className="text-stone-500 block mb-1">Schedule Feasibility</span>
+            <span className="text-slate-500 block mb-1">Schedule Feasibility</span>
             {conflictTasks.length > 0 ? (
-              <div className="flex items-center gap-1.5 text-[#BA4E3E] dark:text-[#E48D80] font-bold text-sm">
+              <div className="flex items-center gap-1.5 text-[#C45547] dark:text-[#E07D70] font-bold text-sm">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{conflictTasks.length} Conflict Requires Attention</span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-[#5F7D5B] dark:text-[#A7C2A4] font-bold text-sm">
+              <div className="flex items-center gap-1.5 text-[#2B6149] dark:text-[#81B89B] font-bold text-sm">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>DAG Timeline Feasible</span>
               </div>
             )}
-            <p className="text-[11px] text-stone-400 mt-1">Finish-to-start constraints satisfied</p>
+            <p className="text-[11px] text-slate-400 mt-1">Finish-to-start constraints satisfied</p>
           </div>
         </div>
       </div>

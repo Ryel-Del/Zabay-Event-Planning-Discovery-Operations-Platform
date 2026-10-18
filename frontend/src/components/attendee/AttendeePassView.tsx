@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-  QrCode,
   Ticket,
   MapPin,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
 
 interface AttendeePassViewProps {
@@ -87,12 +87,17 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                     )}
                   </div>
 
-                  {/* QR Box */}
-                  <div className="bg-white dark:bg-[#FAF9F5] p-3 rounded-xl shadow-sm border border-stone-200 dark:border-stone-700 flex flex-col items-center justify-center shrink-0">
-                    <div className="w-24 h-24 bg-stone-900 p-1.5 rounded-lg flex items-center justify-center relative">
-                      <QrCode className="w-20 h-20 text-stone-100" />
+                  {/* Real Scannable QR Code */}
+                  <div className="bg-white p-2.5 rounded-xl shadow-xs border border-slate-200 flex flex-col items-center justify-center shrink-0">
+                    <div className="bg-white p-1 rounded-lg">
+                      <QRCodeSVG
+                        value={reg.qr_pass_code}
+                        size={88}
+                        level="M"
+                        includeMargin={false}
+                      />
                     </div>
-                    <span className="text-[9px] font-mono font-bold text-stone-800 mt-1">
+                    <span className="text-[9px] font-mono font-bold text-slate-800 mt-1">
                       {reg.qr_pass_code}
                     </span>
                   </div>
@@ -100,9 +105,9 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
 
                 {/* Perforation Divider */}
                 <div className="relative py-2">
-                  <div className="border-t border-dashed border-stone-300 dark:border-stone-800" />
-                  <div className="absolute -left-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200 dark:border-stone-800" />
-                  <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200 dark:border-stone-800" />
+                  <div className="border-t border-dashed border-slate-300 dark:border-slate-800" />
+                  <div className="absolute -left-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#F8FAFD] dark:bg-[#0E131C] border border-slate-200 dark:border-slate-800" />
+                  <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#F8FAFD] dark:bg-[#0E131C] border border-slate-200 dark:border-slate-800" />
                 </div>
 
                 {/* Gate Instructions & Quick Test Scanner trigger */}
