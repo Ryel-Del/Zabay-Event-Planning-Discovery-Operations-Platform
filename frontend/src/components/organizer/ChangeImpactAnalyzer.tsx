@@ -5,19 +5,20 @@ import {
   CheckCircle2,
   Zap,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const ChangeImpactAnalyzer: React.FC = () => {
-  const { tasks, fnDownstreamImpact, fnScheduleImpact, applyTaskDelay, selectedEvent } = useApp();
+  const { tasks, fnDownstreamImpact, fnScheduleImpact, applyTaskDelay, selectedEvent, loadDemoData } = useApp();
 
-  const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[2]?.id || tasks[0]?.id);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[2]?.id || tasks[0]?.id || '');
   const [delayMinutes, setDelayMinutes] = useState<number>(45);
   const [delayReason, setDelayReason] = useState<string>('Supplier equipment delivery delayed in transit');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
 
   const selectedTask = useMemo(
-    () => tasks.find((t) => t.id === selectedTaskId) || tasks[0],
+    () => tasks.find((t) => t.id === selectedTaskId) || tasks[0] || null,
     [tasks, selectedTaskId]
   );
 
@@ -32,6 +33,29 @@ export const ChangeImpactAnalyzer: React.FC = () => {
     () => (selectedTask ? fnScheduleImpact(selectedTask.id, delayMinutes) : { affectedTasks: [], hasConflicts: false }),
     [selectedTask, delayMinutes, fnScheduleImpact]
   );
+
+  if (!selectedEvent || tasks.length === 0) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#F8FAFD] dark:bg-[#111722] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <GitBranch className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">No Operational Tasks to Simulate</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            The Change-Impact Analyzer simulates finish-to-start timing and downstream cascading delays across connected task graphs. Create tasks in the Kanban board or load the Bohol sample environment.
+          </p>
+        </div>
+        <button
+          onClick={loadDemoData}
+          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Load Bohol Sample Data</span>
+        </button>
+      </div>
+    );
+  }
 
   const handleApplyChange = () => {
     if (!selectedTask) return;

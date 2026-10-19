@@ -20,12 +20,12 @@ export const VenueMasterDetail: React.FC = () => {
 
   // Interactive Requirement Controls for Student Orgs & Planners
   const [targetAttendance, setTargetAttendance] = useState<number>(
-    selectedEvent.requirements?.min_capacity || 500
+    selectedEvent?.requirements?.min_capacity || 500
   );
   const [maxBudgetPerHour, setMaxBudgetPerHour] = useState<number>(650);
   const [selectedCity, setSelectedCity] = useState<string>('All');
   const [powerKwNeeded, setPowerKwNeeded] = useState<number>(
-    selectedEvent.requirements?.power_kw_needed || 80
+    selectedEvent?.requirements?.power_kw_needed || 80
   );
 
   // Available facilities student orgs can toggle
@@ -64,7 +64,18 @@ export const VenueMasterDetail: React.FC = () => {
     return venues
       .map((venue) => {
         // Base DB check for schedule exclusion
-        const baseDbMatch = fnMatchVenueToEvent(selectedEvent.id, venue.id);
+        const baseDbMatch = selectedEvent
+          ? fnMatchVenueToEvent(selectedEvent.id, venue.id)
+          : {
+              venue_id: venue.id,
+              venue_name: venue.name,
+              overall_score: 100,
+              is_compatible: true,
+              capacity_status: { required: targetAttendance, actual: venue.capacity, satisfied: true },
+              facilities_status: { required: requiredFacilities, matched: venue.facilities, missing: [], satisfied: true },
+              power_status: { required: powerKwNeeded, actual: venue.power_kw_capacity, satisfied: true },
+              schedule_status: { available: true },
+            };
 
         // 1. Capacity Score (35%)
         const capacityRatio = venue.capacity / targetAttendance;
@@ -126,6 +137,14 @@ export const VenueMasterDetail: React.FC = () => {
   const activeVenueMatch = matchResults.find((m) => m.venue.id === selectedVenueId) || matchResults[0];
 
   const handleBook = (venue: Venue) => {
+    if (!selectedEvent) {
+      setBookingFeedback({
+        success: false,
+        message: 'Please create or select an event first before booking a venue.',
+      });
+      setTimeout(() => setBookingFeedback(null), 4500);
+      return;
+    }
     const res = bookVenue(venue.id, selectedEvent.id, selectedEvent.start_date, selectedEvent.end_date);
     setBookingFeedback(res);
     setTimeout(() => setBookingFeedback(null), 4500);

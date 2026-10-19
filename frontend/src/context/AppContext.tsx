@@ -37,9 +37,14 @@ interface AppContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 
+  isDemoMode: boolean;
+  loadDemoData: () => void;
+  clearToCleanSlate: () => void;
+
   events: ZabayEvent[];
-  selectedEvent: ZabayEvent;
-  setSelectedEvent: (event: ZabayEvent) => void;
+  selectedEvent: ZabayEvent | null;
+  setSelectedEvent: (event: ZabayEvent | null) => void;
+  createEvent: (eventData: Partial<ZabayEvent>) => ZabayEvent;
 
   venues: Venue[];
   venueBookings: VenueBooking[];
@@ -113,16 +118,112 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  const [events] = useState<ZabayEvent[]>(mockEvents);
-  const [selectedEvent, setSelectedEvent] = useState<ZabayEvent>(mockEvents[0]);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zabay-demo-mode') === 'true';
+    }
+    return false;
+  });
+
+  const [events, setEvents] = useState<ZabayEvent[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockEvents;
+    }
+    return [];
+  });
+  const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockEvents[0] || null;
+    }
+    return null;
+  });
 
   const [venues] = useState<Venue[]>(mockVenues);
-  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(mockVenueBookings);
+  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockVenueBookings;
+    }
+    return [];
+  });
   const [resources] = useState<Resource[]>(mockResources);
   const [personnel] = useState<Personnel[]>(mockPersonnel);
-  const [tasks, setTasks] = useState<Task[]>(mockTasks);
-  const [registrations, setRegistrations] = useState<Registration[]>(mockRegistrations);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(mockAuditLogs);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockTasks;
+    }
+    return [];
+  });
+  const [registrations, setRegistrations] = useState<Registration[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockRegistrations;
+    }
+    return [];
+  });
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
+      return mockAuditLogs;
+    }
+    return [];
+  });
+
+  const loadDemoData = () => {
+    setEvents(mockEvents);
+    setSelectedEvent(mockEvents[0]);
+    setVenueBookings(mockVenueBookings);
+    setTasks(mockTasks);
+    setRegistrations(mockRegistrations);
+    setAuditLogs(mockAuditLogs);
+    setIsDemoMode(true);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-demo-mode', 'true');
+    }
+  };
+
+  const clearToCleanSlate = () => {
+    setEvents([]);
+    setSelectedEvent(null);
+    setVenueBookings([]);
+    setTasks([]);
+    setRegistrations([]);
+    setAuditLogs([]);
+    setIsDemoMode(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-demo-mode', 'false');
+    }
+  };
+
+  const createEvent = (data: Partial<ZabayEvent>): ZabayEvent => {
+    const newEvt: ZabayEvent = {
+      id: `evt-${Date.now()}`,
+      title: data.title || 'Untitled Bohol Event',
+      description: data.description || 'Newly created event workspace.',
+      category: data.category || 'Tech & AI',
+      event_type: 'public',
+      status: data.status || 'planning',
+      venue_id: data.venue_id,
+      start_date: data.start_date || '2026-11-20T08:00:00Z',
+      end_date: data.end_date || '2026-11-20T17:00:00Z',
+      expected_attendance: data.expected_attendance || 100,
+      max_capacity: data.max_capacity || 200,
+      ticket_price: data.ticket_price || 0,
+      tickets_sold: 0,
+      banner_url: data.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80',
+      organizer_id: currentUser.id,
+      requirements: data.requirements || {
+        min_capacity: data.expected_attendance || 100,
+        power_kw_needed: 25,
+        requires_indoor: true,
+        required_facilities: ['Dedicated Gigabit Fiber WiFi'],
+        min_setup_hours: 3,
+      },
+      budget: (data.ticket_price || 0) * (data.expected_attendance || 100),
+      created_at: new Date().toISOString(),
+    };
+
+    setEvents((prev) => [newEvt, ...prev]);
+    setSelectedEvent(newEvt);
+    return newEvt;
+  };
 
   // Recursive Downstream Impact Tracing: mimics PostgreSQL CTE `fn_downstream_impact(task_id)`
   const fnDownstreamImpact = (taskId: string) => {
@@ -205,6 +306,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (!venue) {
       throw new Error('Venue not found');
+    }
+
+    if (!event) {
+      return {
+        venue_id: venue.id,
+        venue_name: venue.name,
+        overall_score: 100,
+        is_compatible: true,
+        capacity_status: {
+          required: 100,
+          actual: venue.capacity,
+          satisfied: true,
+        },
+        facilities_status: {
+          required: [],
+          matched: venue.facilities,
+          missing: [],
+          satisfied: true,
+        },
+        power_status: {
+          required: 25,
+          actual: venue.power_kw_capacity,
+          satisfied: true,
+        },
+        schedule_status: {
+          available: true,
+        },
+      };
     }
 
     const req = event.requirements;
@@ -376,7 +505,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newTasks: Task[] = kit.tasks.map((t, idx) => ({
       ...t,
       id: `task-${Date.now()}-${idx + 1}`,
-      event_id: selectedEvent.id,
+      event_id: selectedEvent ? selectedEvent.id : 'evt-draft',
       downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
     }));
 
@@ -462,11 +591,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
 
+    const event = events.find((e) => e.id === eventId) || selectedEvent;
+
     const newBooking: VenueBooking = {
       id: `vb-${Date.now()}`,
       venue_id: venueId,
       event_id: eventId,
-      event_title: selectedEvent.title,
+      event_title: event ? event.title : 'Custom Event',
       start_time: startTime,
       end_time: endTime,
       status: 'confirmed',
@@ -484,6 +615,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     attendeeEmail: string
   ) => {
     const event = events.find((e) => e.id === eventId) || selectedEvent;
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
     const price = ticketType === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const qrCode = `ZABAY-PASS-${randomSuffix}-${attendeeName.split(' ')[0].toUpperCase()}`;
@@ -519,6 +654,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentRole: setRoleWithUser,
       theme,
       toggleTheme,
+      isDemoMode,
+      loadDemoData,
+      clearToCleanSlate,
+      createEvent,
       events,
       selectedEvent,
       setSelectedEvent,
@@ -546,6 +685,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser,
       currentRole,
       theme,
+      isDemoMode,
       events,
       selectedEvent,
       venues,

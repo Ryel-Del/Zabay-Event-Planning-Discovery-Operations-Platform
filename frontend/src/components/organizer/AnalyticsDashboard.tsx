@@ -20,17 +20,41 @@ import {
   Users,
   CheckCircle,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { selectedEvent, tasks, resources, registrations } = useApp();
+  const { selectedEvent, tasks, resources, registrations, loadDemoData } = useApp();
+
+  if (!selectedEvent) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <BarChart3 className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">Live Analytics Pending</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
+          </p>
+        </div>
+        <button
+          onClick={loadDemoData}
+          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Load Bohol Sample Data</span>
+        </button>
+      </div>
+    );
+  }
 
   // Metric derivations from views
   const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
-  const capacityPercent = Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100);
+  const capacityPercent = selectedEvent.max_capacity > 0 ? Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100) : 0;
   const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const taskReadiness = Math.round((completedTasks / tasks.length) * 100);
+  const taskReadiness = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
   const checkedInCount = registrations.filter((r) => r.status === 'checked_in').length;
   const attendanceRate = registrations.length > 0 ? Math.round((checkedInCount / registrations.length) * 100) : 0;
 

@@ -9,14 +9,38 @@ import {
   CalendarCheck,
   CheckCircle2,
   MapPin,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
 
 export const VenueMatcher: React.FC = () => {
-  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
+  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, loadDemoData } = useApp();
   const [selectedVenueId, setSelectedVenueId] = useState<string>(venues[0]?.id);
   const [bookingFeedback, setBookingFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  if (!selectedEvent) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <Building2 className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">No Event Selected for Venue Matching</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            The automated venue matcher evaluates power substation capacity, seating limits, and equipment availability for an active event. Create an event or load sample data to begin.
+          </p>
+        </div>
+        <button
+          onClick={loadDemoData}
+          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Load Bohol Sample Data</span>
+        </button>
+      </div>
+    );
+  }
 
   const matchResults = venues.map((venue) => ({
     venue,

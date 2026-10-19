@@ -1,3 +1,11 @@
+/**
+ * ZABAY SEED & DEMO FIXTURES (Bohol & Tagbilaran City Environment)
+ *
+ * This file contains curated seed data used for development, testing, and the 1-click
+ * interactive demo mode. On fresh clone, the workspace starts clean, allowing organizers
+ * to create events from scratch or load this Bohol sample dataset on demand.
+ */
+
 import type {
   User,
   ZabayEvent,

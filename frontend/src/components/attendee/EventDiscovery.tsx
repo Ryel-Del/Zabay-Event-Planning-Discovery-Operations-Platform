@@ -21,7 +21,7 @@ interface EventDiscoveryProps {
 }
 
 export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWithPass }) => {
-  const { events, venues } = useApp();
+  const { events, venues, loadDemoData } = useApp();
 
   const [activeTab, setActiveTab] = useState<'browse' | 'passes'>('browse');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
@@ -176,6 +176,25 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
               venues={venues}
               onSelectEvent={(evt) => setSelectedEventDetail(evt)}
             />
+          ) : filteredEvents.length === 0 ? (
+            <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center space-y-4 shadow-xs">
+              <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+                <Calendar className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No Events Discovered</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  There are no scheduled public events matching your search in Bohol. You can load sample Bohol events to explore registrations, venues, and passes.
+                </p>
+              </div>
+              <button
+                onClick={loadDemoData}
+                className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Load Bohol Sample Events</span>
+              </button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredEvents.map((event) => {

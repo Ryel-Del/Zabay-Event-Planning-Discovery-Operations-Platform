@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   MapPin,
@@ -7,21 +7,64 @@ import {
   AlertTriangle,
   ArrowRight,
   GitBranch,
+  Sparkles,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
+import { CreateEventModal } from './CreateEventModal';
 
 interface OperationsOverviewProps {
   onNavigate: (view: OrganizerView) => void;
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData } = useApp();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  if (!selectedEvent) {
+    return (
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center space-y-4 shadow-xs">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <Calendar className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Clean Operations Workspace</h2>
+          <p className="text-xs text-slate-500 max-w-md mx-auto">
+            No active event is selected. Create your first Bohol event to track capacity, schedule feasibility, and run-of-show operations, or load the sample Bohol dataset to test all features.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create New Event</span>
+          </button>
+
+          <button
+            onClick={loadDemoData}
+            className="px-4 py-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+            <span>Load Bohol Sample Data</span>
+          </button>
+        </div>
+
+        <CreateEventModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
+      </div>
+    );
+  }
 
   const venue = venues.find((v) => v.id === selectedEvent.venue_id);
   const completedTasks = tasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = tasks.filter((t) => t.has_conflict);
-  const readinessPercent = Math.round((completedTasks / tasks.length) * 100);
+  const readinessPercent = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
   const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
 
   return (

@@ -16,11 +16,15 @@ import {
   Compass,
   MapPin,
   Users,
+  Sparkles,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { UserRole } from '../../types';
 import zabayLogo from '../../assets/zabay-logo.png';
+import { CreateEventModal } from '../organizer/CreateEventModal';
 
 interface AppHeaderProps {
   onOpenAudit: () => void;
@@ -40,10 +44,14 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
     auditLogs,
     theme,
     toggleTheme,
+    isDemoMode,
+    loadDemoData,
+    clearToCleanSlate,
   } = useApp();
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isEventPickerOpen, setIsEventPickerOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const eventPickerRef = useRef<HTMLDivElement>(null);
@@ -128,20 +136,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                   Active Workspace
                 </span>
                 <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[210px] sm:max-w-[280px]">
-                  {selectedEvent.title}
+                  {selectedEvent ? selectedEvent.title : 'No Event Selected'}
                 </span>
               </div>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isEventPickerOpen ? 'rotate-180' : ''}`} />
 
               {/* Micro Live Feasibility Pill */}
-              {hasConflicts ? (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70] border border-[#F5C2BC] dark:border-[#52251F]">
-                  <AlertTriangle className="w-3 h-3" /> Conflict
-                </span>
-              ) : (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
-                  <CheckCircle2 className="w-3 h-3" /> Feasible
-                </span>
+              {selectedEvent && (
+                hasConflicts ? (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70] border border-[#F5C2BC] dark:border-[#52251F]">
+                    <AlertTriangle className="w-3 h-3" /> Conflict
+                  </span>
+                ) : (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
+                    <CheckCircle2 className="w-3 h-3" /> Feasible
+                  </span>
+                )
               )}
             </button>
 
@@ -156,59 +166,104 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                 </div>
 
                 <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto">
-                  {events.map((evt) => {
-                    const isSelected = evt.id === selectedEvent.id;
-                    const venue = venues.find((v) => v.id === evt.venue_id);
+                  {events.length === 0 ? (
+                    <div className="p-5 text-center space-y-1.5">
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Clean Workspace</p>
+                      <p className="text-[11px] text-slate-400">No events created yet. Start fresh or load sample data.</p>
+                    </div>
+                  ) : (
+                    events.map((evt) => {
+                      const isSelected = selectedEvent ? evt.id === selectedEvent.id : false;
+                      const venue = venues.find((v) => v.id === evt.venue_id);
 
-                    return (
-                      <button
-                        key={evt.id}
-                        onClick={() => {
-                          setSelectedEvent(evt);
-                          setIsEventPickerOpen(false);
-                        }}
-                        className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-3 cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160]'
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent'
-                        }`}
-                      >
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                              {evt.title}
-                            </span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
-                              {evt.category}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-slate-400" />
-                              {new Date(evt.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                            </span>
-                            {venue && (
-                              <span className="flex items-center gap-1 truncate">
-                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
-                                {venue.city}
+                      return (
+                        <button
+                          key={evt.id}
+                          onClick={() => {
+                            setSelectedEvent(evt);
+                            setIsEventPickerOpen(false);
+                          }}
+                          className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-3 cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160]'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent'
+                          }`}
+                        >
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                                {evt.title}
                               </span>
-                            )}
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3 text-slate-400" />
-                              {evt.tickets_sold}/{evt.max_capacity}
-                            </span>
-                          </div>
-                        </div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
+                                {evt.category}
+                              </span>
+                            </div>
 
-                        {isSelected && (
-                          <div className="w-5 h-5 rounded-full bg-[#3E6CB5] text-white flex items-center justify-center shrink-0 mt-0.5">
-                            <Check className="w-3 h-3 stroke-[3]" />
+                            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-slate-400" />
+                                {new Date(evt.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </span>
+                              {venue && (
+                                <span className="flex items-center gap-1 truncate">
+                                  <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                  {venue.city}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3 text-slate-400" />
+                                {evt.tickets_sold}/{evt.max_capacity}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </button>
-                    );
-                  })}
+
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-[#3E6CB5] text-white flex items-center justify-center shrink-0 mt-0.5">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Footer Controls: Create Event & Demo Toggle */}
+                <div className="p-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 bg-slate-50/50 dark:bg-slate-900/30">
+                  <button
+                    onClick={() => {
+                      setIsEventPickerOpen(false);
+                      setIsCreateModalOpen(true);
+                    }}
+                    className="w-full py-2 px-3 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Create New Event</span>
+                  </button>
+
+                  {isDemoMode ? (
+                    <button
+                      onClick={() => {
+                        clearToCleanSlate();
+                        setIsEventPickerOpen(false);
+                      }}
+                      className="w-full py-1.5 px-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Reset to Clean Workspace</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        loadDemoData();
+                        setIsEventPickerOpen(false);
+                      }}
+                      className="w-full py-1.5 px-3 bg-[#EBF3FC] hover:bg-[#D4E4F7] dark:bg-[#1E293B] dark:hover:bg-[#283852] text-[#244A85] dark:text-[#8BB0E8] rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                      <span>Load Bohol Sample Data</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -225,6 +280,31 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
 
       {/* Right: Actions, Studio CTA & Account Menu */}
       <div className="flex items-center gap-2.5">
+        {/* Workspace Mode Indicator / Quick Toggle */}
+        <div className="hidden lg:flex items-center">
+          {isDemoMode ? (
+            <button
+              onClick={clearToCleanSlate}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-[#244A85] dark:text-[#8BB0E8] bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 transition-all cursor-pointer group"
+              title="Click to reset to clean initial workspace"
+            >
+              <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0] group-hover:hidden" />
+              <Trash2 className="w-3 h-3 text-rose-600 hidden group-hover:inline" />
+              <span className="group-hover:hidden">Sample Bohol Data</span>
+              <span className="hidden group-hover:inline">Clear to Clean Slate</span>
+            </button>
+          ) : (
+            <button
+              onClick={loadDemoData}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer"
+              title="1-Click load Bohol venues, tasks, and registrations for quick testing"
+            >
+              <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+              <span>Load Sample Data</span>
+            </button>
+          )}
+        </div>
+
         {/* Creator / Host Studio CTA (When viewing the Public Feed) */}
         {currentRole === 'attendee' && (
           <button
@@ -412,6 +492,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           )}
         </div>
       </div>
+
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </header>
   );
 };

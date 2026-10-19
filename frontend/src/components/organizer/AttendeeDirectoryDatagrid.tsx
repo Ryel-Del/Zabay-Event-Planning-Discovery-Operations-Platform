@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock,
   Users,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -14,7 +15,7 @@ interface AttendeeDirectoryDatagridProps {
 export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({
   onScanPassModal,
 }) => {
-  const { registrations, checkInAttendee } = useApp();
+  const { registrations, checkInAttendee, loadDemoData } = useApp();
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState<string>('all');
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -103,7 +104,25 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100 dark:divide-stone-800/80 bg-white dark:bg-[#1E1C19]">
-            {filtered.map((reg) => {
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-12 text-center text-stone-500">
+                  <Users className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
+                  <p className="font-semibold text-xs text-stone-800 dark:text-stone-200">No Registrations in Active Workspace</p>
+                  <p className="text-[11px] text-stone-400 mt-1 max-w-sm mx-auto">
+                    When attendees purchase or claim passes, their digital QR tickets will populate this ledger for camera check-in.
+                  </p>
+                  <button
+                    onClick={loadDemoData}
+                    className="mt-3 px-3 py-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Load Sample Attendee Records</span>
+                  </button>
+                </td>
+              </tr>
+            ) : (
+              filtered.map((reg) => {
               const isCheckedIn = reg.status === 'checked_in';
 
               return (
@@ -173,7 +192,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                   </td>
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>

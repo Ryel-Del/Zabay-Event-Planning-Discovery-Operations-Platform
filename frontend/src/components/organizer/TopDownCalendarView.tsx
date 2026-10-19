@@ -108,9 +108,10 @@ export const TopDownCalendarView: React.FC = () => {
         return day.dateString >= bStart && day.dateString <= bEnd;
       });
 
-      const isEventDay =
-        day.dateString >= selectedEvent.start_date.split('T')[0] &&
-        day.dateString <= selectedEvent.end_date.split('T')[0];
+      const isEventDay = selectedEvent
+        ? day.dateString >= selectedEvent.start_date.split('T')[0] &&
+          day.dateString <= selectedEvent.end_date.split('T')[0]
+        : false;
 
       const hasConflict = dayTasks.some((t) => t.has_conflict);
 
