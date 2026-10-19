@@ -51,6 +51,7 @@ export const VenueMasterDetail: React.FC = () => {
   ]);
 
   const [selectedVenueId, setSelectedVenueId] = useState<string>(venues[0]?.id);
+  const [selectedHallId, setSelectedHallId] = useState<string | null>(null);
   const [bookingFeedback, setBookingFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   const toggleFacility = (facility: string) => {
@@ -145,7 +146,13 @@ export const VenueMasterDetail: React.FC = () => {
       setTimeout(() => setBookingFeedback(null), 4500);
       return;
     }
-    const res = bookVenue(venue.id, selectedEvent.id, selectedEvent.start_date, selectedEvent.end_date);
+    const res = bookVenue(
+      venue.id,
+      selectedEvent.id,
+      selectedEvent.start_date,
+      selectedEvent.end_date,
+      selectedHallId || undefined
+    );
     setBookingFeedback(res);
     setTimeout(() => setBookingFeedback(null), 4500);
   };
@@ -349,7 +356,10 @@ export const VenueMasterDetail: React.FC = () => {
               return (
                 <div
                   key={venue.id}
-                  onClick={() => setSelectedVenueId(venue.id)}
+                  onClick={() => {
+                    setSelectedVenueId(venue.id);
+                    setSelectedHallId(null);
+                  }}
                   className={`p-4 rounded-xl border transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border-[#3E6CB5] dark:border-[#7EA6E0] shadow-xs'
@@ -404,123 +414,199 @@ export const VenueMasterDetail: React.FC = () => {
         {/* Right Column: Deep Inspection Panel (7 cols) */}
         {activeVenueMatch && (
           <div className="lg:col-span-7 bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-6 space-y-6">
-            {/* Banner Header with Photo & Key Specs */}
-            <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#3E6CB5] dark:text-[#7EA6E0]">
-                  {activeVenueMatch.overallScore}% Overall Compatibility
-                </span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                  {activeVenueMatch.venue.name}
-                </h3>
-                <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                  {activeVenueMatch.venue.address}, {activeVenueMatch.venue.city}
-                </p>
-              </div>
+            {(() => {
+              const selectedHall = activeVenueMatch.venue.halls?.find((h) => h.id === selectedHallId);
+              const displayCapacity = selectedHall ? selectedHall.capacity : activeVenueMatch.venue.capacity;
+              const displayRate = selectedHall ? selectedHall.hourly_rate : activeVenueMatch.venue.hourly_rate;
 
-              <div className="text-right">
-                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  ₱{activeVenueMatch.venue.hourly_rate.toLocaleString()}/hr
-                </span>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  Hours: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
-                </p>
-              </div>
-            </div>
+              return (
+                <>
+                  {/* Banner Header with Photo & Key Specs */}
+                  <div className="flex flex-col sm:flex-row items-start justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#3E6CB5] dark:text-[#7EA6E0]">
+                        {activeVenueMatch.overallScore}% Overall Compatibility
+                      </span>
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5 flex items-center gap-2">
+                        {activeVenueMatch.venue.name}
+                        {selectedHall && (
+                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
+                            {selectedHall.name}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        {activeVenueMatch.venue.address}, {activeVenueMatch.venue.city}
+                      </p>
+                    </div>
 
-            {/* Criteria Comparison Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
-                <span className="text-slate-500">Attendee Fit</span>
-                <p className="font-bold text-slate-900 dark:text-slate-100">
-                  {activeVenueMatch.venue.capacity.toLocaleString()} / {targetAttendance.toLocaleString()}
-                </p>
-                <span className={activeVenueMatch.venue.capacity >= targetAttendance ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
-                  {activeVenueMatch.venue.capacity >= targetAttendance ? '✓ Capacity Satisfied' : '✗ Capacity Shortfall'}
-                </span>
-              </div>
-
-              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
-                <span className="text-slate-500">Power Grid</span>
-                <p className="font-bold text-slate-900 dark:text-slate-100">
-                  {activeVenueMatch.venue.power_kw_capacity} kW (need {powerKwNeeded} kW)
-                </p>
-                <span className={activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
-                  {activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? '✓ Power Sufficient' : '✗ Substation Too Small'}
-                </span>
-              </div>
-
-              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
-                <span className="text-slate-500">EXCLUDE Constraint</span>
-                <p className="font-bold text-slate-900 dark:text-slate-100">
-                  {activeVenueMatch.scheduleStatus.available ? 'No Conflict' : 'Clash Blocked'}
-                </p>
-                <span className={activeVenueMatch.scheduleStatus.available ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
-                  {activeVenueMatch.scheduleStatus.available ? '✓ Slot Free' : '✗ Overlap Blocked'}
-                </span>
-              </div>
-            </div>
-
-            {/* Checklist Comparison */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Facilities Checklist Status</span>
-                <span className="text-[10px] text-[#3E6CB5] dark:text-[#7EA6E0] font-normal">
-                  {activeVenueMatch.matchedFacilities.length} of {requiredFacilities.length} matched
-                </span>
-              </h4>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                {activeVenueMatch.matchedFacilities.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-[#BDE3CF]/40">
-                    <Check className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{f}</span>
+                    <div className="text-right">
+                      <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                        ₱{displayRate.toLocaleString()}/hr
+                      </span>
+                      <p className="text-[10px] text-slate-400 font-mono">
+                        Hours: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
+                      </p>
+                    </div>
                   </div>
-                ))}
-                {activeVenueMatch.missingFacilities.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#FDF1EF] dark:bg-[#2E1A17] text-[#C45547] dark:text-[#E07D70] border border-[#F5C2BC]/40">
-                    <X className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Missing: {f}</span>
+
+                  {/* Criteria Comparison Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                      <span className="text-slate-500">{selectedHall ? `${selectedHall.name} Fit` : 'Venue Attendee Fit'}</span>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">
+                        {displayCapacity.toLocaleString()} / {targetAttendance.toLocaleString()}
+                      </p>
+                      <span className={displayCapacity >= targetAttendance ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                        {displayCapacity >= targetAttendance ? '✓ Capacity Satisfied' : '✗ Capacity Shortfall'}
+                      </span>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                      <span className="text-slate-500">Power Grid</span>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">
+                        {activeVenueMatch.venue.power_kw_capacity} kW (need {powerKwNeeded} kW)
+                      </p>
+                      <span className={activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                        {activeVenueMatch.venue.power_kw_capacity >= powerKwNeeded ? '✓ Power Sufficient' : '✗ Substation Too Small'}
+                      </span>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 text-xs space-y-1">
+                      <span className="text-slate-500">EXCLUDE Constraint</span>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">
+                        {activeVenueMatch.scheduleStatus.available ? 'No Conflict' : 'Clash Blocked'}
+                      </p>
+                      <span className={activeVenueMatch.scheduleStatus.available ? 'text-[10px] text-[#2B6149] dark:text-[#81B89B] font-semibold' : 'text-[10px] text-[#C45547] font-semibold'}>
+                        {activeVenueMatch.scheduleStatus.available ? '✓ Slot Free' : '✗ Overlap Blocked'}
+                      </span>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Estimated 8-Hour Budget Quote */}
-            <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-slate-400 font-semibold block">Estimated 8-Hour Event Rental:</span>
-                <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  ₱{(activeVenueMatch.venue.hourly_rate * 8).toLocaleString()}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-400 text-[11px] block">Your 8h Target Budget:</span>
-                <span className={`text-xs font-bold ${activeVenueMatch.venue.hourly_rate <= maxBudgetPerHour ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}`}>
-                  ₱{(maxBudgetPerHour * 8).toLocaleString()}
-                </span>
-              </div>
-            </div>
+                  {/* Multi-Hall & Function Spaces Breakdown */}
+                  {activeVenueMatch.venue.halls && activeVenueMatch.venue.halls.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                          <span>Halls & Function Spaces</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 font-mono text-slate-700 dark:text-slate-300">
+                            {activeVenueMatch.venue.halls.length} Available
+                          </span>
+                        </h4>
+                        {selectedHallId && (
+                          <button
+                            onClick={() => setSelectedHallId(null)}
+                            className="text-[11px] font-semibold text-[#3E6CB5] dark:text-[#7EA6E0] hover:underline cursor-pointer"
+                          >
+                            Reset to Entire Facility
+                          </button>
+                        )}
+                      </div>
 
-            {/* Action Bar */}
-            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400">
-                Protected by PostgreSQL <code className="font-mono text-[10px]">EXCLUDE USING gist</code>
-              </span>
-              <button
-                onClick={() => handleBook(activeVenueMatch.venue)}
-                disabled={!activeVenueMatch.scheduleStatus.available}
-                className={`py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-                  activeVenueMatch.scheduleStatus.available
-                    ? 'bg-[#3E6CB5] hover:bg-[#325896] text-white'
-                    : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                <CalendarCheck className="w-4 h-4" />
-                Confirm Venue Booking for Event
-              </button>
-            </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {activeVenueMatch.venue.halls.map((hall) => {
+                          const isHallActive = selectedHallId === hall.id;
+                          return (
+                            <div
+                              key={hall.id}
+                              onClick={() => setSelectedHallId(isHallActive ? null : hall.id)}
+                              className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                                isHallActive
+                                  ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border-[#3E6CB5] dark:border-[#7EA6E0] ring-1 ring-[#3E6CB5]/30'
+                                  : 'bg-white dark:bg-[#171E2B] border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1.5 mb-1">
+                                <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                  {isHallActive && <CheckCircle2 className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />}
+                                  {hall.name}
+                                </span>
+                                <span className="text-[10px] font-bold text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0 font-mono">
+                                  ₱{hall.hourly_rate.toLocaleString()}/hr
+                                </span>
+                              </div>
+                              {hall.description && (
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-2">
+                                  {hall.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
+                                <span>Cap: {hall.capacity.toLocaleString()}</span>
+                                {hall.dimensions && <span>• {hall.dimensions}</span>}
+                                <span>• {hall.is_indoor ? 'Indoor' : 'Outdoor'}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Checklist Comparison */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                      <span>Facilities Checklist Status</span>
+                      <span className="text-[10px] text-[#3E6CB5] dark:text-[#7EA6E0] font-normal">
+                        {activeVenueMatch.matchedFacilities.length} of {requiredFacilities.length} matched
+                      </span>
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {activeVenueMatch.matchedFacilities.map((f, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-[#BDE3CF]/40">
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{f}</span>
+                        </div>
+                      ))}
+                      {activeVenueMatch.missingFacilities.map((f, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 rounded-lg bg-[#FDF1EF] dark:bg-[#2E1A17] text-[#C45547] dark:text-[#E07D70] border border-[#F5C2BC]/40">
+                          <X className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">Missing: {f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Estimated 8-Hour Budget Quote */}
+                  <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-slate-400 font-semibold block">
+                        Estimated 8-Hour {selectedHall ? selectedHall.name : 'Venue'} Rental:
+                      </span>
+                      <span className="text-base font-bold text-slate-900 dark:text-slate-100">
+                        ₱{(displayRate * 8).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-400 text-[11px] block">Your 8h Target Budget:</span>
+                      <span className={`text-xs font-bold ${displayRate <= maxBudgetPerHour ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}`}>
+                        ₱{(maxBudgetPerHour * 8).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action Bar */}
+                  <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400">
+                      Protected by PostgreSQL <code className="font-mono text-[10px]">EXCLUDE USING gist</code>
+                    </span>
+                    <button
+                      onClick={() => handleBook(activeVenueMatch.venue)}
+                      disabled={!activeVenueMatch.scheduleStatus.available}
+                      className={`py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                        activeVenueMatch.scheduleStatus.available
+                          ? 'bg-[#3E6CB5] hover:bg-[#325896] text-white'
+                          : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <CalendarCheck className="w-4 h-4" />
+                      Confirm Booking {selectedHall ? `for ${selectedHall.name}` : 'for Entire Venue'}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -38,8 +38,8 @@ const createCustomIcon = (_category?: string) => {
 };
 
 export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSelectEvent }) => {
-  // Bohol / Tagbilaran City coordinates
-  const defaultCenter: [number, number] = [9.6558, 123.8601];
+  // Bohol / Tagbilaran City center coordinates
+  const defaultCenter: [number, number] = [9.64819, 123.85582];
 
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm bg-[#FAF9F5] dark:bg-[#171513] relative h-[520px]">
@@ -51,7 +51,7 @@ export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSe
 
       <MapContainer
         center={defaultCenter}
-        zoom={11}
+        zoom={13}
         scrollWheelZoom={true}
         className="w-full h-full z-10"
       >
@@ -77,8 +77,8 @@ export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSe
                   </span>
                   <h4 className="font-bold text-sm leading-snug mt-0.5 text-stone-900">{event.title}</h4>
                   <p className="text-xs text-stone-600 mt-1 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-stone-400" />
-                    {venue.name}
+                    <MapPin className="w-3 h-3 text-stone-400 shrink-0" />
+                    <span>{venue.name}{event.hall_name ? ` • ${event.hall_name}` : ''}</span>
                   </p>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 text-xs">
                     <span className="font-bold text-slate-900">₱{event.ticket_price}</span>

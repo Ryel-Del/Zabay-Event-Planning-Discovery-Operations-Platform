@@ -57,6 +57,8 @@ export interface ZabayEvent {
   end_date: string;
   organizer_id: string;
   venue_id?: string;
+  hall_id?: string;
+  hall_name?: string;
   expected_attendance: number;
   max_capacity: number;
   ticket_price: number;
@@ -65,6 +67,17 @@ export interface ZabayEvent {
   requirements: EventRequirements;
   budget: number;
   created_at: string;
+}
+
+export interface VenueHall {
+  id: string;
+  name: string;
+  capacity: number;
+  hourly_rate: number;
+  is_indoor: boolean;
+  facilities: string[];
+  dimensions?: string;
+  description?: string;
 }
 
 export interface Venue {
@@ -84,11 +97,14 @@ export interface Venue {
   image_url: string;
   contact_email: string;
   contact_phone: string;
+  halls?: VenueHall[];
 }
 
 export interface VenueBooking {
   id: string;
   venue_id: string;
+  hall_id?: string;
+  hall_name?: string;
   event_id: string;
   event_title: string;
   start_time: string;

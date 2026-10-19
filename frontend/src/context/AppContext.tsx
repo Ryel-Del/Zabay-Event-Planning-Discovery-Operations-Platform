@@ -68,7 +68,13 @@ interface AppContextType {
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
   checkInAttendee: (qrCode: string) => { success: boolean; message: string; registration?: Registration; isDuplicate?: boolean };
-  bookVenue: (venueId: string, eventId: string, startTime: string, endTime: string) => { success: boolean; message: string };
+  bookVenue: (
+    venueId: string,
+    eventId: string,
+    startTime: string,
+    endTime: string,
+    hallId?: string
+  ) => { success: boolean; message: string };
   registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
@@ -591,12 +597,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Venue booking with EXCLUDE constraint simulation
-  const bookVenue = (venueId: string, eventId: string, startTime: string, endTime: string) => {
+  const bookVenue = (
+    venueId: string,
+    eventId: string,
+    startTime: string,
+    endTime: string,
+    hallId?: string
+  ) => {
     const venue = venues.find((v) => v.id === venueId);
     if (!venue) return { success: false, message: 'Venue does not exist' };
 
+    const selectedHall = hallId ? venue.halls?.find((h) => h.id === hallId) : undefined;
+
     const overlap = venueBookings.some((b) => {
       if (b.venue_id !== venueId || b.status === 'cancelled') return false;
+      // If booking a specific hall, collision only occurs if the existing booking is for the SAME hall,
+      // or if either booking is for the entire venue (no hallId)!
+      if (hallId && b.hall_id && b.hall_id !== hallId) {
+        return false;
+      }
       const bStart = new Date(b.start_time).getTime();
       const bEnd = new Date(b.end_time).getTime();
       const nStart = new Date(startTime).getTime();
@@ -605,9 +624,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (overlap) {
+      const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
       return {
         success: false,
-        message: 'Database EXCLUDE Constraint Violation: The venue already has a confirmed booking that overlaps with the requested time window.',
+        message: `Database EXCLUDE Constraint Violation: ${spaceName} already has a confirmed booking that overlaps with the requested time window.`,
       };
     }
 
@@ -616,6 +636,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newBooking: VenueBooking = {
       id: `vb-${Date.now()}`,
       venue_id: venueId,
+      hall_id: hallId,
+      hall_name: selectedHall?.name,
       event_id: eventId,
       event_title: event ? event.title : 'Custom Event',
       start_time: startTime,
@@ -624,7 +646,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setVenueBookings((prev) => [...prev, newBooking]);
-    return { success: true, message: `Venue booking confirmed for ${venue.name}!` };
+    return {
+      success: true,
+      message: `Venue booking confirmed for ${selectedHall ? `${venue.name} (${selectedHall.name})` : venue.name}!`,
+    };
   };
 
   // Register for event (Attendee flow with simulated Stripe checkout)

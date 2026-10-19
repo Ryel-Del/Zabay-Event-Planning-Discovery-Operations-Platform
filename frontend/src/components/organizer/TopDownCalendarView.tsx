@@ -392,8 +392,13 @@ export const TopDownCalendarView: React.FC = () => {
                   key={booking.id}
                   className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] space-y-1 text-xs"
                 >
-                  <div className="font-bold text-slate-900 dark:text-slate-100">
-                    {venueMap.get(booking.venue_id) || 'Bohol Cultural Center'}
+                  <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between gap-2">
+                    <span>{venueMap.get(booking.venue_id) || 'Bohol Cultural Center'}</span>
+                    {booking.hall_name && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-semibold shrink-0">
+                        {booking.hall_name}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] text-slate-500 flex items-center justify-between">
                     <span>{booking.event_title}</span>

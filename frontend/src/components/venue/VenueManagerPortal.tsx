@@ -22,9 +22,16 @@ export const VenueManagerPortal: React.FC = () => {
   const [bookingStatus, setBookingStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   const bookingsForVenue = venueBookings.filter((b) => b.venue_id === selectedVenue.id);
+  const [testHallId, setTestHallId] = useState<string>('');
 
   const handleTestBooking = () => {
-    const res = bookVenue(selectedVenue.id, 'test-conflict-check', testStart, testEnd);
+    const res = bookVenue(
+      selectedVenue.id,
+      'test-conflict-check',
+      testStart,
+      testEnd,
+      testHallId || undefined
+    );
     setBookingStatus(res);
     setTimeout(() => setBookingStatus(null), 4500);
   };
@@ -46,7 +53,7 @@ export const VenueManagerPortal: React.FC = () => {
                 </span>
               </h2>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                Manage physical specifications, certified facilities, and database-enforced non-overlapping time slots.
+                Manage physical specifications, multi-hall inventories, and database-enforced non-overlapping time slots.
               </p>
             </div>
           </div>
@@ -56,7 +63,10 @@ export const VenueManagerPortal: React.FC = () => {
             value={selectedVenue.id}
             onChange={(e) => {
               const v = venues.find((x) => x.id === e.target.value);
-              if (v) setSelectedVenue(v);
+              if (v) {
+                setSelectedVenue(v);
+                setTestHallId('');
+              }
             }}
             className="bg-[#FAF9F5] dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs font-semibold text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
           >
@@ -106,6 +116,49 @@ export const VenueManagerPortal: React.FC = () => {
         </div>
       </div>
 
+      {/* Halls & Function Spaces Inventory */}
+      {selectedVenue.halls && selectedVenue.halls.length > 0 && (
+        <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4 transition-colors">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-200/80 dark:border-stone-800">
+            <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
+              Halls & Sub-Venues Inventory ({selectedVenue.halls.length} Individual Spaces)
+            </h3>
+            <span className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">
+              Independent EXCLUDE Booking Partitions
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {selectedVenue.halls.map((hall) => (
+              <div
+                key={hall.id}
+                className="p-4 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800 space-y-2 text-xs"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-bold text-stone-900 dark:text-stone-100">{hall.name}</h4>
+                  <span className="font-bold text-[#B68366] dark:text-[#D4A58C] font-mono shrink-0">
+                    ₱{hall.hourly_rate.toLocaleString()}/hr
+                  </span>
+                </div>
+                {hall.description && (
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 line-clamp-2">
+                    {hall.description}
+                  </p>
+                )}
+                <div className="flex items-center gap-2 text-[10px] text-stone-400 font-mono pt-2 border-t border-stone-200/60 dark:border-stone-800">
+                  <span className="font-semibold text-stone-700 dark:text-stone-300">
+                    Cap: {hall.capacity.toLocaleString()}
+                  </span>
+                  {hall.dimensions && <span>• {hall.dimensions}</span>}
+                  <span>• {hall.is_indoor ? 'Indoor' : 'Outdoor'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Facilities & Equipment Inventory */}
       <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4 transition-colors">
         <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-2">
@@ -149,6 +202,11 @@ export const VenueManagerPortal: React.FC = () => {
               <div>
                 <span className="text-xs font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                   {booking.event_title}
+                  {booking.hall_name && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#FAF0E6] dark:bg-[#2A231C] text-[#8C5D39] dark:text-[#E8BA97] border border-[#B68366]/30 font-semibold">
+                      {booking.hall_name}
+                    </span>
+                  )}
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] border border-[#5F7D5B]/20 font-semibold uppercase">
                     {booking.status}
                   </span>
@@ -176,6 +234,20 @@ export const VenueManagerPortal: React.FC = () => {
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
+            {selectedVenue.halls && selectedVenue.halls.length > 0 && (
+              <select
+                value={testHallId}
+                onChange={(e) => setTestHallId(e.target.value)}
+                className="bg-white dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 px-3 py-1.5 rounded-lg text-xs font-semibold text-stone-900 dark:text-stone-100 focus:outline-none"
+              >
+                <option value="">Entire Facility</option>
+                {selectedVenue.halls.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    {h.name} (Cap: {h.capacity})
+                  </option>
+                ))}
+              </select>
+            )}
             <input
               type="text"
               value={testStart}
