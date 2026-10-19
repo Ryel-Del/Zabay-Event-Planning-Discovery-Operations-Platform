@@ -8,6 +8,8 @@ import {
   Tag,
   Sparkles,
   CheckCircle,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { EventCategory, ZabayEvent } from '../../types';
@@ -24,6 +26,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<EventCategory>('Sports & Athletics');
+  const [isPrivate, setIsPrivate] = useState<boolean>(false);
   const [venueId, setVenueId] = useState<string>('');
   const [startDate, setStartDate] = useState('2026-11-20');
   const [endDate, setEndDate] = useState('2026-11-20');
@@ -46,8 +49,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80';
         case 'Festivals & Cultural':
           return 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80';
-        case 'Weddings & Celebrations':
-          return 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&auto=format&fit=crop&q=80';
+        case 'Workshops & Bootcamps':
+          return 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1200&auto=format&fit=crop&q=80';
         case 'Conferences & Seminars':
           return 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&auto=format&fit=crop&q=80';
         case 'School & Youth':
@@ -65,6 +68,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
       title: title.trim(),
       description: description.trim() || 'Custom Bohol event workspace.',
       category,
+      event_type: isPrivate ? 'private' : 'public',
+      is_private: isPrivate,
       venue_id: venueId || undefined,
       start_date: `${startDate}T08:00:00Z`,
       end_date: `${endDate}T17:00:00Z`,
@@ -155,6 +160,54 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             />
           </div>
 
+          {/* Visibility: Public vs Private Event */}
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Event Visibility & Access
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsPrivate(false)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  !isPrivate
+                    ? 'border-[#3E6CB5] bg-[#EBF3FC] dark:bg-[#152338] dark:border-[#3E6CB5]'
+                    : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Globe className={`w-4 h-4 ${!isPrivate ? 'text-[#3E6CB5]' : 'text-slate-400'}`} />
+                  <span className={`font-bold text-xs ${!isPrivate ? 'text-[#244A85] dark:text-[#8BB0E8]' : 'text-slate-700 dark:text-slate-300'}`}>
+                    Public Event
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Visible in Attendee Event Finder & OpenStreetMap. Open for public registration.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPrivate(true)}
+                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                  isPrivate
+                    ? 'border-[#B87A44] bg-[#FEF8F2] dark:bg-[#281D14] dark:border-[#B87A44]'
+                    : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-slate-300'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Lock className={`w-4 h-4 ${isPrivate ? 'text-[#B87A44]' : 'text-slate-400'}`} />
+                  <span className={`font-bold text-xs ${isPrivate ? 'text-[#8C521E] dark:text-[#E8A568]' : 'text-slate-700 dark:text-slate-300'}`}>
+                    Private Event
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Hidden from Public Event Finder & Map. Exclusive to organizers, staff & invitees.
+                </p>
+              </button>
+            </div>
+          </div>
+
           {/* Category & Venue */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -170,7 +223,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                 >
                   <option value="Sports & Athletics">Sports & Athletics</option>
                   <option value="Festivals & Cultural">Festivals & Cultural</option>
-                  <option value="Weddings & Celebrations">Weddings & Celebrations</option>
+                  <option value="Workshops & Bootcamps">Workshops & Bootcamps</option>
                   <option value="Conferences & Seminars">Conferences & Seminars</option>
                   <option value="School & Youth">School & Youth</option>
                   <option value="Community & Civic">Community & Civic</option>

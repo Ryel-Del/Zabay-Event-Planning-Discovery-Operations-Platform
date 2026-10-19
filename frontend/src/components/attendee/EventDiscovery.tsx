@@ -35,11 +35,17 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
     'Sports & Athletics',
     'Festivals & Cultural',
     'Conferences & Seminars',
-    'Weddings & Celebrations',
+    'Workshops & Bootcamps',
     'School & Youth',
+    'Tech & Innovation',
   ];
 
-  const filteredEvents = events.filter((e) => {
+  // PRIVACY RULE: Private and invite-only events are strictly hidden from public Event Finder & Map!
+  const publicEvents = events.filter(
+    (e) => !e.is_private && e.event_type !== 'private' && e.event_type !== 'invite_only' && e.status !== 'cancelled'
+  );
+
+  const filteredEvents = publicEvents.filter((e) => {
     const matchesSearch =
       e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       e.description.toLowerCase().includes(searchQuery.toLowerCase());

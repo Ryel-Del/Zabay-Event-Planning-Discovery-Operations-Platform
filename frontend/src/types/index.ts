@@ -18,7 +18,7 @@ export type EventStatus = 'draft' | 'planning' | 'ready' | 'in_progress' | 'comp
 export type EventCategory =
   | 'Sports & Athletics'
   | 'Festivals & Cultural'
-  | 'Weddings & Celebrations'
+  | 'Workshops & Bootcamps'
   | 'Conferences & Seminars'
   | 'School & Youth'
   | 'Community & Civic'
@@ -48,6 +48,7 @@ export interface ZabayEvent {
   description: string;
   category: EventCategory;
   event_type: 'public' | 'private' | 'invite_only';
+  is_private?: boolean;
   status: EventStatus;
   start_date: string;
   end_date: string;

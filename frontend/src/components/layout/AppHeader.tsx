@@ -19,6 +19,8 @@ import {
   Sparkles,
   Plus,
   Trash2,
+  Globe,
+  Lock,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
@@ -152,17 +154,28 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
               </div>
               <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isEventPickerOpen ? 'rotate-180' : ''}`} />
 
-              {/* Micro Live Feasibility Pill */}
+              {/* Visibility & Micro Live Feasibility Pill */}
               {selectedEvent && (
-                hasConflicts ? (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70] border border-[#F5C2BC] dark:border-[#52251F]">
-                    <AlertTriangle className="w-3 h-3" /> Conflict
-                  </span>
-                ) : (
-                  <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
-                    <CheckCircle2 className="w-3 h-3" /> Feasible
-                  </span>
-                )
+                <div className="hidden sm:flex items-center gap-1.5">
+                  {selectedEvent.is_private || selectedEvent.event_type === 'private' ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FEF8F2] text-[#8C521E] dark:bg-[#281D14] dark:text-[#E8A568] border border-[#F4DCBE] dark:border-[#523A25]">
+                      <Lock className="w-2.5 h-2.5" /> Private
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EBF3FC] text-[#244A85] dark:bg-[#152338] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
+                      <Globe className="w-2.5 h-2.5" /> Public
+                    </span>
+                  )}
+                  {hasConflicts ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70] border border-[#F5C2BC] dark:border-[#52251F]">
+                      <AlertTriangle className="w-3 h-3" /> Conflict
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
+                      <CheckCircle2 className="w-3 h-3" /> Feasible
+                    </span>
+                  )}
+                </div>
               )}
             </button>
 
@@ -186,6 +199,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                     events.map((evt) => {
                       const isSelected = selectedEvent ? evt.id === selectedEvent.id : false;
                       const venue = venues.find((v) => v.id === evt.venue_id);
+                      const isEvtPrivate = evt.is_private || evt.event_type === 'private';
 
                       return (
                         <button
@@ -201,10 +215,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                           }`}
                         >
                           <div className="space-y-1 flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                                 {evt.title}
                               </span>
+                              {isEvtPrivate ? (
+                                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-0.5 shrink-0">
+                                  <Lock className="w-2.5 h-2.5" /> Private
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-0.5 shrink-0">
+                                  <Globe className="w-2.5 h-2.5" /> Public
+                                </span>
+                              )}
                               <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
                                 {evt.category}
                               </span>
