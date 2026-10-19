@@ -61,3 +61,8 @@ psql -U postgres -d zabay_db -f schema.sql
 ```bash
 psql -U postgres -d zabay_db -f seeds/bohol_venues_seed.sql
 ```
+
+`schema.sql` is repeatable for existing databases and adds the `tasks.updated_at`
+column with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, which is required by the task
+status API. This repository currently implements the schema in this file only; the
+previously proposed 20-table model and advanced functions are not implemented.

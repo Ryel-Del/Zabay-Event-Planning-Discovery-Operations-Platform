@@ -43,6 +43,21 @@ npm run dev
 The API will be available at:
 `http://localhost:5000/api`
 
+### Database initialization
+
+From the repository root, run `psql -U postgres -d zabay_db -f db/schema.sql` and then
+`psql -U postgres -d zabay_db -f db/seeds/bohol_venues_seed.sql`. The backend uses
+`DATABASE_URL` when present, otherwise the `PG*` variables shown in `.env.example`.
+
+### Tests and build
+
+Run `npm run build` to compile TypeScript and `npm test` to run the API suite. The
+health test is always run. Database-mutating tests run only when `TEST_DATABASE_URL`
+is explicitly set and its database name contains `test`; the test process then uses
+that URL as `DATABASE_URL`. CI provisions PostgreSQL, applies the schema and seed, and
+runs both checks. Authentication, payments, and the proposed expanded schema are not
+yet implemented.
+
 ---
 
 ## API Endpoints
