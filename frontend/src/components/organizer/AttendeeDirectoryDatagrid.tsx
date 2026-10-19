@@ -129,7 +129,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                   </td>
 
                   <td className="py-3 px-4 font-bold text-stone-900 dark:text-stone-100">
-                    ${reg.amount_paid}
+                    ₱{reg.amount_paid}
                   </td>
 
                   <td className="py-3 px-4">

@@ -75,7 +75,7 @@ export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSe
                     {venue.name}
                   </p>
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-200 text-xs">
-                    <span className="font-bold text-slate-900">${event.ticket_price}</span>
+                    <span className="font-bold text-slate-900">₱{event.ticket_price}</span>
                     <button
                       onClick={() => onSelectEvent(event)}
                       className="px-2.5 py-1 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"

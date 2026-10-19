@@ -93,7 +93,7 @@ export const VenueManagerPortal: React.FC = () => {
             <p className="text-xl font-black text-stone-900 dark:text-stone-100">
               {selectedVenue.operating_hours.open} - {selectedVenue.operating_hours.close}
             </p>
-            <p className="text-[11px] text-stone-500">Hourly Rate: ${selectedVenue.hourly_rate}/hr</p>
+            <p className="text-[11px] text-stone-500">Hourly Rate: ₱{selectedVenue.hourly_rate}/hr</p>
           </div>
 
           <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-1">

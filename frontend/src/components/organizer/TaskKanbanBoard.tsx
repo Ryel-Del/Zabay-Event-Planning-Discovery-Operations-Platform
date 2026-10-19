@@ -530,7 +530,7 @@ export const TaskKanbanBoard: React.FC = () => {
                 >
                   {personnel.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.role}) - ${p.hourly_rate}/hr
+                      {p.name} ({p.role}) - ₱{p.hourly_rate}/hr
                     </option>
                   ))}
                 </select>

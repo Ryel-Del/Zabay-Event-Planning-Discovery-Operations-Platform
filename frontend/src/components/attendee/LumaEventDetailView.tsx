@@ -363,7 +363,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
               </div>
               <div className="text-right">
                 <span className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                  ${event.ticket_price}
+                  ₱{event.ticket_price}
                 </span>
                 <span className="text-[10px] text-slate-400 block font-mono">
                   via Stripe Checkout

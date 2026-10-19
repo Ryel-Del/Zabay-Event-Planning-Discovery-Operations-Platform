@@ -200,7 +200,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                           {event.category}
                         </span>
                         <span className="absolute top-3 right-3 px-2.5 py-1 rounded-md text-xs font-bold bg-[#3E6CB5] text-white shadow-xs">
-                          ${event.ticket_price}
+                          ₱{event.ticket_price}
                         </span>
                       </div>
 

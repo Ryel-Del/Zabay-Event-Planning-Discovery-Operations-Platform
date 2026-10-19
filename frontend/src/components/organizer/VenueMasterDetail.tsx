@@ -151,7 +151,7 @@ export const VenueMasterDetail: React.FC = () => {
         </div>
 
         <div className="text-xs bg-[#F8FAFD] dark:bg-[#111722] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-          Target: <strong>{targetAttendance.toLocaleString()}</strong> attendees • Max <strong>${maxBudgetPerHour}/hr</strong>
+          Target: <strong>{targetAttendance.toLocaleString()}</strong> attendees • Max <strong>₱{maxBudgetPerHour}/hr</strong>
         </div>
       </div>
 
@@ -213,7 +213,7 @@ export const VenueMasterDetail: React.FC = () => {
               <span className="text-slate-500 font-semibold flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5 text-[#4E8268]" /> Max Budget:
               </span>
-              <span className="font-bold text-slate-900 dark:text-slate-100">${maxBudgetPerHour}/hr</span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">₱{maxBudgetPerHour}/hr</span>
             </div>
             <input
               type="range"
@@ -225,8 +225,8 @@ export const VenueMasterDetail: React.FC = () => {
               className="w-full accent-[#3E6CB5] cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-slate-400">
-              <span>$100/hr (Club)</span>
-              <span>$1,500/hr</span>
+              <span>₱100/hr (Club)</span>
+              <span>₱1,500/hr</span>
             </div>
           </div>
 
@@ -359,7 +359,7 @@ export const VenueMasterDetail: React.FC = () => {
                         {overallScore}% Match
                       </span>
                       <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                        ${venue.hourly_rate}/hr
+                        ₱{venue.hourly_rate}/hr
                       </p>
                     </div>
                   </div>
@@ -402,7 +402,7 @@ export const VenueMasterDetail: React.FC = () => {
 
               <div className="text-right">
                 <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  ${activeVenueMatch.venue.hourly_rate}/hr
+                  ₱{activeVenueMatch.venue.hourly_rate}/hr
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono">
                   Hours: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
@@ -473,13 +473,13 @@ export const VenueMasterDetail: React.FC = () => {
               <div>
                 <span className="text-slate-400 font-semibold block">Estimated 8-Hour Event Rental:</span>
                 <span className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  ${(activeVenueMatch.venue.hourly_rate * 8).toLocaleString()}
+                  ₱{(activeVenueMatch.venue.hourly_rate * 8).toLocaleString()}
                 </span>
               </div>
               <div className="text-right">
                 <span className="text-slate-400 text-[11px] block">Your 8h Target Budget:</span>
                 <span className={`text-xs font-bold ${activeVenueMatch.venue.hourly_rate <= maxBudgetPerHour ? 'text-[#2B6149] dark:text-[#81B89B]' : 'text-[#C45547]'}`}>
-                  ${(maxBudgetPerHour * 8).toLocaleString()}
+                  ₱{(maxBudgetPerHour * 8).toLocaleString()}
                 </span>
               </div>
             </div>

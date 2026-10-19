@@ -102,7 +102,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 }`}
               >
                 <div className="text-xs font-semibold text-stone-900 dark:text-stone-100">General Admission</div>
-                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">${event.ticket_price}</div>
+                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">₱{event.ticket_price}</div>
                 <p className="text-[10px] text-stone-500 mt-0.5">Keynotes & Expo Floor</p>
               </button>
 
@@ -120,7 +120,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   <Sparkles className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C]" />
                 </div>
                 <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">
-                  ${Math.round(event.ticket_price * 1.4)}
+                  ₱{Math.round(event.ticket_price * 1.4)}
                 </div>
                 <p className="text-[10px] text-stone-500 mt-0.5">VIP Lounge + Afterparty</p>
               </button>
@@ -202,7 +202,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 <span>Confirming via Stripe Webhook...</span>
               ) : (
                 <>
-                  <span>Pay ${price} & Receive Digital Pass</span>
+                  <span>Pay ₱{price} & Receive Digital Pass</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

@@ -63,8 +63,8 @@ export const AnalyticsDashboard: React.FC = () => {
 
   // Chart 4: Revenue by Tier with matte organic tones
   const revenueTierData = [
-    { name: 'General Admission ($349)', value: 1040 * 349, color: '#B68366' },
-    { name: 'VIP All-Access ($499)', value: 380 * 499, color: '#A36B75' },
+    { name: 'General Admission (₱349)', value: 1040 * 349, color: '#B68366' },
+    { name: 'VIP All-Access (₱499)', value: 380 * 499, color: '#A36B75' },
     { name: 'Sponsorship Exhibits', value: 85000, color: '#5F7D5B' },
   ];
 
@@ -116,7 +116,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <DollarSign className="w-4 h-4 text-[#5F7D5B] dark:text-[#97B394]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">${totalRevenue.toLocaleString()}</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">₱{totalRevenue.toLocaleString()}</span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">+18% vs budget</span>
           </div>
           <p className="text-[11px] text-stone-500">Stripe Checkout confirmed</p>
