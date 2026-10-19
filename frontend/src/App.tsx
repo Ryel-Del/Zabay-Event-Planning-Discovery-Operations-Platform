@@ -3,21 +3,11 @@ import { AppProvider, useApp } from './context/AppContext';
 import { AppHeader } from './components/layout/AppHeader';
 import { AppSidebar } from './components/layout/AppSidebar';
 import type { OrganizerView } from './components/layout/AppSidebar';
-import { OperationsOverview } from './components/organizer/OperationsOverview';
-import { ChangeImpactSimulator } from './components/organizer/ChangeImpactSimulator';
-import { VenueMasterDetail } from './components/organizer/VenueMasterDetail';
-import { TaskGanttView } from './components/organizer/TaskGanttView';
-import { TaskKanbanBoard } from './components/organizer/TaskKanbanBoard';
-import { TopDownCalendarView } from './components/organizer/TopDownCalendarView';
-import { AttendeeDirectoryDatagrid } from './components/organizer/AttendeeDirectoryDatagrid';
-import { AnalyticsDashboard } from './components/organizer/AnalyticsDashboard';
-import { PersonnelDirectory } from './components/organizer/PersonnelDirectory';
-import { PersonnelPortal } from './components/staff/PersonnelPortal';
-import { QRCheckInScanner } from './components/organizer/QRCheckInScanner';
-import { VenueManagerPortal } from './components/venue/VenueManagerPortal';
-import { EventDiscovery } from './components/attendee/EventDiscovery';
-import { AuditLogViewer } from './components/audit/AuditLogViewer';
-import { ProfileView } from './components/profile/ProfileView';
+import { OrganizerPage } from './pages/organizer/OrganizerPage';
+import { VenuePage } from './pages/venue/VenuePage';
+import { StaffPage } from './pages/staff/StaffPage';
+import { AttendeePage } from './pages/attendee/AttendeePage';
+import { AuditLogViewer, QRCheckInScanner, ProfileView } from './components/modals';
 
 const MainContent: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
@@ -58,40 +48,27 @@ const MainContent: React.FC = () => {
           />
         )}
 
-        {/* Dynamic Center Work Area */}
+        {/* Dynamic Center Work Area with Page-Level Architecture */}
         <main className="flex-1 overflow-y-auto px-6 lg:px-10 py-6 space-y-6">
-          {/* 1. Organizer Mode Views */}
+          {/* 1. Organizer Mode: Operations Studio */}
           {currentRole === 'organizer' && (
-            <>
-              {organizerView === 'overview' && (
-                <OperationsOverview onNavigate={(view) => setOrganizerView(view)} />
-              )}
-              {organizerView === 'kanban' && <TaskKanbanBoard />}
-              {organizerView === 'top_calendar' && <TopDownCalendarView />}
-              {organizerView === 'venues' && <VenueMasterDetail />}
-              {organizerView === 'personnel' && (
-                <PersonnelDirectory onSwitchToStaffView={() => setCurrentRole('staff')} />
-              )}
-              {organizerView === 'impact' && <ChangeImpactSimulator />}
-              {organizerView === 'schedule' && <TaskGanttView />}
-              {organizerView === 'attendees' && (
-                <AttendeeDirectoryDatagrid
-                  onScanPassModal={(code) => handleOpenScannerWithCode(code)}
-                />
-              )}
-              {organizerView === 'analytics' && <AnalyticsDashboard />}
-            </>
+            <OrganizerPage
+              currentView={organizerView}
+              onSelectView={(view) => setOrganizerView(view)}
+              onSwitchToStaff={() => setCurrentRole('staff')}
+              onScanPass={(code) => handleOpenScannerWithCode(code)}
+            />
           )}
 
-          {/* 2. Venue Manager Mode */}
-          {currentRole === 'venue_manager' && <VenueManagerPortal />}
+          {/* 2. Venue Manager Mode: Facility & Multi-Hall Operations Hub */}
+          {currentRole === 'venue_manager' && <VenuePage />}
 
-          {/* 3. Event Staff Mode (View-Only Personnel Portal) */}
-          {currentRole === 'staff' && <PersonnelPortal />}
+          {/* 3. Event Staff Mode: Crew Run-of-Show & Shift Portal */}
+          {currentRole === 'staff' && <StaffPage />}
 
-          {/* 4. Attendee Mode (Public Event Discovery & QR Passes) */}
+          {/* 4. Attendee Mode: Public Discovery, Map & Pass Wallet */}
           {currentRole === 'attendee' && (
-            <EventDiscovery
+            <AttendeePage
               onOpenScannerWithPass={(code) => handleOpenScannerWithCode(code)}
             />
           )}
