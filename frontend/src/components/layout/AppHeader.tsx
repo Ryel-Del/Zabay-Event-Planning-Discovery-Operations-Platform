@@ -24,6 +24,7 @@ import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { UserRole } from '../../types';
 import zabayWordmark from '../../assets/zabay-wordmark.png';
+import zabayWordmarkWhite from '../../assets/zabay-wordmark-white.png';
 import { CreateEventModal } from '../organizer/CreateEventModal';
 
 interface AppHeaderProps {
@@ -91,7 +92,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           <img
             src={zabayWordmark}
             alt="Zabay"
-            className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:brightness-110"
+            className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
+          />
+          <img
+            src={zabayWordmarkWhite}
+            alt="Zabay"
+            className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
           />
           {currentRole === 'organizer' && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
