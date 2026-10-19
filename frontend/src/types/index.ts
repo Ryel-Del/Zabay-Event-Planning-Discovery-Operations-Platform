@@ -107,8 +107,9 @@ export interface Personnel {
   is_available: boolean;
 }
 
-export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'blocked';
+export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'completed' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskTrack = 'venue_logistics' | 'technical_av' | 'marketing_tickets' | 'day_of_ops';
 
 export interface TaskAssignment {
   personnel_id: string;
@@ -131,6 +132,8 @@ export interface Task {
   priority: TaskPriority;
   start_time: string; // ISO date-time or relative hour
   end_time: string;
+  due_date?: string;
+  track?: TaskTrack;
   dependencies: string[]; // finish-to-start predecessor task IDs
   personnel_assignments: TaskAssignment[];
   resource_assignments: ResourceAssignment[];
@@ -197,4 +200,15 @@ export interface VenueMatchResult {
   facilities_status: { required: string[]; matched: string[]; missing: string[]; satisfied: boolean };
   power_status: { required: number; actual: number; satisfied: boolean };
   schedule_status: { available: boolean; conflict_reason?: string };
+}
+
+export interface WorkflowTemplateKit {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  category: string;
+  icon: string;
+  task_count: number;
+  tasks: Omit<Task, 'id' | 'event_id'>[];
 }

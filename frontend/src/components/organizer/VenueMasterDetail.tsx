@@ -33,11 +33,14 @@ export const VenueMasterDetail: React.FC = () => {
     'Dedicated Gigabit Fiber WiFi',
     'Concert PA & Audio System',
     '4K LED Wall & Displays',
-    'Catering Prep Kitchen',
+    'Commercial Prep Kitchen',
     'Breakout Workshop Rooms',
+    'Indoor Arena Hardwood Court',
+    'Grand Ballroom Crystal Chandeliers',
+    'Audiovisual Lecture Hall',
+    'Private Executive Conference Rooms',
     'Wheelchair & ADA Accessible',
     'Loading Dock & Staging Bay',
-    'Security Turnstiles & Access Control',
   ];
 
   const [requiredFacilities, setRequiredFacilities] = useState<string[]>([
@@ -128,7 +131,7 @@ export const VenueMasterDetail: React.FC = () => {
     setTimeout(() => setBookingFeedback(null), 4500);
   };
 
-  const cities = ['All', 'San Francisco', 'San Jose', 'Oakland'];
+  const cities = ['All', 'Tagbilaran City', 'Dauis'];
 
   return (
     <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 transition-colors">

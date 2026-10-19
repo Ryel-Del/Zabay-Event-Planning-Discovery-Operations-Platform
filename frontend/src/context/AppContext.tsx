@@ -8,9 +8,11 @@ import type {
   Resource,
   Personnel,
   Task,
+  TaskStatus,
   Registration,
   AuditLog,
   VenueMatchResult,
+  WorkflowTemplateKit,
 } from '../types';
 import {
   mockCurrentUser,
@@ -21,6 +23,7 @@ import {
   mockResources,
   mockPersonnel,
   mockTasks,
+  mockWorkflowKits,
   mockRegistrations,
   mockAuditLogs,
 } from '../mock/mockData';
@@ -43,6 +46,7 @@ interface AppContextType {
   resources: Resource[];
   personnel: Personnel[];
   tasks: Task[];
+  workflowKits: WorkflowTemplateKit[];
   registrations: Registration[];
   auditLogs: AuditLog[];
 
@@ -55,6 +59,9 @@ interface AppContextType {
   fnMatchVenueToEvent: (eventId: string, venueId: string) => VenueMatchResult;
   applyTaskDelay: (taskId: string, delayMinutes: number, reason: string) => void;
   resetTasksToDefault: () => void;
+  addTask: (task: Omit<Task, 'id'>) => void;
+  updateTaskStatus: (taskId: string, status: TaskStatus) => void;
+  loadTaskTemplate: (kitId: string) => void;
   checkInAttendee: (qrCode: string) => { success: boolean; message: string; registration?: Registration; isDuplicate?: boolean };
   bookVenue: (venueId: string, eventId: string, startTime: string, endTime: string) => { success: boolean; message: string };
   registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
@@ -336,6 +343,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
+  const addTask = (newTaskData: Omit<Task, 'id'>) => {
+    const newTask: Task = {
+      ...newTaskData,
+      id: `task-${Date.now()}`,
+    };
+    setTasks((prev) => [...prev, newTask]);
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: newTask.id,
+      change_summary: `Created new operational task: "${newTask.title}" [${newTask.priority.toUpperCase()} priority]`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  const updateTaskStatus = (taskId: string, status: TaskStatus) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status } : t))
+    );
+  };
+
+  const loadTaskTemplate = (kitId: string) => {
+    const kit = mockWorkflowKits.find((k) => k.id === kitId);
+    if (!kit) return;
+
+    const newTasks: Task[] = kit.tasks.map((t, idx) => ({
+      ...t,
+      id: `task-${Date.now()}-${idx + 1}`,
+      event_id: selectedEvent.id,
+      downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
+    }));
+
+    setTasks(newTasks);
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: 'all',
+      change_summary: `Loaded 1-Click Workflow Kit: "${kit.name}" with ${newTasks.length} pre-configured tasks & dependencies.`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
   // Check-In Attendee with Database Duplicate Prevention
   const checkInAttendee = (qrCode: string) => {
     const reg = registrations.find(
@@ -468,6 +527,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       resources,
       personnel,
       tasks,
+      workflowKits: mockWorkflowKits,
       registrations,
       auditLogs,
       fnDownstreamImpact,
@@ -475,6 +535,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fnMatchVenueToEvent,
       applyTaskDelay,
       resetTasksToDefault,
+      addTask,
+      updateTaskStatus,
+      loadTaskTemplate,
       checkInAttendee,
       bookVenue,
       registerForEvent,

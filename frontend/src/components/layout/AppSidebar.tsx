@@ -10,10 +10,12 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  CheckSquare,
+  Calendar,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-export type OrganizerView = 'overview' | 'impact' | 'venues' | 'schedule' | 'attendees' | 'analytics';
+export type OrganizerView = 'overview' | 'kanban' | 'top_calendar' | 'venues' | 'impact' | 'schedule' | 'attendees' | 'analytics';
 export type VenueView = 'overview' | 'calendar' | 'inventory';
 
 interface AppSidebarProps {
@@ -37,9 +39,28 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const organizerNav = [
     {
       id: 'overview',
-      label: 'Event Overview',
+      label: '4-Stage Lifecycle',
       icon: <LayoutDashboard className="w-4 h-4" />,
       badge: null,
+    },
+    {
+      id: 'kanban',
+      label: 'Kanban & Workflow Kits',
+      icon: <CheckSquare className="w-4 h-4" />,
+      badge: `${tasks.length}`,
+      badgeColor: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]',
+    },
+    {
+      id: 'top_calendar',
+      label: 'Top-Down Calendar',
+      icon: <Calendar className="w-4 h-4" />,
+      badge: null,
+    },
+    {
+      id: 'venues',
+      label: 'Tagbilaran Venues',
+      icon: <Building2 className="w-4 h-4" />,
+      badge: 'Bohol Match',
     },
     {
       id: 'impact',
@@ -49,16 +70,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       badgeColor: 'bg-[#F9ECE9] text-[#BA4E3E] dark:bg-[#341D1A] dark:text-[#E48D80]',
     },
     {
-      id: 'venues',
-      label: 'Venue Matching',
-      icon: <Building2 className="w-4 h-4" />,
-      badge: null,
-    },
-    {
       id: 'schedule',
-      label: 'Task Schedule & Gantt',
+      label: 'Task Gantt & Ripples',
       icon: <CalendarRange className="w-4 h-4" />,
-      badge: `${tasks.length}`,
+      badge: null,
     },
     {
       id: 'attendees',

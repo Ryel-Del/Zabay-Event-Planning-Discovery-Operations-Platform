@@ -220,7 +220,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
         {currentRole === 'venue_manager' && (
           <div className="hidden sm:flex items-center gap-2 bg-[#F8FAFD] dark:bg-[#111722] px-3.5 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300">
             <Building2 className="w-3.5 h-3.5 text-[#4E8268] dark:text-[#81B89B]" />
-            <span>Metropolis Convention Center Management</span>
+            <span>Bohol Cultural Center Management</span>
           </div>
         )}
       </div>

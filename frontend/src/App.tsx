@@ -7,6 +7,8 @@ import { OperationsOverview } from './components/organizer/OperationsOverview';
 import { ChangeImpactSimulator } from './components/organizer/ChangeImpactSimulator';
 import { VenueMasterDetail } from './components/organizer/VenueMasterDetail';
 import { TaskGanttView } from './components/organizer/TaskGanttView';
+import { TaskKanbanBoard } from './components/organizer/TaskKanbanBoard';
+import { TopDownCalendarView } from './components/organizer/TopDownCalendarView';
 import { AttendeeDirectoryDatagrid } from './components/organizer/AttendeeDirectoryDatagrid';
 import { AnalyticsDashboard } from './components/organizer/AnalyticsDashboard';
 import { QRCheckInScanner } from './components/organizer/QRCheckInScanner';
@@ -59,8 +61,10 @@ const MainContent: React.FC = () => {
               {organizerView === 'overview' && (
                 <OperationsOverview onNavigate={(view) => setOrganizerView(view)} />
               )}
-              {organizerView === 'impact' && <ChangeImpactSimulator />}
+              {organizerView === 'kanban' && <TaskKanbanBoard />}
+              {organizerView === 'top_calendar' && <TopDownCalendarView />}
               {organizerView === 'venues' && <VenueMasterDetail />}
+              {organizerView === 'impact' && <ChangeImpactSimulator />}
               {organizerView === 'schedule' && <TaskGanttView />}
               {organizerView === 'attendees' && (
                 <AttendeeDirectoryDatagrid

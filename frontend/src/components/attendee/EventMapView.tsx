@@ -38,13 +38,14 @@ const createCustomIcon = (_category?: string) => {
 };
 
 export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSelectEvent }) => {
-  const defaultCenter: [number, number] = [37.7891, -122.4014];
+  // Bohol / Tagbilaran City coordinates
+  const defaultCenter: [number, number] = [9.6558, 123.8601];
 
   return (
     <div className="rounded-2xl overflow-hidden border border-stone-200 dark:border-stone-800 shadow-sm bg-[#FAF9F5] dark:bg-[#171513] relative h-[520px]">
       <MapContainer
         center={defaultCenter}
-        zoom={13}
+        zoom={11}
         scrollWheelZoom={false}
         className="w-full h-full z-10"
       >

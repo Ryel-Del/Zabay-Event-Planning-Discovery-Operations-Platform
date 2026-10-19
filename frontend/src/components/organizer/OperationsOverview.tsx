@@ -9,9 +9,10 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import type { OrganizerView } from '../layout/AppSidebar';
 
 interface OperationsOverviewProps {
-  onNavigate: (view: 'impact' | 'venues' | 'schedule' | 'attendees' | 'analytics') => void;
+  onNavigate: (view: OrganizerView) => void;
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
@@ -133,6 +134,101 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               </div>
             )}
             <p className="text-[11px] text-slate-400 mt-1">Finish-to-start constraints satisfied</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 4-Stage Organizer Lifecycle Flow for Small & Medium Groups */}
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-3 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Guided Event Architecture
+            </h3>
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              The 4-Stage Operational Flow for Small & Medium Groups
+            </p>
+          </div>
+          <span className="text-[11px] text-slate-500">
+            Click any stage to enter its dedicated workspace
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          {/* Stage 1: Organize */}
+          <div
+            onClick={() => onNavigate('venues')}
+            className="p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] transition-all cursor-pointer space-y-1.5 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]">
+                1. Organize
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              Tagbilaran Venues & Matcher
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Compare Bohol Cultural Center, Wisdom Gym, HNU, MetroCentre & Tropics.
+            </p>
+          </div>
+
+          {/* Stage 2: Prepare */}
+          <div
+            onClick={() => onNavigate('kanban')}
+            className="p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] transition-all cursor-pointer space-y-1.5 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]">
+                2. Prepare
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              Kanban & 1-Click Kits
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Zero-hassle pre-built workflows for student orgs, hackathons & sports.
+            </p>
+          </div>
+
+          {/* Stage 3: Market */}
+          <div
+            onClick={() => onNavigate('attendees')}
+            className="p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] transition-all cursor-pointer space-y-1.5 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#F5F0FA] text-[#5C3B87] dark:bg-[#231A2E] dark:text-[#B393DB]">
+                3. Market
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              Passes & Attendee Feed
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Luma-style invite links, ticket tiers, and Stripe checkout verification.
+            </p>
+          </div>
+
+          {/* Stage 4: Execute */}
+          <div
+            onClick={() => onNavigate('top_calendar')}
+            className="p-3.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] transition-all cursor-pointer space-y-1.5 group"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#FFF9EB] text-[#7A5B14] dark:bg-[#2A2312] dark:text-[#E2C37A]">
+                4. Execute
+              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              Top-Down Calendar & QR Gate
+            </h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Live day-of run sheet, webcam QR check-in, and non-duplicate attendance.
+            </p>
           </div>
         </div>
       </div>

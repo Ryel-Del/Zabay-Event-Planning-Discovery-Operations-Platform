@@ -273,10 +273,10 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                 Event Location & Venue
               </h4>
               <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                {venue ? venue.name : 'Metropolis Convention Center'}
+                {venue ? venue.name : 'Bohol Cultural Center'}
               </p>
               <p className="text-xs text-slate-500 truncate">
-                {venue ? `${venue.address}, ${venue.city}` : 'San Francisco, CA'}
+                {venue ? `${venue.address}, ${venue.city}` : 'Tagbilaran City, Bohol'}
               </p>
             </div>
           </div>
