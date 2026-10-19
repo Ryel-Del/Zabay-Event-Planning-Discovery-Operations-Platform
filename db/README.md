@@ -18,8 +18,8 @@ db/
 
 ## Core Schema Highlights
 
-### 1. Temporal `EXCLUDE` Constraint (Double-Booking Prevention)
-Zabay enforces conflict-free venue and hall scheduling directly at the PostgreSQL database engine level using the `btree_gist` extension:
+### 1. Database-enforced booking integrity
+Zabay uses PostgreSQL constraints and a trigger, so direct SQL writes receive the same protection as API requests. `booking_window` is a `TSTZRANGE` using half-open `[)` intervals: adjacent reservations are allowed, while a shared instant inside both intervals is not.
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -31,8 +31,12 @@ EXCLUDE USING gist (
 ) WHERE (status = 'confirmed');
 ```
 
-- **Venue-Level Reservation:** If a booking does not specify a `hall_id` (`COALESCE(hall_id, 'ALL')`), it reserves the entire venue.
-- **Hall-Level Partitioning:** If a booking reserves a specific hall (e.g. `Dagohoy Grand Hall` at Bohol Tropics), another concurrent booking can safely reserve `Sandugo Grand Ballroom` or `Harbor View Function Hall` without triggering a collision.
+- The GiST exclusion constraint blocks overlapping confirmed bookings for the same hall.
+- A `BEFORE INSERT OR UPDATE` trigger takes a transaction-scoped advisory lock for the venue, then rejects overlaps between a whole-venue booking and any hall booking. Different halls can be booked at the same time.
+- A composite foreign key guarantees that a hall belongs to the booking's venue, including for direct database writes. A check constraint requires `end_time > start_time`, and the trigger derives `booking_window` from those timestamp columns.
+- Cancelled and pending bookings do not block availability.
+
+The per-venue advisory lock is needed because a simple exclusion constraint over `(venue_id, hall_id, range)` cannot express the asymmetric rule that a whole-venue reservation conflicts with all hall IDs, while two different hall IDs may overlap. The trigger serializes these checks in PostgreSQL without an external lock service.
 
 ### 2. Multi-Hall Relational Structure
 ```
@@ -40,7 +44,7 @@ venues (1) ───< venue_halls (N)
    │                  │
    └──────────┬───────┘
               │
-      venue_bookings (with EXCLUDE on tsrange)
+      venue_bookings (with EXCLUDE and trigger enforcement on tstzrange)
 ```
 
 ---
@@ -62,7 +66,17 @@ psql -U postgres -d zabay_db -f schema.sql
 psql -U postgres -d zabay_db -f seeds/bohol_venues_seed.sql
 ```
 
-`schema.sql` is repeatable for existing databases and adds the `tasks.updated_at`
-column with `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, which is required by the task
-status API. This repository currently implements the schema in this file only; the
-previously proposed 20-table model and advanced functions are not implemented.
+`schema.sql` is repeatable for existing databases. Apply it to upgrade a database
+created with the earlier schema; it converts `venue_bookings.booking_window` from
+`tsrange` to `tstzrange` in place and installs the new checks, foreign key, exclusion
+constraint, and trigger. Existing timestamps are interpreted as UTC during the
+conversion. The migration first checks that stored ranges agree with `start_time`
+and `end_time`, and that confirmed bookings and hall ownership satisfy the new
+rules. If it finds incompatible rows, it raises an error containing the affected
+booking IDs before altering the booking records. Review and resolve those records
+explicitly, then rerun the schema. It does not recreate tables or delete booking
+data.
+
+`schema.sql` also adds the `tasks.updated_at` column required by the task status
+API. The previously proposed 20-table model and advanced functions are not
+implemented.
