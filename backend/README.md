@@ -73,7 +73,7 @@ yet implemented.
 ### Venues & Multi-Hall Booking
 - `GET /api/venues` — Retrieve verified Bohol venues and halls
 - `GET /api/venues/:id` — Venue details, halls, and bookings
-- `POST /api/venues/:id/book` — Reserve a venue or specific hall (enforces PostgreSQL `EXCLUDE` constraint)
+- `POST /api/venues/:id/book` — Reserve a venue or specific hall (validates references and relies on PostgreSQL booking constraints)
 
 ### Operations & Tasks
 - `GET /api/tasks` — Tasks for run-of-show
