@@ -89,7 +89,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
         </div>
       </div>
 
-      {/* Cvent-Style Clean High-Density Datagrid */}
+      {/* Clean High-Density Datagrid */}
       <div className="overflow-x-auto rounded-xl border border-stone-200/80 dark:border-stone-800/80">
         <table className="w-full text-left text-xs">
           <thead className="bg-[#FAF9F5] dark:bg-[#171513] text-stone-500 uppercase font-semibold text-[10px] tracking-wider border-b border-stone-200/80 dark:border-stone-800/80">

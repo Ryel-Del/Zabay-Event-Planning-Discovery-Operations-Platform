@@ -138,7 +138,7 @@ export const TaskGanttView: React.FC = () => {
           </div>
         </div>
 
-        {/* Task Inspector Panel (Cvent-Style Right Drawer) */}
+        {/* Task Inspector Panel (Right Drawer) */}
         <div className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
             <div>

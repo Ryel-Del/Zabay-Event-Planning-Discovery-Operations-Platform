@@ -132,7 +132,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   ZABAY
                 </span>
                 <span className="block text-[10px] text-stone-500 font-mono uppercase tracking-wider">
-                  Cvent Modernized
+                  Event Platform
                 </span>
               </div>
             </div>

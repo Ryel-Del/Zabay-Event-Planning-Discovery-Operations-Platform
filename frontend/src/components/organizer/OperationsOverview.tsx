@@ -69,7 +69,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
   return (
     <div className="space-y-6">
-      {/* Cvent-Style Event Identity Hero Banner */}
+      {/* Event Identity Hero Banner */}
       <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
