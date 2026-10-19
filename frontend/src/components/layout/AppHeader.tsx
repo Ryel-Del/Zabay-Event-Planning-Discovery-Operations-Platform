@@ -20,6 +20,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { UserRole } from '../../types';
+import zabayLogo from '../../assets/zabay-logo.png';
 
 interface AppHeaderProps {
   onOpenAudit: () => void;
@@ -79,24 +80,21 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           className="flex items-center gap-2.5 cursor-pointer group"
           title="Go to Public Explore Feed"
         >
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#325896] via-[#3E6CB5] to-[#6093DB] text-white flex items-center justify-center font-bold font-serif text-base shadow-xs group-hover:scale-105 transition-transform">
-            Z
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-bold tracking-tight text-slate-900 dark:text-slate-100 font-serif">
-              ZABAY
+          <img
+            src={zabayLogo}
+            alt="Zabay"
+            className="h-8 sm:h-9 w-auto object-contain rounded-lg shadow-2xs group-hover:scale-105 transition-transform"
+          />
+          {currentRole === 'organizer' && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
+              Studio
             </span>
-            {currentRole === 'organizer' && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
-                Studio
-              </span>
-            )}
-            {currentRole === 'venue_manager' && (
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
-                Venue Hub
-              </span>
-            )}
-          </div>
+          )}
+          {currentRole === 'venue_manager' && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
+              Venue Hub
+            </span>
+          )}
         </div>
 
         {/* Studio / Venue Hub Exit Action (Return to Public Community Feed) */}
