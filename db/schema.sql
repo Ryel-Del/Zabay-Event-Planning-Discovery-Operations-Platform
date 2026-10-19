@@ -226,6 +226,11 @@ BEGIN
     old_venue_id := NEW.venue_id;
     IF TG_OP = 'UPDATE' THEN old_venue_id := OLD.venue_id; END IF;
     IF NEW.status = 'confirmed' THEN
+        IF current_setting('transaction_isolation') <> 'read committed' THEN
+            RAISE EXCEPTION 'Confirmed venue booking writes require READ COMMITTED transaction isolation'
+                USING ERRCODE = '0A000', CONSTRAINT = 'venue_bookings_isolation_level';
+        END IF;
+
         -- Serialize all confirmed changes per venue. Database-direct writes
         -- take the same transaction scoped advisory lock as API requests.
         FOR lock_key IN

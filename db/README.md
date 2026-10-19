@@ -38,6 +38,14 @@ EXCLUDE USING gist (
 
 The per-venue advisory lock is needed because a simple exclusion constraint over `(venue_id, hall_id, range)` cannot express the asymmetric rule that a whole-venue reservation conflicts with all hall IDs, while two different hall IDs may overlap. The trigger serializes these checks in PostgreSQL without an external lock service.
 
+Confirmed booking inserts and updates must run at PostgreSQL's default
+`READ COMMITTED` isolation. Under `REPEATABLE READ` or `SERIALIZABLE`, a
+transaction can retain a snapshot taken before it waits for the advisory lock;
+the trigger therefore rejects confirmed writes at those isolation levels with
+SQLSTATE `0A000` and explains the requirement. Pending and cancelled writes are
+not restricted. The Express API uses the connection's normal `READ COMMITTED`
+default.
+
 ### 2. Multi-Hall Relational Structure
 ```
 venues (1) ───< venue_halls (N)

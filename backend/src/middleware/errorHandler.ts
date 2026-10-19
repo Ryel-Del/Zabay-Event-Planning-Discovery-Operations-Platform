@@ -15,6 +15,14 @@ export function errorHandler(
     });
   }
 
+  if (err.code === '0A000' && err.constraint === 'venue_bookings_isolation_level') {
+    return res.status(500).json({
+      success: false,
+      error: 'Confirmed venue booking writes require READ COMMITTED transaction isolation.',
+      code: 'UNSUPPORTED_TRANSACTION_ISOLATION',
+    });
+  }
+
   // PostgreSQL Unique constraint violation code 23505
   if (err.code === '23505') {
     return res.status(409).json({
