@@ -117,6 +117,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Compatibility for task status updates on databases created before this field existed.
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE;
+
 -- 7. PERSONNEL DIRECTORY TABLE
 CREATE TABLE IF NOT EXISTS personnel (
     id VARCHAR(64) PRIMARY KEY,
