@@ -23,7 +23,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { UserRole } from '../../types';
-import zabayLogo from '../../assets/zabay-logo.png';
+import zabayWordmark from '../../assets/zabay-wordmark.png';
 import { CreateEventModal } from '../organizer/CreateEventModal';
 
 interface AppHeaderProps {
@@ -82,16 +82,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
     <header className="h-16 bg-white dark:bg-[#171E2B] border-b border-slate-200/80 dark:border-slate-800 px-6 flex items-center justify-between z-30 shrink-0 select-none transition-colors">
       {/* Left: Brand Identity & Context Navigation */}
       <div className="flex items-center gap-4">
-        {/* Brand Logo */}
+        {/* Brand Logo & Site Name */}
         <div
           onClick={() => setCurrentRole('attendee')}
           className="flex items-center gap-2.5 cursor-pointer group"
-          title="Go to Public Explore Feed"
+          title="Zabay - Go to Public Explore Feed"
         >
           <img
-            src={zabayLogo}
+            src={zabayWordmark}
             alt="Zabay"
-            className="h-8 sm:h-9 w-auto object-contain rounded-lg shadow-2xs group-hover:scale-105 transition-transform"
+            className="h-7 sm:h-8 w-auto object-contain group-hover:scale-105 transition-transform"
           />
           {currentRole === 'organizer' && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
