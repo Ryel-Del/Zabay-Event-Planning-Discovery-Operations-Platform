@@ -4,13 +4,38 @@ import {
   UserCheck,
   Package,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { Task } from '../../types';
 
 export const TaskGanttView: React.FC = () => {
-  const { tasks } = useApp();
-  const [selectedTask, setSelectedTask] = useState<Task>(tasks[0]);
+  const { tasks, loadDemoData } = useApp();
+  const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[0]?.id || '');
+
+  if (tasks.length === 0) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <CalendarRange className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">No Scheduled Tasks in Workspace</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            The Gantt timeline visualizes task durations, setup windows, and finish-to-start sequences. Add tasks in the Kanban board or load the Bohol sample plan.
+          </p>
+        </div>
+        <button
+          onClick={loadDemoData}
+          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Load Bohol Sample Data</span>
+        </button>
+      </div>
+    );
+  }
+
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
 
   // Convert "HH:mm" to minutes from 06:00 (base = 360)
   const timeToPercent = (timeStr: string) => {
@@ -75,7 +100,7 @@ export const TaskGanttView: React.FC = () => {
               return (
                 <div
                   key={task.id}
-                  onClick={() => setSelectedTask(task)}
+                  onClick={() => setSelectedTaskId(task.id)}
                   className={`group p-2 rounded-xl transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-stone-100/80 dark:bg-stone-800/60 ring-1 ring-[#B68366]/40'
