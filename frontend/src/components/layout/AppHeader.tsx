@@ -21,6 +21,8 @@ import {
   Trash2,
   Globe,
   Lock,
+  User,
+  ChevronRight,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
@@ -32,9 +34,10 @@ import { CreateEventModal } from '../organizer/CreateEventModal';
 interface AppHeaderProps {
   onOpenAudit: () => void;
   onOpenScanner: () => void;
+  onOpenProfile?: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner, onOpenProfile }) => {
   const {
     currentRole,
     setCurrentRole,
@@ -437,6 +440,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Profile Page Action */}
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800/80">
+                <button
+                  onClick={() => {
+                    setIsProfileMenuOpen(false);
+                    if (onOpenProfile) onOpenProfile();
+                  }}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] hover:text-[#244A85] dark:hover:text-[#8BB0E8] transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <User className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                    <span>My Profile & Events</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
               </div>
 
               {/* Workspace Switcher */}

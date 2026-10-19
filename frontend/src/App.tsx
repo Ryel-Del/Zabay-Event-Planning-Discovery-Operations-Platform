@@ -17,6 +17,7 @@ import { QRCheckInScanner } from './components/organizer/QRCheckInScanner';
 import { VenueManagerPortal } from './components/venue/VenueManagerPortal';
 import { EventDiscovery } from './components/attendee/EventDiscovery';
 import { AuditLogViewer } from './components/audit/AuditLogViewer';
+import { ProfileView } from './components/profile/ProfileView';
 
 const MainContent: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
@@ -25,6 +26,7 @@ const MainContent: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [activeScanCode, setActiveScanCode] = useState<string | undefined>();
 
   const handleOpenScannerWithCode = (code?: string) => {
@@ -38,6 +40,7 @@ const MainContent: React.FC = () => {
       <AppHeader
         onOpenAudit={() => setIsAuditOpen(true)}
         onOpenScanner={() => handleOpenScannerWithCode()}
+        onOpenProfile={() => setIsProfileOpen(true)}
       />
 
       {/* Main Dual-Layout Shell */}
@@ -104,6 +107,11 @@ const MainContent: React.FC = () => {
           setIsScannerOpen(false);
           setActiveScanCode(undefined);
         }}
+      />
+      <ProfileView
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onViewPass={(code) => handleOpenScannerWithCode(code)}
       />
     </div>
   );

@@ -26,6 +26,9 @@ export const mockCurrentUser: User = {
   role: 'organizer',
   phone: '+63 (917) 389-1029',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+  organization: 'Tagbilaran Youth & Sports Council',
+  location: 'Tagbilaran City, Bohol',
+  bio: 'Event director and logistics coordinator organizing provincial sports tournaments, cultural showcases, and youth leadership summits.',
 };
 
 export const mockUsers: User[] = [
@@ -37,6 +40,9 @@ export const mockUsers: User[] = [
     role: 'venue_manager',
     phone: '+63 (38) 411-3520',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    organization: 'Bohol Cultural Center Facilities',
+    location: 'CPG North Avenue, Tagbilaran City',
+    bio: 'Venue manager ensuring PostgreSQL GiST overlap safety, facility readiness, and convention space allocations.',
   },
   {
     id: 'usr-stf-1',
@@ -45,6 +51,9 @@ export const mockUsers: User[] = [
     role: 'staff',
     phone: '+63 (919) 304-9844',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    organization: 'StageMaster Crew Bohol',
+    location: 'Downtown District, Tagbilaran City',
+    bio: 'Stage manager and event floor supervisor handling line-array audio setups, referee sync, and VIP ingress.',
   },
   {
     id: 'usr-att-1',
@@ -52,6 +61,9 @@ export const mockUsers: User[] = [
     email: 'sofia.ramos@bisu.edu.ph',
     role: 'attendee',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    organization: 'Bohol Island State University (BISU)',
+    location: 'Dampas, Tagbilaran City',
+    bio: 'Student delegate and basketball enthusiast attending Bohol university tournaments and tech exhibitions.',
   },
 ];
 

@@ -12,6 +12,9 @@ export interface User {
   role: UserRole;
   phone?: string;
   avatar: string;
+  bio?: string;
+  organization?: string;
+  location?: string;
 }
 
 export type EventStatus = 'draft' | 'planning' | 'ready' | 'in_progress' | 'completed' | 'cancelled';
