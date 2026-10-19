@@ -29,15 +29,30 @@ For an initial commit and production-ready setup:
 
 ```
 zabay/
-├── db/              # PostgreSQL schema, migrations, triggers, views, and functions
-├── backend/         # Express.js + Prisma API
-├── frontend/        # React + TypeScript + Vite + Tailwind CSS client
+├── db/                       # PostgreSQL schema, EXCLUDE constraints, and Bohol seeds
+│   ├── schema.sql            # Full 20-table schema with btree_gist EXCLUDE
+│   ├── seeds/                # Verified Bohol venues & multi-hall fixtures
+│   └── README.md
+├── backend/                  # Express.js + TypeScript REST API
 │   ├── src/
-│   │   ├── assets/       # Official Zabay emblems and graphics
-│   │   ├── components/   # Modular Attendee, Organizer, Venue, and Layout components
-│   │   ├── context/      # Reactive application state & simulated database functions
-│   │   ├── mock/         # Curated Bohol seed fixtures for demo/testing
-│   │   └── types/        # TypeScript interfaces matching the 20-table schema
+│   │   ├── config/           # PostgreSQL pool configuration (pg)
+│   │   ├── controllers/      # Route handlers (events, venues, tasks, attendees)
+│   │   ├── middleware/       # Centralized error handler (EXCLUDE code 23P01)
+│   │   ├── routes/           # Domain routers (/api/events, /api/venues, etc.)
+│   │   └── server.ts         # Server entry point & CORS
+│   ├── package.json
+│   └── README.md
+├── frontend/                 # React 19 + TypeScript + Vite + Tailwind CSS client
+│   ├── src/
+│   │   ├── pages/            # Dedicated Page views (Organizer, Venue, Staff, Attendee)
+│   │   ├── components/       # Reusable feature blocks, layout & modals
+│   │   ├── services/         # Algorithmic engines (venueMatcher, impactEngine, checkInService)
+│   │   ├── hooks/            # Custom React hooks (useApp)
+│   │   ├── context/          # Reactive application state provider
+│   │   ├── mock/             # Verified Bohol venue seeds & demo fixtures
+│   │   └── types/            # TypeScript interfaces matching relational schema
+│   ├── package.json
+│   └── vite.config.ts
 └── README.md
 ```
 
