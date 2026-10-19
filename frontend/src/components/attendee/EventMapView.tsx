@@ -42,11 +42,17 @@ export const EventMapView: React.FC<EventMapViewProps> = ({ events, venues, onSe
   const defaultCenter: [number, number] = [9.6558, 123.8601];
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-stone-200 dark:border-stone-800 shadow-sm bg-[#FAF9F5] dark:bg-[#171513] relative h-[520px]">
+    <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm bg-[#FAF9F5] dark:bg-[#171513] relative h-[520px]">
+      {/* Scroll to Zoom Hint Pill */}
+      <div className="absolute top-3 right-3 z-20 bg-white/90 dark:bg-[#171E2B]/90 backdrop-blur-xs px-3 py-1 rounded-full border border-slate-200/80 dark:border-slate-700/80 text-[11px] font-medium text-slate-700 dark:text-slate-300 shadow-xs flex items-center gap-1.5 pointer-events-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#3E6CB5] animate-pulse" />
+        Scroll to zoom • Drag to pan
+      </div>
+
       <MapContainer
         center={defaultCenter}
         zoom={11}
-        scrollWheelZoom={false}
+        scrollWheelZoom={true}
         className="w-full h-full z-10"
       >
         <TileLayer

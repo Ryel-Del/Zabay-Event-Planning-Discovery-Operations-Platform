@@ -56,7 +56,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6558,
     lng: 123.8601,
     capacity: 2200,
-    hourly_rate: 450,
+    hourly_rate: 3500,
     facilities: [
       'Dedicated Gigabit Fiber WiFi',
       '4K Laser Projection System',
@@ -83,7 +83,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6543,
     lng: 123.8732,
     capacity: 3500,
-    hourly_rate: 320,
+    hourly_rate: 2800,
     facilities: [
       'Indoor Arena Hardwood Court',
       'Dedicated Gigabit Fiber WiFi',
@@ -109,7 +109,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6582,
     lng: 123.8587,
     capacity: 2000,
-    hourly_rate: 280,
+    hourly_rate: 2200,
     facilities: [
       'Indoor Arena Hardwood Court',
       'Dedicated Gigabit Fiber WiFi',
@@ -134,7 +134,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6439,
     lng: 123.8532,
     capacity: 850,
-    hourly_rate: 650,
+    hourly_rate: 4800,
     facilities: [
       'Grand Ballroom Crystal Chandeliers',
       'Dedicated Gigabit Fiber WiFi',
@@ -160,7 +160,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6285,
     lng: 123.8420,
     capacity: 650,
-    hourly_rate: 420,
+    hourly_rate: 3200,
     facilities: [
       'Open-Air Panoramic Bayview Deck',
       'Acoustic Sound Treatment',
@@ -185,7 +185,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6515,
     lng: 123.8490,
     capacity: 1200,
-    hourly_rate: 580,
+    hourly_rate: 4200,
     facilities: [
       'Multi-Tier Convention Stage',
       'Dedicated Gigabit Fiber WiFi',
@@ -211,7 +211,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6520,
     lng: 123.8485,
     capacity: 450,
-    hourly_rate: 350,
+    hourly_rate: 2600,
     facilities: [
       'Oceanfront Sea-Breeze Pavilion',
       'Concert PA & Audio System',
@@ -235,7 +235,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6425,
     lng: 123.8528,
     capacity: 1600,
-    hourly_rate: 150,
+    hourly_rate: 850,
     facilities: [
       'Public Civic Stage & Bandstand',
       'Heritage Park Open Grounds',
@@ -259,7 +259,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6430,
     lng: 123.8530,
     capacity: 350,
-    hourly_rate: 290,
+    hourly_rate: 1800,
     facilities: [
       'Historic Courtyard & Quadrangle',
       'Audiovisual Lecture Hall',
@@ -284,7 +284,7 @@ export const mockVenues: Venue[] = [
     lat: 9.6565,
     lng: 123.8592,
     capacity: 120,
-    hourly_rate: 140,
+    hourly_rate: 1200,
     facilities: [
       'Private Executive Conference Rooms',
       'Dedicated Gigabit Fiber WiFi',
@@ -497,7 +497,7 @@ export const mockResources: Resource[] = [
     category: 'av_equipment',
     total_quantity: 8,
     available_quantity: 3,
-    hourly_cost: 150,
+    hourly_cost: 1800,
     unit: 'sets',
   },
   {
@@ -506,7 +506,7 @@ export const mockResources: Resource[] = [
     category: 'av_equipment',
     total_quantity: 6,
     available_quantity: 2,
-    hourly_cost: 210,
+    hourly_cost: 1500,
     unit: 'units',
   },
   {
@@ -515,7 +515,7 @@ export const mockResources: Resource[] = [
     category: 'stage_lighting',
     total_quantity: 48,
     available_quantity: 12,
-    hourly_cost: 25,
+    hourly_cost: 250,
     unit: 'fixtures',
   },
   {
@@ -524,7 +524,7 @@ export const mockResources: Resource[] = [
     category: 'safety',
     total_quantity: 30,
     available_quantity: 18,
-    hourly_cost: 35,
+    hourly_cost: 350,
     unit: 'units',
   },
   {
@@ -533,7 +533,7 @@ export const mockResources: Resource[] = [
     category: 'sports_equipment',
     total_quantity: 4,
     available_quantity: 2,
-    hourly_cost: 45,
+    hourly_cost: 450,
     unit: 'units',
   },
   {
@@ -542,7 +542,7 @@ export const mockResources: Resource[] = [
     category: 'furniture',
     total_quantity: 50,
     available_quantity: 25,
-    hourly_cost: 20,
+    hourly_cost: 200,
     unit: 'sets',
   },
 ];
@@ -555,7 +555,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['Acoustic Tuning', 'Arena Sound Systems', 'Wireless Mic Arrays'],
     phone: '+63 (917) 772-1049',
     email: 'darius.thorne@boholaudio.ph',
-    hourly_rate: 95,
+    hourly_rate: 550,
     is_available: true,
   },
   {
@@ -565,7 +565,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['GrandMA3 Programming', 'Court Illumination', 'Stage Spotlights'],
     phone: '+63 (928) 881-2299',
     email: 'maya.lin@luminaevents.ph',
-    hourly_rate: 90,
+    hourly_rate: 500,
     is_available: true,
   },
   {
@@ -575,7 +575,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['Logistics Direction', 'Floor Setup', 'Vendor Coordination'],
     phone: '+63 (919) 304-9844',
     email: 'carlos.r@stagemaster.ph',
-    hourly_rate: 110,
+    hourly_rate: 650,
     is_available: true,
   },
   {
@@ -585,7 +585,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['Crowd Safety', 'Emergency Dispatch', 'CPR / First Aid'],
     phone: '+63 (920) 550-9921',
     email: 'aisha.r@safeguard.ph',
-    hourly_rate: 85,
+    hourly_rate: 400,
     is_available: true,
   },
   {
@@ -595,7 +595,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['FIBA Certified Referee', 'Table Official Management', 'Scorekeeping'],
     phone: '+63 (917) 664-8833',
     email: 'mark.tan@boholreferees.ph',
-    hourly_rate: 95,
+    hourly_rate: 500,
     is_available: true,
   },
   {
@@ -605,7 +605,7 @@ export const mockPersonnel: Personnel[] = [
     skills: ['Guest Relations', 'Team Coordination', 'Registration Management'],
     phone: '+63 (917) 412-9901',
     email: 'elena.rostova@zabay.ph',
-    hourly_rate: 100,
+    hourly_rate: 600,
     is_available: true,
   },
 ];

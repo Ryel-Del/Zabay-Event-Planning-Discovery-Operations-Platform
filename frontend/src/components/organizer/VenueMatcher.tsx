@@ -189,7 +189,7 @@ export const VenueMatcher: React.FC = () => {
               Detailed Verification: {activeVenueMatch.venue.name}
             </h3>
             <span className="text-[11px] text-stone-500 dark:text-stone-400">
-              ₱{activeVenueMatch.venue.hourly_rate}/hr • Operating: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
+              ₱{activeVenueMatch.venue.hourly_rate.toLocaleString()}/hr • Operating: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
             </span>
           </div>
 

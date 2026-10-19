@@ -22,7 +22,7 @@ export const VenueMasterDetail: React.FC = () => {
   const [targetAttendance, setTargetAttendance] = useState<number>(
     selectedEvent?.requirements?.min_capacity || 500
   );
-  const [maxBudgetPerHour, setMaxBudgetPerHour] = useState<number>(650);
+  const [maxBudgetPerHour, setMaxBudgetPerHour] = useState<number>(3500);
   const [selectedCity, setSelectedCity] = useState<string>('All');
   const [powerKwNeeded, setPowerKwNeeded] = useState<number>(
     selectedEvent?.requirements?.power_kw_needed || 80
@@ -232,20 +232,20 @@ export const VenueMasterDetail: React.FC = () => {
               <span className="text-slate-500 font-semibold flex items-center gap-1">
                 <DollarSign className="w-3.5 h-3.5 text-[#4E8268]" /> Max Budget:
               </span>
-              <span className="font-bold text-slate-900 dark:text-slate-100">₱{maxBudgetPerHour}/hr</span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">₱{maxBudgetPerHour.toLocaleString()}/hr</span>
             </div>
             <input
               type="range"
-              min={100}
-              max={1500}
-              step={50}
+              min={500}
+              max={6000}
+              step={100}
               value={maxBudgetPerHour}
               onChange={(e) => setMaxBudgetPerHour(Number(e.target.value))}
               className="w-full accent-[#3E6CB5] cursor-pointer"
             />
             <div className="flex justify-between text-[10px] text-slate-400">
-              <span>₱100/hr (Club)</span>
-              <span>₱1,500/hr</span>
+              <span>₱500/hr (Civic)</span>
+              <span>₱6,000/hr (Grand Ballroom)</span>
             </div>
           </div>
 
@@ -378,7 +378,7 @@ export const VenueMasterDetail: React.FC = () => {
                         {overallScore}% Match
                       </span>
                       <p className="text-[11px] font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                        ₱{venue.hourly_rate}/hr
+                        ₱{venue.hourly_rate.toLocaleString()}/hr
                       </p>
                     </div>
                   </div>
@@ -421,7 +421,7 @@ export const VenueMasterDetail: React.FC = () => {
 
               <div className="text-right">
                 <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                  ₱{activeVenueMatch.venue.hourly_rate}/hr
+                  ₱{activeVenueMatch.venue.hourly_rate.toLocaleString()}/hr
                 </span>
                 <p className="text-[10px] text-slate-400 font-mono">
                   Hours: {activeVenueMatch.venue.operating_hours.open} - {activeVenueMatch.venue.operating_hours.close}
