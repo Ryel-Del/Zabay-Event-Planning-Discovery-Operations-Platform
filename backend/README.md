@@ -52,10 +52,11 @@ From the repository root, run `psql -U postgres -d zabay_db -f db/schema.sql` an
 ### Tests and build
 
 Run `npm run build` to compile TypeScript and `npm test` to run the API suite. The
-health test is always run; database-backed tests run when `DATABASE_URL` points to an
-isolated test database. CI provisions PostgreSQL, applies the schema and seed, and runs
-both checks. Authentication, payments, and the proposed expanded schema are not yet
-implemented.
+health test is always run. Database-mutating tests run only when `TEST_DATABASE_URL`
+is explicitly set and its database name contains `test`; the test process then uses
+that URL as `DATABASE_URL`. CI provisions PostgreSQL, applies the schema and seed, and
+runs both checks. Authentication, payments, and the proposed expanded schema are not
+yet implemented.
 
 ---
 

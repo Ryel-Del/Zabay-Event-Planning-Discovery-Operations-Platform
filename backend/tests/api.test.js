@@ -1,6 +1,17 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const request = require('supertest');
+
+const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+if (testDatabaseUrl) {
+  const parsed = new URL(testDatabaseUrl);
+  const databaseName = decodeURIComponent(parsed.pathname.slice(1));
+  if (!databaseName || !/(^|[_-])test([_-]|$)/i.test(databaseName)) {
+    throw new Error('Refusing integration tests: TEST_DATABASE_URL must target a database whose name contains "test".');
+  }
+  process.env.DATABASE_URL = testDatabaseUrl;
+}
+
 const { app } = require('../dist/app');
 const { pool } = require('../dist/config/db');
 
@@ -11,7 +22,7 @@ test('health endpoint reports the service online', async () => {
   assert.equal(response.body.service, 'Zabay Backend API');
 });
 
-test('database-backed API behavior uses the schema and seed', { skip: !process.env.DATABASE_URL }, async (t) => {
+test('database-backed API behavior uses the schema and seed', { skip: !testDatabaseUrl }, async (t) => {
   const venues = await request(app).get('/api/venues');
   assert.equal(venues.status, 200);
   assert.ok(Array.isArray(venues.body.data));
