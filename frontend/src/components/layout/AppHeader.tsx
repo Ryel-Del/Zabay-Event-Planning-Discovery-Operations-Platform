@@ -109,6 +109,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
               Venue Hub
             </span>
           )}
+          {currentRole === 'staff' && (
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF7EE] text-[#8C6212] dark:bg-[#252219] dark:text-[#E8BD68] border border-[#ECD9A8] dark:border-[#5A4B27]">
+              Staff View
+            </span>
+          )}
         </div>
 
         {/* Studio / Venue Hub Exit Action (Return to Public Community Feed) */}
@@ -378,6 +383,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                   ? 'Organizer'
                   : currentRole === 'venue_manager'
                   ? 'Venue Manager'
+                  : currentRole === 'staff'
+                  ? 'Staff (View-Only)'
                   : 'Public Attendee'}
               </p>
             </div>
@@ -449,6 +456,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                     </div>
                   </div>
                   {currentRole === 'venue_manager' && <Check className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />}
+                </button>
+
+                <button
+                  onClick={() => handleRoleSelect('staff')}
+                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                    currentRole === 'staff'
+                      ? 'bg-[#FAF7EE] dark:bg-[#252219] text-[#8C6212] dark:text-[#E8BD68] font-semibold'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />
+                    <div className="text-left">
+                      <p className="font-semibold">Event Staff Portal</p>
+                      <p className="text-[10px] text-slate-500">View-only shifts, tasks & run-of-show</p>
+                    </div>
+                  </div>
+                  {currentRole === 'staff' && <Check className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />}
                 </button>
 
                 <button

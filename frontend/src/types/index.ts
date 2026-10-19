@@ -3,7 +3,7 @@
 // Models the 20-table Relational System
 // ==========================================
 
-export type UserRole = 'organizer' | 'venue_manager' | 'attendee' | 'admin';
+export type UserRole = 'organizer' | 'venue_manager' | 'staff' | 'attendee' | 'admin';
 
 export interface User {
   id: string;
@@ -202,7 +202,7 @@ export interface AuditLog {
   id: string;
   user_id: string;
   user_name: string;
-  action: 'TASK_DELAY' | 'VENUE_CHANGE' | 'RESOURCE_OVERALLOCATION' | 'SCHEDULE_REBALANCED' | 'CHECK_IN';
+  action: 'TASK_DELAY' | 'VENUE_CHANGE' | 'RESOURCE_OVERALLOCATION' | 'SCHEDULE_REBALANCED' | 'CHECK_IN' | 'RESOURCE_ASSIGNMENT';
   entity_type: 'task' | 'venue' | 'resource' | 'registration';
   entity_id: string;
   change_summary: string;

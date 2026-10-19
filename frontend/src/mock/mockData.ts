@@ -39,6 +39,14 @@ export const mockUsers: User[] = [
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
   },
   {
+    id: 'usr-stf-1',
+    name: 'Carlos Ruiz',
+    email: 'carlos.r@stagemaster.ph',
+    role: 'staff',
+    phone: '+63 (919) 304-9844',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+  },
+  {
     id: 'usr-att-1',
     name: 'Sofia Ramos',
     email: 'sofia.ramos@bisu.edu.ph',

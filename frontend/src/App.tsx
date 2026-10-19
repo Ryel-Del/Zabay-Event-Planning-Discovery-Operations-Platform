@@ -11,13 +11,15 @@ import { TaskKanbanBoard } from './components/organizer/TaskKanbanBoard';
 import { TopDownCalendarView } from './components/organizer/TopDownCalendarView';
 import { AttendeeDirectoryDatagrid } from './components/organizer/AttendeeDirectoryDatagrid';
 import { AnalyticsDashboard } from './components/organizer/AnalyticsDashboard';
+import { PersonnelDirectory } from './components/organizer/PersonnelDirectory';
+import { PersonnelPortal } from './components/staff/PersonnelPortal';
 import { QRCheckInScanner } from './components/organizer/QRCheckInScanner';
 import { VenueManagerPortal } from './components/venue/VenueManagerPortal';
 import { EventDiscovery } from './components/attendee/EventDiscovery';
 import { AuditLogViewer } from './components/audit/AuditLogViewer';
 
 const MainContent: React.FC = () => {
-  const { currentRole } = useApp();
+  const { currentRole, setCurrentRole } = useApp();
   const [organizerView, setOrganizerView] = useState<OrganizerView>('overview');
   const [venueView, setVenueView] = useState<'overview' | 'calendar' | 'inventory'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -41,7 +43,7 @@ const MainContent: React.FC = () => {
       {/* Main Dual-Layout Shell */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar (Active for Organizer & Venue Manager) */}
-        {currentRole !== 'attendee' && (
+        {currentRole !== 'attendee' && currentRole !== 'staff' && (
           <AppSidebar
             currentView={currentRole === 'venue_manager' ? venueView : organizerView}
             onSelectView={(v) => {
@@ -64,6 +66,9 @@ const MainContent: React.FC = () => {
               {organizerView === 'kanban' && <TaskKanbanBoard />}
               {organizerView === 'top_calendar' && <TopDownCalendarView />}
               {organizerView === 'venues' && <VenueMasterDetail />}
+              {organizerView === 'personnel' && (
+                <PersonnelDirectory onSwitchToStaffView={() => setCurrentRole('staff')} />
+              )}
               {organizerView === 'impact' && <ChangeImpactSimulator />}
               {organizerView === 'schedule' && <TaskGanttView />}
               {organizerView === 'attendees' && (
@@ -78,7 +83,10 @@ const MainContent: React.FC = () => {
           {/* 2. Venue Manager Mode */}
           {currentRole === 'venue_manager' && <VenueManagerPortal />}
 
-          {/* 3. Attendee Mode (Public Event Discovery & QR Passes) */}
+          {/* 3. Event Staff Mode (View-Only Personnel Portal) */}
+          {currentRole === 'staff' && <PersonnelPortal />}
+
+          {/* 4. Attendee Mode (Public Event Discovery & QR Passes) */}
           {currentRole === 'attendee' && (
             <EventDiscovery
               onOpenScannerWithPass={(code) => handleOpenScannerWithCode(code)}

@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarRange,
   Users,
+  UserCheck,
   BarChart3,
   CalendarDays,
   ChevronLeft,
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
-export type OrganizerView = 'overview' | 'kanban' | 'top_calendar' | 'venues' | 'impact' | 'schedule' | 'attendees' | 'analytics';
+export type OrganizerView = 'overview' | 'kanban' | 'top_calendar' | 'venues' | 'personnel' | 'impact' | 'schedule' | 'attendees' | 'analytics';
 export type VenueView = 'overview' | 'calendar' | 'inventory';
 
 interface AppSidebarProps {
@@ -31,7 +32,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isCollapsed,
   onToggleCollapse,
 }) => {
-  const { currentRole, setCurrentRole, tasks, registrations } = useApp();
+  const { currentRole, setCurrentRole, tasks, registrations, personnel } = useApp();
 
   const conflictCount = tasks.filter((t) => t.has_conflict).length;
   const pendingCheckIn = registrations.filter((r) => r.status === 'confirmed').length;
@@ -63,6 +64,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       badge: 'Bohol Match',
     },
     {
+      id: 'personnel',
+      label: 'Personnel & Crew',
+      icon: <Users className="w-4 h-4" />,
+      badge: `${personnel.length} staff`,
+      badgeColor: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]',
+    },
+    {
       id: 'impact',
       label: 'Change-Impact DAG',
       icon: <GitBranch className="w-4 h-4" />,
@@ -78,7 +86,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     {
       id: 'attendees',
       label: 'Attendee Directory',
-      icon: <Users className="w-4 h-4" />,
+      icon: <UserCheck className="w-4 h-4" />,
       badge: `${pendingCheckIn} active`,
     },
     {

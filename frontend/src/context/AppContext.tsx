@@ -70,6 +70,9 @@ interface AppContextType {
   checkInAttendee: (qrCode: string) => { success: boolean; message: string; registration?: Registration; isDuplicate?: boolean };
   bookVenue: (venueId: string, eventId: string, startTime: string, endTime: string) => { success: boolean; message: string };
   registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
+  addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
+  updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
+  removePersonnel: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -146,7 +149,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   });
   const [resources] = useState<Resource[]>(mockResources);
-  const [personnel] = useState<Personnel[]>(mockPersonnel);
+  const [personnel, setPersonnel] = useState<Personnel[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay_custom_personnel');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore parsing error
+        }
+      }
+    }
+    return mockPersonnel;
+  });
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
       return mockTasks;
@@ -171,11 +186,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedEvent(mockEvents[0]);
     setVenueBookings(mockVenueBookings);
     setTasks(mockTasks);
+    setPersonnel(mockPersonnel);
     setRegistrations(mockRegistrations);
     setAuditLogs(mockAuditLogs);
     setIsDemoMode(true);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-demo-mode', 'true');
+      localStorage.removeItem('zabay_custom_personnel');
     }
   };
 
@@ -184,11 +201,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedEvent(null);
     setVenueBookings([]);
     setTasks([]);
+    setPersonnel([]);
     setRegistrations([]);
     setAuditLogs([]);
     setIsDemoMode(false);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-demo-mode', 'false');
+      localStorage.removeItem('zabay_custom_personnel');
     }
   };
 
@@ -646,6 +665,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const addPersonnel = (data: Omit<Personnel, 'id'>): Personnel => {
+    const newPerson: Personnel = {
+      id: `per-${Date.now()}`,
+      ...data,
+    };
+    setPersonnel((prev) => {
+      const updated = [newPerson, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_custom_personnel', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    const log: AuditLog = {
+      id: `aud-${Date.now()}`,
+      action: 'RESOURCE_ASSIGNMENT',
+      entity_type: 'resource',
+      entity_id: newPerson.id,
+      user_id: currentUser?.id || 'usr-org-1',
+      user_name: currentUser?.name || 'Lead Organizer',
+      change_summary: `Registered personnel member "${newPerson.name}" (${newPerson.role}) with rate ₱${newPerson.hourly_rate.toLocaleString()}/hr`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [log, ...prev]);
+
+    return newPerson;
+  };
+
+  const updatePersonnel = (id: string, updates: Partial<Personnel>) => {
+    setPersonnel((prev) => {
+      const updated = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_custom_personnel', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const removePersonnel = (id: string) => {
+    setPersonnel((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_custom_personnel', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    const log: AuditLog = {
+      id: `aud-${Date.now()}`,
+      action: 'RESOURCE_ASSIGNMENT',
+      entity_type: 'resource',
+      entity_id: id,
+      user_id: currentUser?.id || 'usr-org-1',
+      user_name: currentUser?.name || 'Lead Organizer',
+      change_summary: `Removed personnel member ID "${id}" from event roster`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [log, ...prev]);
+  };
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -680,6 +759,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       checkInAttendee,
       bookVenue,
       registerForEvent,
+      addPersonnel,
+      updatePersonnel,
+      removePersonnel,
     }),
     [
       currentUser,

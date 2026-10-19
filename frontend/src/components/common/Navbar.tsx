@@ -8,6 +8,7 @@ import {
   RotateCcw,
   QrCode,
   Layers,
+  Users,
   Sun,
   Moon,
 } from 'lucide-react';
@@ -36,6 +37,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAudit, onOpenScanner }) =>
       label: 'Venue Manager',
       icon: <Building2 className="w-3.5 h-3.5" />,
       desc: 'Facilities, Slots & EXCLUDE Safety',
+    },
+    {
+      role: 'staff',
+      label: 'Staff Portal',
+      icon: <Users className="w-3.5 h-3.5" />,
+      desc: 'View-Only Shifts, Tasks & Run-of-Show',
     },
     {
       role: 'attendee',
