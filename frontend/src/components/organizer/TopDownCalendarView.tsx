@@ -15,7 +15,7 @@ import type { Task, VenueBooking, TaskTrack } from '../../types';
 export const TopDownCalendarView: React.FC = () => {
   const { tasks, selectedEvent, venues, venueBookings } = useApp();
 
-  // Current calendar view month (Default to November 2026 for Sandugo Tech Summit)
+  // Current calendar view month (Default to November 2026 for Bohol Basketball Championship)
   const [currentYear, setCurrentYear] = useState(2026);
   const [currentMonth, setCurrentMonth] = useState(10); // 0-indexed: 10 = November
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-12');
@@ -151,7 +151,7 @@ export const TopDownCalendarView: React.FC = () => {
       case 'venue_logistics':
         return { label: 'Venue', dot: 'bg-[#2B6149]', pill: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]' };
       case 'technical_av':
-        return { label: 'A/V Rig', dot: 'bg-[#3E6CB5]', pill: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]' };
+        return { label: 'Stage & Sound', dot: 'bg-[#3E6CB5]', pill: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]' };
       case 'marketing_tickets':
         return { label: 'Passes', dot: 'bg-[#7E57C2]', pill: 'bg-[#F5F0FA] text-[#5C3B87] dark:bg-[#231A2E] dark:text-[#B393DB]' };
       case 'day_of_ops':
@@ -250,10 +250,10 @@ export const TopDownCalendarView: React.FC = () => {
         </span>
         {[
           { id: 'all', label: 'All Operations' },
-          { id: 'venue_logistics', label: 'Venue & Logistics' },
-          { id: 'technical_av', label: 'Technical & A/V Rig' },
-          { id: 'marketing_tickets', label: 'Marketing & Passes' },
-          { id: 'day_of_ops', label: 'Day-of Operations' },
+          { id: 'venue_logistics', label: 'Venue & Facilities' },
+          { id: 'technical_av', label: 'Lights, Sound & Stage' },
+          { id: 'marketing_tickets', label: 'Registration & Promotion' },
+          { id: 'day_of_ops', label: 'Day-of Coordination' },
         ].map((tab) => (
           <button
             key={tab.id}

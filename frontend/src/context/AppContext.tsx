@@ -197,7 +197,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `evt-${Date.now()}`,
       title: data.title || 'Untitled Bohol Event',
       description: data.description || 'Newly created event workspace.',
-      category: data.category || 'Tech & AI',
+      category: data.category || 'Sports & Athletics',
       event_type: 'public',
       status: data.status || 'planning',
       venue_id: data.venue_id,

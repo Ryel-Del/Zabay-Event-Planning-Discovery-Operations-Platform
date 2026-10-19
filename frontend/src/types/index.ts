@@ -15,7 +15,15 @@ export interface User {
 }
 
 export type EventStatus = 'draft' | 'planning' | 'ready' | 'in_progress' | 'completed' | 'cancelled';
-export type EventCategory = 'Tech & AI' | 'Music & Festival' | 'Business & Summit' | 'Gaming & Esports' | 'Design & Arts';
+export type EventCategory =
+  | 'Sports & Athletics'
+  | 'Festivals & Cultural'
+  | 'Weddings & Celebrations'
+  | 'Conferences & Seminars'
+  | 'School & Youth'
+  | 'Community & Civic'
+  | 'Music & Concert'
+  | 'Tech & Innovation';
 
 export interface EventRequirements {
   min_capacity: number;
@@ -84,7 +92,7 @@ export interface VenueBooking {
   status: 'confirmed' | 'pending' | 'cancelled';
 }
 
-export type ResourceCategory = 'av_equipment' | 'furniture' | 'stage_lighting' | 'catering' | 'safety' | 'networking';
+export type ResourceCategory = 'av_equipment' | 'furniture' | 'stage_lighting' | 'catering' | 'safety' | 'sports_equipment' | 'networking';
 
 export interface Resource {
   id: string;
@@ -99,7 +107,18 @@ export interface Resource {
 export interface Personnel {
   id: string;
   name: string;
-  role: 'Sound Engineer' | 'Lighting Tech' | 'Stage Manager' | 'Security Lead' | 'Registration Staff' | 'Catering Supervisor' | 'Network Admin';
+  role:
+    | 'Sound Engineer'
+    | 'Lighting Tech'
+    | 'Stage Manager'
+    | 'Security Lead'
+    | 'Registration Staff'
+    | 'Catering Supervisor'
+    | 'Event Coordinator'
+    | 'Tournament Referee'
+    | 'Emcee / Host'
+    | 'Medical / First Aid'
+    | 'Network Admin';
   skills: string[];
   phone: string;
   email: string;
@@ -150,7 +169,7 @@ export interface Registration {
   attendee_name: string;
   attendee_email: string;
   status: 'confirmed' | 'checked_in' | 'cancelled';
-  ticket_type: 'General Admission' | 'VIP Access' | 'Speaker / Staff';
+  ticket_type: 'General Admission' | 'VIP Access' | 'Speaker / Staff' | 'Courtside Reserved' | 'General Bleachers';
   qr_pass_code: string;
   registered_at: string;
   payment_id?: string;

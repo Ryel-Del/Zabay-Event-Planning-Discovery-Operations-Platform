@@ -13,6 +13,7 @@ import {
   Briefcase,
   Check,
   Filter,
+  Heart,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { TaskStatus, TaskPriority, TaskTrack } from '../../types';
@@ -105,13 +106,13 @@ export const TaskKanbanBoard: React.FC = () => {
   const getTrackBadge = (track?: TaskTrack) => {
     switch (track) {
       case 'venue_logistics':
-        return { label: 'Venue & Logistics', bg: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]' };
+        return { label: 'Venue & Facilities', bg: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]' };
       case 'technical_av':
-        return { label: 'Technical & A/V', bg: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]' };
+        return { label: 'Lights, Sound & Stage', bg: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]' };
       case 'marketing_tickets':
-        return { label: 'Marketing & Passes', bg: 'bg-[#F5F0FA] text-[#5C3B87] dark:bg-[#231A2E] dark:text-[#B393DB]' };
+        return { label: 'Registration & Promotion', bg: 'bg-[#F5F0FA] text-[#5C3B87] dark:bg-[#231A2E] dark:text-[#B393DB]' };
       case 'day_of_ops':
-        return { label: 'Day-of Operations', bg: 'bg-[#FFF9EB] text-[#7A5B14] dark:bg-[#2A2312] dark:text-[#E2C37A]' };
+        return { label: 'Day-of Coordination', bg: 'bg-[#FFF9EB] text-[#7A5B14] dark:bg-[#2A2312] dark:text-[#E2C37A]' };
       default:
         return { label: 'General', bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
     }
@@ -134,6 +135,8 @@ export const TaskKanbanBoard: React.FC = () => {
         return <Trophy className="w-4 h-4 text-[#C2611D] dark:text-[#E89255]" />;
       case 'Briefcase':
         return <Briefcase className="w-4 h-4 text-[#2B6149] dark:text-[#81B89B]" />;
+      case 'Heart':
+        return <Heart className="w-4 h-4 text-rose-500 dark:text-rose-400" />;
       default:
         return <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />;
     }
@@ -221,10 +224,10 @@ export const TaskKanbanBoard: React.FC = () => {
           </span>
           {[
             { id: 'all', label: 'All Tasks' },
-            { id: 'venue_logistics', label: 'Venue & Logistics' },
-            { id: 'technical_av', label: 'Technical & A/V' },
-            { id: 'marketing_tickets', label: 'Marketing & Passes' },
-            { id: 'day_of_ops', label: 'Day-of Ops' },
+            { id: 'venue_logistics', label: 'Venue & Facilities' },
+            { id: 'technical_av', label: 'Lights, Sound & Stage' },
+            { id: 'marketing_tickets', label: 'Registration & Promotion' },
+            { id: 'day_of_ops', label: 'Day-of Coordination' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -473,10 +476,10 @@ export const TaskKanbanBoard: React.FC = () => {
                     onChange={(e) => setNewTrack(e.target.value as TaskTrack)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   >
-                    <option value="venue_logistics">Venue & Logistics</option>
-                    <option value="technical_av">Technical & A/V</option>
-                    <option value="marketing_tickets">Marketing & Passes</option>
-                    <option value="day_of_ops">Day-of Operations</option>
+                    <option value="venue_logistics">Venue & Facilities</option>
+                    <option value="technical_av">Lights, Sound & Stage</option>
+                    <option value="marketing_tickets">Registration & Promotion</option>
+                    <option value="day_of_ops">Day-of Coordination</option>
                   </select>
                 </div>
               </div>

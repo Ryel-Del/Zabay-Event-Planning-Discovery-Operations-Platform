@@ -260,7 +260,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                 })}
               </p>
               <p className="text-xs text-slate-500 font-mono">
-                09:00 AM – 06:00 PM PDT (Multi-Day Summit)
+                {new Date(event.start_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} – {new Date(event.end_date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} (PHT)
               </p>
             </div>
 
@@ -273,7 +273,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                 Event Location & Venue
               </h4>
               <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
-                {venue ? venue.name : 'Bohol Cultural Center'}
+                {venue ? venue.name : 'Bohol Venue'}
               </p>
               <p className="text-xs text-slate-500 truncate">
                 {venue ? `${venue.address}, ${venue.city}` : 'Tagbilaran City, Bohol'}
@@ -290,25 +290,25 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
 
             <div className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed space-y-3">
               <p>
-                Welcome to <strong>{event.title}</strong>. This multi-track event brings together university student organizations, engineering teams, and industry leaders for hands-on demos, keynote sessions, and networking.
+                {event.description || `Welcome to ${event.title}. Experience premier community organizing and seamless venue operations in Bohol.`}
               </p>
 
               <div className="p-4 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 space-y-2">
                 <span className="font-bold text-slate-900 dark:text-slate-100 block">
-                  Included with Your Registration:
+                  Included with Your Admission:
                 </span>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                   <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Full Keynote & Workshop Floor Access
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Networking Lunch & Espresso Bar
+                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Official Venue & Arena Admission Pass
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Digital QR Gate Pass in Wallet
                   </li>
                   <li className="flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Dedicated High-Speed Gigabit WiFi
+                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> Reserved Seating / Bleacher Access
+                  </li>
+                  <li className="flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-[#3E6CB5]" /> First Aid & Security Marshal Coverage
                   </li>
                 </ul>
               </div>

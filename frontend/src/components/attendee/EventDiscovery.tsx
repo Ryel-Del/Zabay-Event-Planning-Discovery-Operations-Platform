@@ -30,7 +30,14 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
   const [selectedEventForCheckout, setSelectedEventForCheckout] = useState<ZabayEvent | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] = useState<ZabayEvent | null>(null);
 
-  const categories: string[] = ['All', 'Tech & AI', 'Music & Festival', 'Gaming & Esports'];
+  const categories: string[] = [
+    'All',
+    'Sports & Athletics',
+    'Festivals & Cultural',
+    'Conferences & Seminars',
+    'Weddings & Celebrations',
+    'School & Youth',
+  ];
 
   const filteredEvents = events.filter((e) => {
     const matchesSearch =

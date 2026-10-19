@@ -23,13 +23,13 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<EventCategory>('Tech & AI');
+  const [category, setCategory] = useState<EventCategory>('Sports & Athletics');
   const [venueId, setVenueId] = useState<string>('');
   const [startDate, setStartDate] = useState('2026-11-20');
   const [endDate, setEndDate] = useState('2026-11-20');
   const [expectedAttendance, setExpectedAttendance] = useState(250);
   const [maxCapacity, setMaxCapacity] = useState(500);
-  const [ticketPrice, setTicketPrice] = useState(150);
+  const [ticketPrice, setTicketPrice] = useState(50);
   const [powerKw, setPowerKw] = useState(30);
 
   if (!isOpen) return null;
@@ -39,6 +39,27 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     if (!title.trim()) return;
 
     const selectedVenue = venues.find((v) => v.id === venueId);
+
+    const getBannerForCategory = (cat: EventCategory) => {
+      switch (cat) {
+        case 'Sports & Athletics':
+          return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80';
+        case 'Festivals & Cultural':
+          return 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80';
+        case 'Weddings & Celebrations':
+          return 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&auto=format&fit=crop&q=80';
+        case 'Conferences & Seminars':
+          return 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&auto=format&fit=crop&q=80';
+        case 'School & Youth':
+          return 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=1200&auto=format&fit=crop&q=80';
+        case 'Music & Concert':
+          return 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80';
+        case 'Community & Civic':
+          return 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80';
+        default:
+          return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80';
+      }
+    };
 
     const newEvent = createEvent({
       title: title.trim(),
@@ -51,14 +72,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
       max_capacity: Number(maxCapacity) || 200,
       ticket_price: Number(ticketPrice) || 0,
       status: 'planning',
-      banner_url:
-        category === 'Gaming & Esports'
-          ? 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=1200&auto=format&fit=crop&q=80'
-          : category === 'Music & Festival'
-          ? 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80'
-          : category === 'Business & Summit'
-          ? 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&auto=format&fit=crop&q=80'
-          : 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80',
+      banner_url: getBannerForCategory(category),
       requirements: {
         min_capacity: Number(expectedAttendance) || 100,
         power_kw_needed: Number(powerKw) || 25,
@@ -134,7 +148,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             <input
               type="text"
               required
-              placeholder="e.g. Bohol Youth Leadership Summit 2026"
+              placeholder="e.g. Bohol Inter-School Basketball Cup or Sandugo Cultural Showcase"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
@@ -154,11 +168,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   onChange={(e) => setCategory(e.target.value as EventCategory)}
                   className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
                 >
-                  <option value="Tech & AI">Tech & AI</option>
-                  <option value="Business & Summit">Business & Summit</option>
-                  <option value="Gaming & Esports">Gaming & Esports</option>
-                  <option value="Music & Festival">Music & Festival</option>
-                  <option value="Design & Arts">Design & Arts</option>
+                  <option value="Sports & Athletics">Sports & Athletics</option>
+                  <option value="Festivals & Cultural">Festivals & Cultural</option>
+                  <option value="Weddings & Celebrations">Weddings & Celebrations</option>
+                  <option value="Conferences & Seminars">Conferences & Seminars</option>
+                  <option value="School & Youth">School & Youth</option>
+                  <option value="Community & Civic">Community & Civic</option>
+                  <option value="Music & Concert">Music & Concert</option>
+                  <option value="Tech & Innovation">Tech & Innovation</option>
                 </select>
               </div>
             </div>
