@@ -1121,7 +1121,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
   {
     id: 'kit-sports',
     name: 'Bohol Inter-School & Barangay Sports Tournament Kit',
-    tagline: 'Tailored for gymnasium tournaments at Bohol Wisdom Gym or HNU Barder Gym',
+    tagline: 'Tailored for gymnasium tournaments, collegiate championships, and athletic cups',
     description: 'Manages hardwood court inspection, digital scoreboards, referee call time, medical team, and championship awarding.',
     category: 'Sports & Athletics',
     icon: 'Trophy',
@@ -1511,7 +1511,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
   {
     id: 'kit-campus',
     name: 'Campus Event & Student Org Assembly Kit',
-    tagline: 'Ideal for BISU, HNU, UB & college councils organizing acquaintance parties & assemblies',
+    tagline: 'Suitable for student councils, academic work groups, collegiate assemblies & youth summits',
     description: 'Pre-packages school admin clearance, sound rig testing, volunteer marshals, student meals, and awards.',
     category: 'School & Youth',
     icon: 'GraduationCap',
