@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type {
   User,
   UserRole,
@@ -13,6 +13,7 @@ import type {
   AuditLog,
   VenueMatchResult,
   WorkflowTemplateKit,
+  AppNotification,
 } from '../types';
 import {
   mockCurrentUser,
@@ -27,6 +28,7 @@ import {
   mockRegistrations,
   mockAuditLogs,
 } from '../mock/mockData';
+import api, { type HealthStatus } from '../services/api';
 
 interface AppContextType {
   currentUser: User;
@@ -40,6 +42,25 @@ interface AppContextType {
   isDemoMode: boolean;
   loadDemoData: () => void;
   clearToCleanSlate: () => void;
+
+  // Live Database & API Status (Member 3 Connector)
+  isLiveBackend: boolean;
+  backendHealth: HealthStatus | null;
+  refreshBackendStatus: () => Promise<void>;
+
+  // Notification & Event Change Propagation System
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
+  dismissNotification: (id: string) => void;
+  broadcastEventChange: (changeDetails: {
+    eventId: string;
+    eventTitle?: string;
+    oldVenue?: string;
+    newVenue?: string;
+    oldTime?: string;
+    newTime?: string;
+    summary: string;
+  }) => void;
 
   events: ZabayEvent[];
   selectedEvent: ZabayEvent | null;
@@ -74,7 +95,7 @@ interface AppContextType {
     startTime: string,
     endTime: string,
     hallId?: string
-  ) => { success: boolean; message: string };
+  ) => Promise<{ success: boolean; message: string }>;
   registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
@@ -186,6 +207,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return [];
   });
+
+  // Live Backend & PostgreSQL Connection State (Member 3 Connector)
+  const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
+  const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
+
+  const refreshBackendStatus = async () => {
+    try {
+      const res = await api.health.check();
+      if (res.success && res.data) {
+        setIsLiveBackend(true);
+        setBackendHealth(res.data);
+      } else {
+        setIsLiveBackend(false);
+      }
+    } catch {
+      setIsLiveBackend(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshBackendStatus();
+  }, []);
+
+  // Event Change Notifications & Live Alerts System
+  const [notifications, setNotifications] = useState<AppNotification[]>([
+    {
+      id: 'notif-1',
+      title: 'PostgreSQL Relational DB Connected',
+      message: 'Venue and hall collision detection active via btree_gist EXCLUDE constraints.',
+      type: 'info',
+      timestamp: new Date().toISOString(),
+      targetRole: 'all',
+      read: false,
+    },
+    {
+      id: 'notif-2',
+      title: 'Bohol Tropics Multi-Hall Architecture Ready',
+      message: 'Dagohoy, Sandugo, Chocolate Hills, Panglao, and Baclayon ballrooms are available for scheduling.',
+      type: 'success',
+      timestamp: new Date(Date.now() - 1800000).toISOString(),
+      targetRole: 'all',
+      read: false,
+    },
+  ]);
+
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const dismissNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const broadcastEventChange = (changeDetails: {
+    eventId: string;
+    eventTitle?: string;
+    oldVenue?: string;
+    newVenue?: string;
+    oldTime?: string;
+    newTime?: string;
+    summary: string;
+  }) => {
+    const title = changeDetails.eventTitle || 'Event Update Broadcast';
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}`,
+      title: `Event Notice: ${title}`,
+      message: changeDetails.summary,
+      type: 'warning',
+      timestamp: new Date().toISOString(),
+      targetRole: 'all',
+      eventId: changeDetails.eventId,
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+
+    const auditLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'VENUE_CHANGE',
+      entity_type: 'venue',
+      entity_id: changeDetails.eventId,
+      change_summary: `BROADCAST: ${changeDetails.summary}`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+  };
 
   const loadDemoData = () => {
     setEvents(mockEvents);
@@ -596,18 +705,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Venue booking with EXCLUDE constraint simulation
-  const bookVenue = (
+  // Venue booking with PostgreSQL EXCLUDE constraint handling
+  const bookVenue = async (
     venueId: string,
     eventId: string,
     startTime: string,
     endTime: string,
     hallId?: string
-  ) => {
+  ): Promise<{ success: boolean; message: string }> => {
     const venue = venues.find((v) => v.id === venueId);
     if (!venue) return { success: false, message: 'Venue does not exist' };
 
     const selectedHall = hallId ? venue.halls?.find((h) => h.id === hallId) : undefined;
+    const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
+    const event = events.find((e) => e.id === eventId) || selectedEvent;
+
+    // Check live backend API first if connected
+    if (isLiveBackend) {
+      const apiRes = await api.venues.book(venueId, {
+        event_id: eventId,
+        event_title: event?.title || 'Custom Event',
+        start_time: startTime,
+        end_time: endTime,
+        hall_id: hallId,
+        hall_name: selectedHall?.name,
+      });
+
+      if (!apiRes.success) {
+        return {
+          success: false,
+          message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
+        };
+      }
+    }
 
     const overlap = venueBookings.some((b) => {
       if (b.venue_id !== venueId || b.status === 'cancelled') return false;
@@ -624,14 +754,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (overlap) {
-      const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
       return {
         success: false,
         message: `Database EXCLUDE Constraint Violation: ${spaceName} already has a confirmed booking that overlaps with the requested time window.`,
       };
     }
-
-    const event = events.find((e) => e.id === eventId) || selectedEvent;
 
     const newBooking: VenueBooking = {
       id: `vb-${Date.now()}`,
@@ -648,7 +775,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVenueBookings((prev) => [...prev, newBooking]);
     return {
       success: true,
-      message: `Venue booking confirmed for ${selectedHall ? `${venue.name} (${selectedHall.name})` : venue.name}!`,
+      message: `Venue booking confirmed for ${spaceName}!`,
     };
   };
 
@@ -762,6 +889,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDemoMode,
       loadDemoData,
       clearToCleanSlate,
+      isLiveBackend,
+      backendHealth,
+      refreshBackendStatus,
+      notifications,
+      unreadNotificationCount,
+      dismissNotification,
+      broadcastEventChange,
       createEvent,
       events,
       selectedEvent,
@@ -794,6 +928,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentRole,
       theme,
       isDemoMode,
+      isLiveBackend,
+      backendHealth,
+      notifications,
+      unreadNotificationCount,
       events,
       selectedEvent,
       venues,

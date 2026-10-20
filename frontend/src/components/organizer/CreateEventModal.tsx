@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import {
   X,
   Calendar,
-  Building2,
-  Users,
   Zap,
-  Tag,
   Sparkles,
   CheckCircle,
   Globe,
   Lock,
+  ArrowRight,
+  ArrowLeft,
+  Check,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { EventCategory, ZabayEvent } from '../../types';
@@ -21,48 +21,79 @@ interface CreateEventModalProps {
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated }) => {
-  const { venues, createEvent, loadDemoData } = useApp();
+  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, loadDemoData } = useApp();
 
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+
+  // Step 1: Basics
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<EventCategory>('Sports & Athletics');
   const [isPrivate, setIsPrivate] = useState<boolean>(false);
-  const [venueId, setVenueId] = useState<string>('');
+  const [expectedAttendance, setExpectedAttendance] = useState(250);
+
+  // Step 2: Venue & Hall
+  const [venueId, setVenueId] = useState<string>(venues[0]?.id || '');
+  const [hallId, setHallId] = useState<string>('');
   const [startDate, setStartDate] = useState('2026-11-20');
   const [endDate, setEndDate] = useState('2026-11-20');
-  const [expectedAttendance, setExpectedAttendance] = useState(250);
-  const [maxCapacity, setMaxCapacity] = useState(500);
-  const [ticketPrice, setTicketPrice] = useState(50);
   const [powerKw, setPowerKw] = useState(30);
+
+  // Step 3: Staff Delegation
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(['per-1', 'per-2']);
+
+  // Step 4: Ticketing & Launch
+  const [ticketPrice, setTicketPrice] = useState(50);
+  const [maxCapacity, setMaxCapacity] = useState(500);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectedVenue = venues.find((v) => v.id === venueId);
+  const selectedHall = selectedVenue?.halls?.find((h) => h.id === hallId);
+
+  const getBannerForCategory = (cat: EventCategory) => {
+    switch (cat) {
+      case 'Sports & Athletics':
+        return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80';
+      case 'Festivals & Cultural':
+        return 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80';
+      case 'Workshops & Bootcamps':
+        return 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1200&auto=format&fit=crop&q=80';
+      case 'Conferences & Seminars':
+        return 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&auto=format&fit=crop&q=80';
+      case 'School & Youth':
+        return 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=1200&auto=format&fit=crop&q=80';
+      case 'Music & Concert':
+        return 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80';
+      case 'Community & Civic':
+        return 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80';
+      default:
+        return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80';
+    }
+  };
+
+  const handleNext = () => {
+    if (currentStep === 1 && !title.trim()) return;
+    if (currentStep < 4) {
+      setCurrentStep((prev) => (prev + 1) as any);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as any);
+    }
+  };
+
+  const toggleStaff = (id: string) => {
+    setSelectedStaffIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
-    const selectedVenue = venues.find((v) => v.id === venueId);
-
-    const getBannerForCategory = (cat: EventCategory) => {
-      switch (cat) {
-        case 'Sports & Athletics':
-          return 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1200&auto=format&fit=crop&q=80';
-        case 'Festivals & Cultural':
-          return 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80';
-        case 'Workshops & Bootcamps':
-          return 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=1200&auto=format&fit=crop&q=80';
-        case 'Conferences & Seminars':
-          return 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&auto=format&fit=crop&q=80';
-        case 'School & Youth':
-          return 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=1200&auto=format&fit=crop&q=80';
-        case 'Music & Concert':
-          return 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80';
-        case 'Community & Civic':
-          return 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=1200&auto=format&fit=crop&q=80';
-        default:
-          return 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80';
-      }
-    };
 
     const newEvent = createEvent({
       title: title.trim(),
@@ -71,6 +102,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
       event_type: isPrivate ? 'private' : 'public',
       is_private: isPrivate,
       venue_id: venueId || undefined,
+      hall_id: hallId || undefined,
+      hall_name: selectedHall?.name,
       start_date: `${startDate}T08:00:00Z`,
       end_date: `${endDate}T17:00:00Z`,
       expected_attendance: Number(expectedAttendance) || 100,
@@ -87,14 +120,34 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
       },
     });
 
+    // Auto-reserve venue slot if chosen
+    if (venueId) {
+      await bookVenue(
+        venueId,
+        newEvent.id,
+        `${startDate}T08:00:00Z`,
+        `${endDate}T17:00:00Z`,
+        hallId || undefined
+      );
+    }
+
+    // Broadcast launch alert
+    broadcastEventChange({
+      eventId: newEvent.id,
+      eventTitle: newEvent.title,
+      summary: `New Event Published: "${newEvent.title}" at ${selectedVenue?.name || 'Selected Venue'}${selectedHall ? ` (${selectedHall.name})` : ''}`,
+    });
+
     if (onCreated) onCreated(newEvent);
     onClose();
   };
 
-  const handleQuickSeed = () => {
-    loadDemoData();
-    onClose();
-  };
+  const steps = [
+    { num: 1, label: 'Basics' },
+    { num: 2, label: 'Venue & Hall' },
+    { num: 3, label: 'Staffing' },
+    { num: 4, label: 'Tickets' },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
@@ -102,281 +155,425 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
         className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="px-6 py-4.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/70 dark:bg-slate-900/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
+        {/* Header & Stepper */}
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Guided Event Launch Wizard
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Step {currentStep} of 4: {steps[currentStep - 1].label}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                Create New Event
-              </h3>
-              <p className="text-[11px] text-slate-500">
-                Define core requirements, target dates, and ticketing
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
-          {/* Quick Demo Seed Option */}
-          <div className="p-3 bg-[#EBF3FC] dark:bg-[#152030] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
-              <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                Want to test with full Bohol sample data instead?
-              </span>
-            </div>
             <button
-              type="button"
-              onClick={handleQuickSeed}
-              className="px-2.5 py-1 text-[11px] font-bold bg-[#3E6CB5] text-white rounded-lg hover:bg-[#325896] transition-colors shrink-0 cursor-pointer"
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              Load Sample Data
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Title */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Event Title <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Bohol Inter-School Basketball Cup or Sandugo Cultural Showcase"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-            />
+          {/* Stepper Progress Bar */}
+          <div className="flex items-center justify-between gap-2 pt-1">
+            {steps.map((s) => (
+              <div key={s.num} className="flex-1 flex items-center gap-2">
+                <div
+                  className={`h-1.5 flex-1 rounded-full transition-all ${
+                    s.num <= currentStep
+                      ? 'bg-[#3E6CB5] dark:bg-[#7EA6E0]'
+                      : 'bg-slate-200 dark:bg-slate-800'
+                  }`}
+                />
+                <span
+                  className={`text-[10px] font-bold ${
+                    s.num === currentStep
+                      ? 'text-[#3E6CB5] dark:text-[#7EA6E0]'
+                      : s.num < currentStep
+                      ? 'text-slate-700 dark:text-slate-300'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          {/* Visibility: Public vs Private Event */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Event Visibility & Access
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsPrivate(false)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  !isPrivate
-                    ? 'border-[#3E6CB5] bg-[#EBF3FC] dark:bg-[#152338] dark:border-[#3E6CB5]'
-                    : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Globe className={`w-4 h-4 ${!isPrivate ? 'text-[#3E6CB5]' : 'text-slate-400'}`} />
-                  <span className={`font-bold text-xs ${!isPrivate ? 'text-[#244A85] dark:text-[#8BB0E8]' : 'text-slate-700 dark:text-slate-300'}`}>
-                    Public Event
+        {/* Wizard Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+          {/* STEP 1: BASICS */}
+          {currentStep === 1 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              {/* Quick Demo Seed */}
+              <div className="p-3 bg-[#EBF3FC] dark:bg-[#152030] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
+                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                    Want to test with full Bohol sample data instead?
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-500">
-                  Visible in Attendee Event Finder & OpenStreetMap. Open for public registration.
-                </p>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    loadDemoData();
+                    onClose();
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold bg-[#3E6CB5] text-white rounded-lg hover:bg-[#325896] transition-colors shrink-0 cursor-pointer"
+                >
+                  Load Sample
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setIsPrivate(true)}
-                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                  isPrivate
-                    ? 'border-[#B87A44] bg-[#FEF8F2] dark:bg-[#281D14] dark:border-[#B87A44]'
-                    : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-slate-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Lock className={`w-4 h-4 ${isPrivate ? 'text-[#B87A44]' : 'text-slate-400'}`} />
-                  <span className={`font-bold text-xs ${isPrivate ? 'text-[#8C521E] dark:text-[#E8A568]' : 'text-slate-700 dark:text-slate-300'}`}>
-                    Private Event
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-500">
-                  Hidden from Public Event Finder & Map. Exclusive to organizers, staff & invitees.
-                </p>
-              </button>
-            </div>
-          </div>
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Event Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Bohol Tech Summit or Sandugo Cultural Expo"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                />
+              </div>
 
-          {/* Category & Venue */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Category
-              </label>
-              <div className="relative">
-                <Tag className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              {/* Category */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Category
+                </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as EventCategory)}
-                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
                 >
                   <option value="Sports & Athletics">Sports & Athletics</option>
                   <option value="Festivals & Cultural">Festivals & Cultural</option>
                   <option value="Workshops & Bootcamps">Workshops & Bootcamps</option>
                   <option value="Conferences & Seminars">Conferences & Seminars</option>
-                  <option value="School & Youth">School & Youth</option>
-                  <option value="Community & Civic">Community & Civic</option>
                   <option value="Music & Concert">Music & Concert</option>
                   <option value="Tech & Innovation">Tech & Innovation</option>
+                  <option value="School & Youth">School & Youth</option>
+                  <option value="Community & Civic">Community & Civic</option>
                 </select>
               </div>
-            </div>
 
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Target Venue
-              </label>
-              <div className="relative">
-                <Building2 className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <select
-                  value={venueId}
-                  onChange={(e) => setVenueId(e.target.value)}
-                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-                >
-                  <option value="">Decide Later / Unassigned</option>
-                  {venues.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name} ({v.capacity} pax)
-                    </option>
-                  ))}
-                </select>
+              {/* Public vs Private */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Visibility
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate(false)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      !isPrivate
+                        ? 'border-[#3E6CB5] bg-[#EBF3FC] dark:bg-[#152338]'
+                        : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1 font-bold text-xs">
+                      <Globe className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                      <span>Public Event</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Listed on Public Explore Feed</p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsPrivate(true)}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      isPrivate
+                        ? 'border-[#B87A44] bg-[#FEF8F2] dark:bg-[#281D14]'
+                        : 'border-slate-200 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1 font-bold text-xs">
+                      <Lock className="w-3.5 h-3.5 text-[#B87A44]" />
+                      <span>Private / Invite</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Direct registration link only</p>
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-              />
-            </div>
-          </div>
-
-          {/* Capacities & Pricing */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Expected Guests
-              </label>
-              <div className="relative">
-                <Users className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Expected Attendance
+                </label>
                 <input
                   type="number"
                   min={10}
                   value={expectedAttendance}
                   onChange={(e) => setExpectedAttendance(Number(e.target.value))}
-                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-8 pr-2 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Brief Description
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Summary of event objectives and schedule..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none resize-none text-xs"
                 />
               </div>
             </div>
+          )}
 
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Max Capacity
-              </label>
-              <input
-                type="number"
-                min={10}
-                value={maxCapacity}
-                onChange={(e) => setMaxCapacity(Number(e.target.value))}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-              />
+          {/* STEP 2: VENUE & HALL SELECTION */}
+          {currentStep === 2 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Select Bohol Venue
+                </label>
+                <select
+                  value={venueId}
+                  onChange={(e) => {
+                    setVenueId(e.target.value);
+                    setHallId('');
+                  }}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                >
+                  {venues.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} ({v.city}) — Cap: {v.capacity.toLocaleString()} • ₱{v.hourly_rate.toLocaleString()}/hr
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub-Venue / Hall Picker */}
+              {selectedVenue?.halls && selectedVenue.halls.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                  <label className="block font-bold text-slate-800 dark:text-slate-200 text-xs">
+                    Select Specific Hall / Ballroom
+                  </label>
+                  <select
+                    value={hallId}
+                    onChange={(e) => setHallId(e.target.value)}
+                    className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                  >
+                    <option value="">Entire Facility</option>
+                    {selectedVenue.halls.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name} (Cap: {h.capacity.toLocaleString()} • ₱{h.hourly_rate.toLocaleString()}/hr)
+                      </option>
+                    ))}
+                  </select>
+                  {selectedHall && (
+                    <p className="text-[11px] text-slate-500 italic">
+                      {selectedHall.description || `${selectedHall.name} configured for breakout and main stages.`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Event Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Event End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Power kw */}
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Required Power (kW)
+                </label>
+                <div className="relative">
+                  <Zap className="w-3.5 h-3.5 text-amber-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="number"
+                    min={5}
+                    value={powerKw}
+                    onChange={(e) => setPowerKw(Number(e.target.value))}
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
+          )}
 
-            <div>
-              <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Ticket Price (₱)
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={ticketPrice}
-                onChange={(e) => setTicketPrice(Number(e.target.value))}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-              />
+          {/* STEP 3: STAFF DELEGATION */}
+          {currentStep === 3 && (
+            <div className="space-y-3 animate-in fade-in duration-150">
+              <p className="text-[11px] text-slate-500">
+                Select personnel to auto-assign key operational responsibilities (Gate Check-In, Stage Lead, Technical Director):
+              </p>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {personnel.map((person) => {
+                  const isAssigned = selectedStaffIds.includes(person.id);
+                  return (
+                    <div
+                      key={person.id}
+                      onClick={() => toggleStaff(person.id)}
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                        isAssigned
+                          ? 'bg-[#EBF3FC] dark:bg-[#152338] border-[#3E6CB5]'
+                          : 'bg-[#F8FAFD] dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-5 h-5 rounded-md flex items-center justify-center text-xs ${
+                            isAssigned
+                              ? 'bg-[#3E6CB5] text-white'
+                              : 'border border-slate-300 dark:border-slate-700'
+                          }`}
+                        >
+                          {isAssigned && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-slate-100">{person.name}</p>
+                          <p className="text-[10px] text-slate-500">{person.role} • ₱{person.hourly_rate.toLocaleString()}/hr</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                        {(person.role || 'crew').toUpperCase()}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Power Requirement */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Required Electrical Power (kW)
-            </label>
-            <div className="relative">
-              <Zap className="w-3.5 h-3.5 text-amber-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="number"
-                min={5}
-                max={500}
-                value={powerKw}
-                onChange={(e) => setPowerKw(Number(e.target.value))}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-              />
+          {/* STEP 4: TICKETING & LAUNCH REVIEW */}
+          {currentStep === 4 && (
+            <div className="space-y-4 animate-in fade-in duration-150">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Ticket Price (₱)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={ticketPrice}
+                    onChange={(e) => setTicketPrice(Number(e.target.value))}
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">0 for Free admission</span>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Max Ticket Capacity
+                  </label>
+                  <input
+                    type="number"
+                    min={10}
+                    value={maxCapacity}
+                    onChange={(e) => setMaxCapacity(Number(e.target.value))}
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Review Card */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Event Launch Summary
+                </span>
+                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-800">
+                  <span className="text-slate-500">Event Title:</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-100">{title}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-800">
+                  <span className="text-slate-500">Venue:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {selectedVenue?.name} {selectedHall ? `(${selectedHall.name})` : ''}
+                  </span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-slate-200/60 dark:border-slate-800">
+                  <span className="text-slate-500">Assigned Crew:</span>
+                  <span className="font-semibold text-[#3E6CB5]">{selectedStaffIds.length} crew members</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-slate-500">Projected Revenue:</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    ₱{(ticketPrice * expectedAttendance).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="text-[10px] text-slate-400 mt-1">
-              Used by the venue matcher to verify substation/generator capacity.
-            </p>
-          </div>
+          )}
 
-          {/* Description */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Brief Description
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Outline the primary objectives and target audience for this event..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] resize-none"
-            />
-          </div>
+          {/* Footer Navigation Actions */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            {currentStep > 1 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-slate-400 hover:text-slate-600 font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
 
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span>Create Event & Open Workspace</span>
-            </button>
+            {currentStep < 4 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={currentStep === 1 && !title.trim()}
+                className="px-5 py-2 bg-[#3E6CB5] hover:bg-[#325896] disabled:opacity-50 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Continue</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>Publish Event & Launch</span>
+              </button>
+            )}
           </div>
         </form>
       </div>

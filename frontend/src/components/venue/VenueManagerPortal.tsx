@@ -24,8 +24,8 @@ export const VenueManagerPortal: React.FC = () => {
   const bookingsForVenue = venueBookings.filter((b) => b.venue_id === selectedVenue.id);
   const [testHallId, setTestHallId] = useState<string>('');
 
-  const handleTestBooking = () => {
-    const res = bookVenue(
+  const handleTestBooking = async () => {
+    const res = await bookVenue(
       selectedVenue.id,
       'test-conflict-check',
       testStart,

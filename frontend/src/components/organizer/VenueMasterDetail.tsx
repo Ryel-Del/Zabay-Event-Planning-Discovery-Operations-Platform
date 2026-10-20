@@ -137,7 +137,7 @@ export const VenueMasterDetail: React.FC = () => {
 
   const activeVenueMatch = matchResults.find((m) => m.venue.id === selectedVenueId) || matchResults[0];
 
-  const handleBook = (venue: Venue) => {
+  const handleBook = async (venue: Venue) => {
     if (!selectedEvent) {
       setBookingFeedback({
         success: false,
@@ -146,7 +146,7 @@ export const VenueMasterDetail: React.FC = () => {
       setTimeout(() => setBookingFeedback(null), 4500);
       return;
     }
-    const res = bookVenue(
+    const res = await bookVenue(
       venue.id,
       selectedEvent.id,
       selectedEvent.start_date,

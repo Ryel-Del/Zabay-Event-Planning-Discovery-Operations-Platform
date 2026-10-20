@@ -251,3 +251,14 @@ export interface WorkflowTemplateKit {
   task_count: number;
   tasks: Omit<Task, 'id' | 'event_id'>[];
 }
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'alert';
+  timestamp: string;
+  targetRole?: UserRole | 'all';
+  eventId?: string;
+  read: boolean;
+}

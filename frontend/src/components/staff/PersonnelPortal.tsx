@@ -18,7 +18,7 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export const PersonnelPortal: React.FC = () => {
-  const { personnel, tasks, selectedEvent, venues } = useApp();
+  const { personnel, tasks, selectedEvent, venues, updateTaskStatus, notifications } = useApp();
 
   // Selected personnel member viewing the portal (defaults to Carlos Ruiz or first personnel)
   const defaultPersonnel = personnel.find((p) => p.name.includes('Carlos')) || personnel[0];
@@ -68,6 +68,20 @@ export const PersonnelPortal: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Real-Time Operational Change Alerts */}
+      {notifications.length > 0 && (
+        <div className="bg-amber-500 text-white p-3.5 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-in slide-in-from-top-1">
+          <div className="flex items-center gap-2.5">
+            <Radio className="w-4 h-4 shrink-0 animate-pulse" />
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider block">Live Operational Dispatch</span>
+              <p className="text-xs font-medium opacity-95">{notifications[0].message}</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/20 shrink-0">Priority Update</span>
+        </div>
+      )}
+
       {/* 1. Explicit View-Only Banner Guard */}
       <div className="bg-[#FAF7EE] dark:bg-[#252219] border border-[#ECD9A8] dark:border-[#5A4B27] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
@@ -317,10 +331,35 @@ export const PersonnelPortal: React.FC = () => {
                         <p className="text-[10px] text-slate-400">Scheduled Time</p>
                       </div>
 
-                      <div className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
-                        <span>Read-Only</span>
-                      </div>
+                      {/* One-Tap Status Toggle for Crew */}
+                      {task.status === 'completed' ? (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                          className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 cursor-pointer transition-colors"
+                          title="Click to revert to In Progress"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Done ✓</span>
+                        </button>
+                      ) : task.status === 'in_progress' ? (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'completed')}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                          title="Click to mark duty complete"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Mark Done</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                          title="Click to start this duty"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Start Duty</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 

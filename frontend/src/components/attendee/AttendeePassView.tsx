@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Ticket,
   MapPin,
+  AlertTriangle,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
@@ -11,7 +12,7 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues } = useApp();
+  const { registrations, events, venues, notifications } = useApp();
 
   return (
     <div className="space-y-6">
@@ -32,6 +33,9 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           const event = events.find((e) => e.id === reg.event_id);
           const venue = venues.find((v) => v.id === event?.venue_id);
           const isCheckedIn = reg.status === 'checked_in';
+          const eventNotification = notifications.find(
+            (n) => n.eventId === reg.event_id || n.message.toLowerCase().includes(reg.event_title.toLowerCase())
+          );
 
           return (
             <div
@@ -42,6 +46,17 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   : 'bg-white dark:bg-[#1E1C19] border-stone-200/90 dark:border-stone-800'
               }`}
             >
+              {/* Real-Time Event Change Banner */}
+              {eventNotification && (
+                <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-2 text-xs font-semibold animate-in slide-in-from-top-1">
+                  <div className="flex items-center gap-2 truncate">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-bounce" />
+                    <span className="truncate">Notice: {eventNotification.message}</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-black/20 shrink-0">Updated</span>
+                </div>
+              )}
+
               {/* Pass Header Banner */}
               <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 border-b border-stone-200/80 dark:border-stone-800/80 flex justify-between items-start">
                 <div>
