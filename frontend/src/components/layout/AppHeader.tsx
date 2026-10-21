@@ -301,7 +301,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                       className="w-full py-1.5 px-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span>Reset to Clean Workspace</span>
+                      <span>Exit Sample Mode</span>
                     </button>
                   ) : (
                     <button
@@ -342,7 +342,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
               <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0] group-hover:hidden" />
               <Trash2 className="w-3 h-3 text-rose-600 hidden group-hover:inline" />
               <span className="group-hover:hidden">Sample Bohol Data</span>
-              <span className="hidden group-hover:inline">Clear to Clean Slate</span>
+              <span className="hidden group-hover:inline">Exit Sample Mode</span>
             </button>
           ) : (
             <button
@@ -404,8 +404,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           }`}
           title={
             isLiveBackend
-              ? `Connected to ${backendHealth?.service || 'Express API'} (${backendHealth?.region || 'Bohol'}). Click to recheck.`
-              : 'Backend server offline - running in Local State Engine. Click to ping /api/health.'
+              ? 'PostgreSQL queries for venues and events succeeded. Click to recheck.'
+              : backendHealth ? 'Backend is online, but PostgreSQL data is unavailable. Click to recheck.' : 'Backend unavailable. Click to recheck.'
           }
         >
           <span
@@ -414,7 +414,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
             }`}
           />
           <Database className="w-3 h-3 opacity-70" />
-          <span>{isLiveBackend ? 'Postgres Live' : 'Local Engine'}</span>
+          <span>{isDemoMode ? 'Sample Mode' : isLiveBackend ? 'Postgres Live' : backendHealth ? 'API Only' : 'Offline'}</span>
         </div>
 
         {/* Live Notification Center */}

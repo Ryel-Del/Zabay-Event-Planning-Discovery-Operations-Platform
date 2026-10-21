@@ -32,12 +32,53 @@ export interface HealthStatus {
   region: string;
 }
 
+interface DbVenue extends Omit<Venue, 'operating_hours' | 'halls'> {
+  operating_hours_open: string;
+  operating_hours_close: string;
+  halls: Venue['halls'];
+  bookings?: import('../types').VenueBooking[];
+}
+
+const asNumber = (value: number | string | null | undefined) => Number(value || 0);
+
+export function adaptVenue(row: any): Venue {
+  return {
+    ...row,
+    lat: asNumber(row.lat), lng: asNumber(row.lng),
+    hourly_rate: asNumber(row.hourly_rate),
+    operating_hours: { open: row.operating_hours_open, close: row.operating_hours_close },
+    image_url: row.image_url || '/zabay-logo.png',
+    halls: (row.halls || []).map((hall: any) => ({ ...hall, hourly_rate: asNumber(hall.hourly_rate) })),
+  };
+}
+
+export function adaptEvent(row: any): ZabayEvent {
+  return {
+    ...row,
+    venue_id: row.venue_id || undefined,
+    hall_id: row.hall_id || undefined,
+    hall_name: row.hall_name || undefined,
+    description: row.description || '',
+    ticket_price: asNumber(row.ticket_price),
+    budget: asNumber(row.budget),
+    tickets_sold: 0,
+    banner_url: row.banner_url || '/zabay-logo.png',
+    requirements: {
+      min_capacity: row.expected_attendance,
+      power_kw_needed: 0,
+      requires_indoor: false,
+      required_facilities: [],
+      min_setup_hours: 0,
+    },
+  };
+}
+
 /**
  * Translates PostgreSQL error codes into user-friendly messages for the UI
  */
 export function translateDbError(errData: any): string {
   if (!errData) return 'An unexpected error occurred.';
-  
+
   const code = errData.code;
   const message = errData.error || errData.message;
 
@@ -83,6 +124,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     return {
       success: false,
       error: error?.message || 'Network error: Unable to connect to the backend API server.',
+      code: 'NETWORK_ERROR',
     };
   }
 }
@@ -90,13 +132,23 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // System Health
   health: {
-    check: () => request<HealthStatus>('/api/health'),
+    check: async (): Promise<ApiResponse<HealthStatus>> => {
+      try {
+        const response = await fetch('/api/health');
+        const data = await response.json();
+        return response.ok && data?.status === 'online'
+          ? { success: true, data }
+          : { success: false, error: 'Backend health check failed.' };
+      } catch {
+        return { success: false, error: 'Backend API is unavailable.' };
+      }
+    },
   },
 
   // Venues & Sub-Venues (Halls)
   venues: {
-    getAll: () => request<Venue[]>('/api/venues'),
-    getById: (id: string) => request<Venue>(`/api/venues/${id}`),
+    getAll: () => request<DbVenue[]>('/api/venues'),
+    getById: (id: string) => request<DbVenue>(`/api/venues/${id}`),
     book: (venueId: string, booking: VenueBookingRequest) =>
       request<{ id: string; venue_id: string; hall_id?: string; status: string }>(
         `/api/venues/${venueId}/book`,
@@ -109,10 +161,10 @@ export const api = {
 
   // Events Operations
   events: {
-    getAll: () => request<ZabayEvent[]>('/api/events'),
-    getById: (id: string) => request<ZabayEvent>(`/api/events/${id}`),
+    getAll: () => request<any[]>('/api/events'),
+    getById: (id: string) => request<any>(`/api/events/${id}`),
     create: (eventData: Partial<ZabayEvent>) =>
-      request<ZabayEvent>('/api/events', {
+      request<any>('/api/events', {
         method: 'POST',
         body: JSON.stringify(eventData),
       }),

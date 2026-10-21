@@ -16,7 +16,7 @@ import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
 
 export const VenueMasterDetail: React.FC = () => {
-  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
+  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, isDemoMode } = useApp();
 
   // Interactive Requirement Controls for Student Orgs & Planners
   const [targetAttendance, setTargetAttendance] = useState<number>(
@@ -589,7 +589,7 @@ export const VenueMasterDetail: React.FC = () => {
                   {/* Action Bar */}
                   <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-[11px] text-slate-400">
-                      Protected by PostgreSQL <code className="font-mono text-[10px]">EXCLUDE USING gist</code>
+                      {isDemoMode ? 'Sample booking check' : 'Protected by PostgreSQL booking constraints'}
                     </span>
                     <button
                       onClick={() => handleBook(activeVenueMatch.venue)}

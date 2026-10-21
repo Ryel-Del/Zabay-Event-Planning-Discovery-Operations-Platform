@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   Calendar,
@@ -21,7 +21,7 @@ interface CreateEventModalProps {
 }
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated }) => {
-  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, loadDemoData } = useApp();
+  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, loadDemoData, isDemoMode, isLiveBackend } = useApp();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -45,6 +45,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   // Step 4: Ticketing & Launch
   const [ticketPrice, setTicketPrice] = useState(50);
   const [maxCapacity, setMaxCapacity] = useState(500);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [persistedEvent, setPersistedEvent] = useState<ZabayEvent | null>(null);
+
+  useEffect(() => {
+    if (!venues.some((venue) => venue.id === venueId)) {
+      setVenueId(venues[0]?.id || '');
+      setHallId('');
+    }
+  }, [venues, venueId]);
 
   if (!isOpen) return null;
 
@@ -95,15 +105,16 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     e.preventDefault();
     if (!title.trim()) return;
 
-    const newEvent = createEvent({
+    if (saving) return;
+    setSaving(true);
+    setSubmitError('');
+    try {
+    const newEvent = persistedEvent || await createEvent({
       title: title.trim(),
       description: description.trim() || 'Custom Bohol event workspace.',
       category,
       event_type: isPrivate ? 'private' : 'public',
       is_private: isPrivate,
-      venue_id: venueId || undefined,
-      hall_id: hallId || undefined,
-      hall_name: selectedHall?.name,
       start_date: `${startDate}T08:00:00Z`,
       end_date: `${endDate}T17:00:00Z`,
       expected_attendance: Number(expectedAttendance) || 100,
@@ -119,27 +130,44 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
         min_setup_hours: 3,
       },
     });
+    setPersistedEvent(newEvent);
 
     // Auto-reserve venue slot if chosen
     if (venueId) {
-      await bookVenue(
+      const booking = await bookVenue(
         venueId,
         newEvent.id,
-        `${startDate}T08:00:00Z`,
-        `${endDate}T17:00:00Z`,
-        hallId || undefined
+        newEvent.start_date,
+        newEvent.end_date,
+        hallId || undefined,
+        newEvent.title
       );
+      if (!booking.success) {
+        setSubmitError(`Event saved in planning as ${newEvent.id}. Booking failed: ${booking.message} Retry to book this event without creating another.`);
+        return;
+      }
     }
 
     // Broadcast launch alert
     broadcastEventChange({
       eventId: newEvent.id,
       eventTitle: newEvent.title,
-      summary: `New Event Published: "${newEvent.title}" at ${selectedVenue?.name || 'Selected Venue'}${selectedHall ? ` (${selectedHall.name})` : ''}`,
+      summary: isDemoMode
+        ? `Sample event created: "${newEvent.title}"${venueId ? ' with a sample venue reservation' : ''}.`
+        : `Event saved in planning: "${newEvent.title}"${venueId ? `; venue booking confirmed at ${selectedVenue?.name}` : '; no venue booked'}.`,
     });
 
     if (onCreated) onCreated(newEvent);
     onClose();
+    setPersistedEvent(null);
+    setTitle('');
+    setDescription('');
+    setCurrentStep(1);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Event could not be saved.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const steps = [
@@ -499,7 +527,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   ) + 1
                 ) > 1 && (
                   <p className="text-[10px] text-[#244A85] dark:text-[#8BB0E8] bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 p-2 rounded-lg">
-                    ✨ Database GiST EXCLUDE constraint will automatically reserve a continuous temporal window on{' '}
+                    ✨ {isDemoMode ? 'Sample mode will mark a local reservation' : 'PostgreSQL will reserve a continuous time window'} on{' '}
                     {selectedHall ? selectedHall.name : selectedVenue?.name}.
                   </p>
                 )}
@@ -629,6 +657,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             </div>
           )}
 
+          {submitError && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
+          {!isDemoMode && !isLiveBackend && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">PostgreSQL is unavailable. Event saving requires a database connection. Sample Data mode is available for a local demo.</div>}
           {/* Footer Navigation Actions */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             {currentStep > 1 ? (
@@ -654,7 +684,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={handleNext}
-                disabled={currentStep === 1 && !title.trim()}
+                disabled={saving || (currentStep === 1 && !title.trim())}
                 className="px-5 py-2 bg-[#3E6CB5] hover:bg-[#325896] disabled:opacity-50 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <span>Continue</span>
@@ -663,10 +693,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             ) : (
               <button
                 type="submit"
+                disabled={saving || (!isDemoMode && !isLiveBackend)}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>Publish Event & Launch</span>
+                <span>{saving ? 'Saving…' : persistedEvent ? 'Retry Venue Booking' : isDemoMode ? 'Create Sample Event' : 'Save Event & Book Venue'}</span>
               </button>
             )}
           </div>

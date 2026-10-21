@@ -28,7 +28,7 @@ import {
   mockRegistrations,
   mockAuditLogs,
 } from '../mock/mockData';
-import api, { type HealthStatus } from '../services/api';
+import api, { adaptEvent, adaptVenue, type HealthStatus } from '../services/api';
 
 interface AppContextType {
   currentUser: User;
@@ -65,7 +65,7 @@ interface AppContextType {
   events: ZabayEvent[];
   selectedEvent: ZabayEvent | null;
   setSelectedEvent: (event: ZabayEvent | null) => void;
-  createEvent: (eventData: Partial<ZabayEvent>) => ZabayEvent;
+  createEvent: (eventData: Partial<ZabayEvent>) => Promise<ZabayEvent>;
 
   venues: Venue[];
   venueBookings: VenueBooking[];
@@ -94,7 +94,8 @@ interface AppContextType {
     eventId: string,
     startTime: string,
     endTime: string,
-    hallId?: string
+    hallId?: string,
+    eventTitle?: string
   ) => Promise<{ success: boolean; message: string }>;
   registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
@@ -168,7 +169,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [venues] = useState<Venue[]>(mockVenues);
+  const [venues, setVenues] = useState<Venue[]>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true' ? mockVenues : []
+  );
   const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
       return mockVenueBookings;
@@ -215,12 +218,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const refreshBackendStatus = async () => {
     try {
       const res = await api.health.check();
-      if (res.success && res.data) {
-        setIsLiveBackend(true);
-        setBackendHealth(res.data);
-      } else {
+      setBackendHealth(res.success ? res.data || null : null);
+      if (!res.success || localStorage.getItem('zabay-demo-mode') === 'true') { setIsLiveBackend(false); return; }
+      const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
+      if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
+        return;
       }
+      const venueDetails = await Promise.all(venueRes.data.map((venue) => api.venues.getById(venue.id)));
+      if (venueDetails.some((detail) => !detail.success || !detail.data)) {
+        setIsLiveBackend(false);
+        return;
+      }
+      if (localStorage.getItem('zabay-demo-mode') === 'true') return;
+      const liveEvents = eventRes.data.map(adaptEvent);
+      setVenues(venueRes.data.map(adaptVenue));
+      setEvents(liveEvents);
+      setVenueBookings(venueDetails.flatMap((detail) => (detail.data?.bookings || []) as VenueBooking[]));
+      setSelectedEvent((previous) => liveEvents.find((event) => event.id === previous?.id) || liveEvents[0] || null);
+      setIsLiveBackend(true);
     } catch {
       setIsLiveBackend(false);
     }
@@ -231,26 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Event Change Notifications & Live Alerts System
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    {
-      id: 'notif-1',
-      title: 'PostgreSQL Relational DB Connected',
-      message: 'Venue and hall collision detection active via btree_gist EXCLUDE constraints.',
-      type: 'info',
-      timestamp: new Date().toISOString(),
-      targetRole: 'all',
-      read: false,
-    },
-    {
-      id: 'notif-2',
-      title: 'Bohol Tropics Multi-Hall Architecture Ready',
-      message: 'Dagohoy, Sandugo, Chocolate Hills, Panglao, and Baclayon ballrooms are available for scheduling.',
-      type: 'success',
-      timestamp: new Date(Date.now() - 1800000).toISOString(),
-      targetRole: 'all',
-      read: false,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   const unreadNotificationCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
@@ -297,6 +294,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loadDemoData = () => {
+    setIsLiveBackend(false);
+    setVenues(mockVenues);
     setEvents(mockEvents);
     setSelectedEvent(mockEvents[0]);
     setVenueBookings(mockVenueBookings);
@@ -312,6 +311,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearToCleanSlate = () => {
+    setVenues([]);
     setEvents([]);
     setSelectedEvent(null);
     setVenueBookings([]);
@@ -324,11 +324,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('zabay-demo-mode', 'false');
       localStorage.removeItem('zabay_custom_personnel');
     }
+    void refreshBackendStatus();
   };
 
-  const createEvent = (data: Partial<ZabayEvent>): ZabayEvent => {
+  const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
+    if (!isDemoMode) {
+      if (!isLiveBackend) throw new Error('PostgreSQL is unavailable. Connect the database or choose Sample Data mode.');
+      const response = await api.events.create({
+        ...data,
+        organizer_id: currentUser.id,
+        venue_id: undefined,
+        hall_id: undefined,
+        hall_name: undefined,
+      });
+      if (!response.success || !response.data?.id) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        throw new Error(response.error || 'Event was not saved.');
+      }
+      const saved = adaptEvent(response.data);
+      setEvents((previous) => [saved, ...previous]);
+      setSelectedEvent(saved);
+      return saved;
+    }
     const newEvt: ZabayEvent = {
-      id: `evt-${Date.now()}`,
+      id: `demo-evt-${Date.now()}`,
       title: data.title || 'Untitled Bohol Event',
       description: data.description || 'Newly created event workspace.',
       category: data.category || 'Sports & Athletics',
@@ -711,7 +730,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     eventId: string,
     startTime: string,
     endTime: string,
-    hallId?: string
+    hallId?: string,
+    eventTitle?: string
   ): Promise<{ success: boolean; message: string }> => {
     const venue = venues.find((v) => v.id === venueId);
     if (!venue) return { success: false, message: 'Venue does not exist' };
@@ -720,11 +740,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
     const event = events.find((e) => e.id === eventId) || selectedEvent;
 
-    // Check live backend API first if connected
-    if (isLiveBackend) {
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No booking was made.' };
+      const savedEvent = await api.events.getById(eventId);
+      if (!savedEvent.success || !savedEvent.data?.id) {
+        if (savedEvent.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'PostgreSQL is unavailable. No booking was made.' : 'Select a saved event before booking.' };
+      }
       const apiRes = await api.venues.book(venueId, {
         event_id: eventId,
-        event_title: event?.title || 'Custom Event',
+        event_title: savedEvent.data.title,
         start_time: startTime,
         end_time: endTime,
         hall_id: hallId,
@@ -732,11 +757,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       if (!apiRes.success) {
+        if (apiRes.code === 'NETWORK_ERROR') setIsLiveBackend(false);
         return {
           success: false,
           message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
         };
       }
+      if (!apiRes.data?.id) return { success: false, message: 'Booking response did not confirm a saved reservation.' };
+      setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
+      setEvents((previous) => previous.map((item) => item.id === eventId
+        ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+        : item));
+      setSelectedEvent((previous) => previous?.id === eventId
+        ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+        : previous);
+      return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
     }
 
     const overlap = venueBookings.some((b) => {
@@ -756,17 +791,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (overlap) {
       return {
         success: false,
-        message: `Database EXCLUDE Constraint Violation: ${spaceName} already has a confirmed booking that overlaps with the requested time window.`,
+        message: `Sample booking conflict: ${spaceName} already has a reservation that overlaps with the requested time window.`,
       };
     }
 
     const newBooking: VenueBooking = {
-      id: `vb-${Date.now()}`,
+      id: `demo-vb-${Date.now()}`,
       venue_id: venueId,
       hall_id: hallId,
       hall_name: selectedHall?.name,
       event_id: eventId,
-      event_title: event ? event.title : 'Custom Event',
+      event_title: eventTitle || event?.title || 'Sample Event',
       start_time: startTime,
       end_time: endTime,
       status: 'confirmed',

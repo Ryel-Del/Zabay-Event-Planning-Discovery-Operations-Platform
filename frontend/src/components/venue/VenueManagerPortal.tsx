@@ -12,22 +12,26 @@ import {
   Layers,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { Venue } from '../../types';
 
 export const VenueManagerPortal: React.FC = () => {
-  const { venues, venueBookings, bookVenue } = useApp();
-  const [selectedVenue, setSelectedVenue] = useState<Venue>(venues[0]);
+  const { venues, venueBookings, bookVenue, selectedEvent, isDemoMode } = useApp();
+  const [selectedVenueId, setSelectedVenueId] = useState<string>('');
+  const selectedVenue = venues.find((venue) => venue.id === selectedVenueId) || venues[0];
   const [testStart, setTestStart] = useState('2026-11-13T10:00:00Z');
   const [testEnd, setTestEnd] = useState('2026-11-13T18:00:00Z');
   const [bookingStatus, setBookingStatus] = useState<{ success: boolean; message: string } | null>(null);
 
-  const bookingsForVenue = venueBookings.filter((b) => b.venue_id === selectedVenue.id);
+  const bookingsForVenue = venueBookings.filter((b) => b.venue_id === selectedVenue?.id);
   const [testHallId, setTestHallId] = useState<string>('');
 
   const handleTestBooking = async () => {
+    if (!selectedEvent || !selectedVenue) {
+      setBookingStatus({ success: false, message: 'Select a saved event and venue first.' });
+      return;
+    }
     const res = await bookVenue(
       selectedVenue.id,
-      'test-conflict-check',
+      selectedEvent.id,
       testStart,
       testEnd,
       testHallId || undefined
@@ -35,6 +39,8 @@ export const VenueManagerPortal: React.FC = () => {
     setBookingStatus(res);
     setTimeout(() => setBookingStatus(null), 4500);
   };
+
+  if (!selectedVenue) return <div className="p-6 text-sm">Venues are unavailable. Load Sample Data for the offline demo.</div>;
 
   return (
     <div className="space-y-6">
@@ -64,7 +70,7 @@ export const VenueManagerPortal: React.FC = () => {
             onChange={(e) => {
               const v = venues.find((x) => x.id === e.target.value);
               if (v) {
-                setSelectedVenue(v);
+                setSelectedVenueId(v.id);
                 setTestHallId('');
               }
             }}
@@ -110,8 +116,8 @@ export const VenueManagerPortal: React.FC = () => {
             <span className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
               <Lock className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" /> Overlap Protection
             </span>
-            <p className="text-xl font-black text-[#455C42] dark:text-[#A7C2A4]">PostgreSQL GiST</p>
-            <p className="text-[11px] text-stone-500">EXCLUDE USING gist(tsrange)</p>
+            <p className="text-xl font-black text-[#455C42] dark:text-[#A7C2A4]">{isDemoMode ? 'Sample checks' : 'PostgreSQL GiST'}</p>
+            <p className="text-[11px] text-stone-500">{isDemoMode ? 'Local demo reservations' : 'EXCLUDE USING gist(tstzrange)'}</p>
           </div>
         </div>
       </div>
@@ -227,10 +233,10 @@ export const VenueManagerPortal: React.FC = () => {
         <div className="p-4 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800 space-y-3">
           <h4 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-[#5F7D5B] dark:text-[#97B394]" />
-            Test Double-Booking Prevention (Simulate Database Conflict)
+            Check Double-Booking Prevention
           </h4>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Attempt to schedule an overlapping event booking during an existing slot to see the database EXCLUDE constraint actively block it:
+            {isDemoMode ? 'Try an overlapping sample booking to see the local conflict check.' : 'Book the selected saved event in an overlapping slot to see PostgreSQL reject the conflict.'}
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
