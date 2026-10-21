@@ -288,13 +288,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
             <div className="bg-white dark:bg-[#171E2B] p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
               <div className="flex items-center justify-between text-slate-400 text-xs">
-                <span>Ticket Spend</span>
+                <span>Recorded Payments</span>
                 <DollarSign className="w-4 h-4 text-[#3E6CB5]" />
               </div>
               <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
                 ₱{totalTicketSpend.toLocaleString()}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Total tickets purchased</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">No payment is collected by this prototype</p>
             </div>
           </div>
 

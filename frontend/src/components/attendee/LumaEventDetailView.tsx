@@ -371,7 +371,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                   ₱{event.ticket_price}
                 </span>
                 <span className="text-[10px] text-slate-400 block font-mono">
-                  via Stripe Checkout
+                  listed ticket price
                 </span>
               </div>
             </div>
@@ -430,7 +430,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#3E6CB5] shrink-0" />
-                <span>Encrypted checkout powered by Stripe</span>
+                <span>Payment collection is not available in this prototype</span>
               </div>
             </div>
           </div>

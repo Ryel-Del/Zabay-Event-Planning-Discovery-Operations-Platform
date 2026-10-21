@@ -12,7 +12,7 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues, notifications } = useApp();
+  const { registrations, events, venues, notifications, isDemoMode } = useApp();
 
   return (
     <div className="space-y-6">
@@ -23,7 +23,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
             My Digital QR Event Passes ({registrations.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Database-backed digital admission passes for rapid contactless gate verification.
+            {isDemoMode ? 'Sample passes for the local demo.' : 'QR passes returned by PostgreSQL during this session.'}
           </p>
         </div>
       </div>
@@ -61,7 +61,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
               <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 border-b border-stone-200/80 dark:border-stone-800/80 flex justify-between items-start">
                 <div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                    Official Event Pass
+                    {isDemoMode ? 'Sample Event Pass' : 'Event Pass'}
                   </span>
                   <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight mt-0.5">
                     {reg.event_title}
@@ -74,7 +74,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                       : 'bg-[#F6EFE9] dark:bg-[#2B231D] text-[#885B43] dark:text-[#DEC0B0] border-[#B88568]/30'
                   }`}
                 >
-                  {isCheckedIn ? 'Admitted (Checked In)' : 'Active / Valid'}
+                  {isCheckedIn ? 'Admitted (Checked In)' : reg.status === 'cancelled' ? 'Cancelled' : 'Active / Valid'}
                 </div>
               </div>
 
@@ -136,7 +136,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                       onClick={() => onScanPass(reg.qr_pass_code)}
                       className="px-2.5 py-1 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-medium transition-colors"
                     >
-                      Test Scan Pass
+                      Open Scanner
                     </button>
                   )}
                 </div>

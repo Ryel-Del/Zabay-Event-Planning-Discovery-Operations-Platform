@@ -1,4 +1,4 @@
-import type { Venue, ZabayEvent, Task } from '../types';
+import type { Venue, ZabayEvent, Task, Registration } from '../types';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -6,6 +6,7 @@ export interface ApiResponse<T> {
   error?: string;
   code?: string;
   count?: number;
+  isDuplicate?: boolean;
 }
 
 export interface VenueBookingRequest {
@@ -19,10 +20,23 @@ export interface VenueBookingRequest {
 
 export interface AttendeeRegistrationRequest {
   event_id: string;
-  name: string;
-  email: string;
+  attendee_name: string;
+  attendee_email: string;
   ticket_type: string;
-  notes?: string;
+}
+
+export type DbRegistration = Omit<Registration, 'event_title' | 'attendee_id' | 'amount_paid'> & {
+  attendee_id: string | null;
+  amount_paid: string | number;
+};
+
+export function adaptRegistration(row: DbRegistration, eventTitle: string): Registration {
+  return {
+    ...row,
+    event_title: eventTitle,
+    attendee_id: row.attendee_id || '',
+    amount_paid: asNumber(row.amount_paid),
+  };
 }
 
 export interface HealthStatus {
@@ -111,11 +125,15 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (!data) {
+        return { success: false, error: 'Backend API is unavailable. No database change was confirmed.', code: 'NETWORK_ERROR' };
+      }
       const friendlyMessage = translateDbError(data);
       return {
         success: false,
         error: friendlyMessage,
         code: data?.code,
+        isDuplicate: data?.isDuplicate,
       };
     }
 
@@ -183,16 +201,16 @@ export const api = {
   // Attendee & Ticket Operations
   attendees: {
     register: (payload: AttendeeRegistrationRequest) =>
-      request<{ id: string; ticket_id: string }>(`/api/attendees/register`, {
+      request<DbRegistration>(`/api/attendees/register`, {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    checkIn: (ticketId: string) =>
-      request<{ success: boolean; attendee_id: string; checked_in_at: string }>(
+    checkIn: (qrPassCode: string) =>
+      request<DbRegistration>(
         '/api/attendees/checkin',
         {
           method: 'POST',
-          body: JSON.stringify({ ticket_id: ticketId }),
+          body: JSON.stringify({ qr_pass_code: qrPassCode }),
         }
       ),
   },

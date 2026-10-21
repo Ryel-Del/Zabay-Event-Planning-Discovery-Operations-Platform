@@ -74,10 +74,11 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           <StripeCheckoutModal
             event={selectedEventForCheckout}
             isOpen={true}
-            onClose={() => setSelectedEventForCheckout(null)}
-            onSuccess={() => {
-              // Pass confirmed
+            onClose={() => {
+              setSelectedEventForCheckout(null);
+              if (activeTab === 'passes') setSelectedEventDetail(null);
             }}
+            onSuccess={() => setActiveTab('passes')}
           />
         )}
       </div>
@@ -298,7 +299,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                           setSelectedEventForCheckout(event);
                         }}
                         className="py-2.5 px-3.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                        title="Quick Checkout via Stripe"
+                        title="Register for a digital pass"
                       >
                         <Ticket className="w-4 h-4 text-white" />
                         <span>Get Pass</span>
@@ -320,9 +321,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           event={selectedEventForCheckout}
           isOpen={true}
           onClose={() => setSelectedEventForCheckout(null)}
-          onSuccess={() => {
-            // Stay open for pass display
-          }}
+          onSuccess={() => setActiveTab('passes')}
         />
       )}
     </div>

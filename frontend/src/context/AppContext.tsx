@@ -28,7 +28,7 @@ import {
   mockRegistrations,
   mockAuditLogs,
 } from '../mock/mockData';
-import api, { adaptEvent, adaptVenue, type HealthStatus } from '../services/api';
+import api, { adaptEvent, adaptRegistration, adaptVenue, type HealthStatus } from '../services/api';
 
 interface AppContextType {
   currentUser: User;
@@ -88,7 +88,7 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id'>) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
-  checkInAttendee: (qrCode: string) => { success: boolean; message: string; registration?: Registration; isDuplicate?: boolean };
+  checkInAttendee: (qrCode: string) => Promise<{ success: boolean; message: string; registration?: Registration; isDuplicate?: boolean }>;
   bookVenue: (
     venueId: string,
     eventId: string,
@@ -97,7 +97,7 @@ interface AppContextType {
     hallId?: string,
     eventTitle?: string
   ) => Promise<{ success: boolean; message: string }>;
-  registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
+  registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => Promise<{ success: boolean; message: string; registration?: Registration }>;
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
   removePersonnel: (id: string) => void;
@@ -679,7 +679,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Check-In Attendee with Database Duplicate Prevention
-  const checkInAttendee = (qrCode: string) => {
+  const checkInAttendee = async (qrCode: string) => {
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No attendee was checked in.' };
+      const response = await api.attendees.checkIn(qrCode);
+      if (!response.success || !response.data) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN', message: response.error || 'Check-in failed.' };
+      }
+      const known = registrations.find((registration) => registration.id === response.data?.id);
+      const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
+      const checkedIn = adaptRegistration(response.data, title);
+      setRegistrations((previous) => previous.some((registration) => registration.id === checkedIn.id)
+        ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
+        : [checkedIn, ...previous]);
+      return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
+    }
     const reg = registrations.find(
       (r) => r.qr_pass_code.toUpperCase() === qrCode.trim().toUpperCase()
     );
@@ -687,8 +702,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!reg) {
       return {
         success: false,
-        message: 'Invalid QR pass code. No active registration record found in database.',
+        message: 'Invalid sample QR pass code.',
       };
+    }
+
+    if (reg.status === 'cancelled') {
+      return { success: false, message: 'This sample registration was cancelled.' };
     }
 
     if (reg.status === 'checked_in') {
@@ -712,7 +731,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'CHECK_IN',
       entity_type: 'registration',
       entity_id: reg.id,
-      change_summary: `Admitted attendee ${reg.attendee_name} (${reg.ticket_type}) via QR Pass. Check-in registered into attendance table.`,
+      change_summary: `Sample check-in for ${reg.attendee_name} (${reg.ticket_type}).`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [checkInLog, ...prev]);
@@ -814,24 +833,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Register for event (Attendee flow with simulated Stripe checkout)
-  const registerForEvent = (
+  // Register for an event and retain the returned QR pass in this workspace.
+  const registerForEvent = async (
     eventId: string,
     ticketType: 'General Admission' | 'VIP Access',
     attendeeName: string,
     attendeeEmail: string
-  ) => {
+  ): Promise<{ success: boolean; message: string; registration?: Registration }> => {
     const event = events.find((e) => e.id === eventId) || selectedEvent;
     if (!event) {
-      throw new Error('Event not found');
+      return { success: false, message: 'Event not found.' };
     }
 
-    const price = ticketType === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No registration was saved.' };
+      const response = await api.attendees.register({
+        event_id: eventId,
+        attendee_name: attendeeName,
+        attendee_email: attendeeEmail,
+        ticket_type: ticketType,
+      });
+      if (!response.success || !response.data?.qr_pass_code) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: response.error || 'Registration was not saved.' };
+      }
+      const saved = adaptRegistration(response.data, event.title);
+      setRegistrations((previous) => [saved, ...previous]);
+      return { success: true, registration: saved, message: 'Registration saved. No payment was collected.' };
+    }
+
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const qrCode = `ZABAY-PASS-${randomSuffix}-${attendeeName.split(' ')[0].toUpperCase()}`;
 
     const newReg: Registration = {
-      id: `reg-${Date.now()}`,
+      id: `demo-reg-${Date.now()}`,
       event_id: event.id,
       event_title: event.title,
       attendee_id: currentUser.id,
@@ -841,8 +876,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ticket_type: ticketType,
       qr_pass_code: qrCode,
       registered_at: new Date().toISOString(),
-      amount_paid: price,
-      payment_id: `pay-${Date.now()}`,
+      amount_paid: 0,
     };
 
     setRegistrations((prev) => [newReg, ...prev]);
@@ -850,6 +884,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return {
       success: true,
       registration: newReg,
+      message: 'Sample registration created. No payment was collected.',
     };
   };
 

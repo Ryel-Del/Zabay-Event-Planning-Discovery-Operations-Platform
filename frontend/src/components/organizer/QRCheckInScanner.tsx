@@ -19,12 +19,14 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose }) => {
-  const { checkInAttendee } = useApp();
+  const { checkInAttendee, isDemoMode } = useApp();
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
   const [scanFlash, setScanFlash] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const verificationInFlight = useRef(false);
 
   const [result, setResult] = useState<{
     success: boolean;
@@ -42,13 +44,26 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   useEffect(() => {
     if (initialCode) {
       setPassCodeInput(initialCode);
-      const res = checkInAttendee(initialCode);
-      setResult(res);
+      setResult(null);
     } else {
       setPassCodeInput('');
       setResult(null);
     }
   }, [initialCode, isOpen]);
+
+  const handleManualVerify = async (code: string) => {
+    if (verificationInFlight.current) return;
+    verificationInFlight.current = true;
+    setVerifying(true);
+    try {
+      setResult(await checkInAttendee(code));
+    } catch {
+      setResult({ success: false, message: 'Check-in could not be completed.' });
+    } finally {
+      verificationInFlight.current = false;
+      setVerifying(false);
+    }
+  };
 
   // Stop camera tracks cleanly
   const stopCamera = () => {
@@ -82,7 +97,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
       setCameraError(
         err.name === 'NotAllowedError'
           ? 'Camera permission denied. Please allow camera access in your browser settings.'
-          : 'Could not access camera device. You can still test with the simulated passes below.'
+          : 'Could not access camera device. You can still enter a pass code manually.'
       );
       setCameraActive(false);
     }
@@ -120,8 +135,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               setScanFlash(true);
               setTimeout(() => setScanFlash(false), 800);
 
-              const verifyRes = checkInAttendee(scanned);
-              setResult(verifyRes);
+              void handleManualVerify(scanned);
 
               // Allow scanning another code after 2.5s
               setTimeout(() => setLastScannedCode(null), 2500);
@@ -149,11 +163,6 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const handleManualVerify = (code: string) => {
-    const res = checkInAttendee(code);
-    setResult(res);
-  };
 
   const sampleCodes = [
     { label: 'Sofia Chen (VIP - Valid)', code: 'ZABAY-PASS-9042-SOFIA' },
@@ -189,7 +198,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               </span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hold attendee QR pass up to your webcam or scan pass serial to verify database check-in.
+              Hold a QR pass up to your webcam or enter its code to check in.
             </p>
           </div>
         </div>
@@ -284,20 +293,21 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             />
             <button
               onClick={() => handleManualVerify(passCodeInput)}
+              disabled={verifying}
               className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
-              Verify Pass
+              {verifying ? 'Checking...' : 'Verify Pass'}
             </button>
           </div>
         </div>
 
         {/* Quick Test Presets (For grading/testing without phone) */}
-        <div className="space-y-1.5">
+        {isDemoMode && <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               Quick Test Scenarios:
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">Test Database Constraints</span>
+            <span className="text-[10px] text-slate-400 font-mono">Sample mode only</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {sampleCodes.map((item, i) => (
@@ -317,7 +327,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Result Verification Feedback */}
         {result && (
