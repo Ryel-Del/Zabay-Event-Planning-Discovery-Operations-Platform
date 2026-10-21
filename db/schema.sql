@@ -319,6 +319,11 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     is_duplicate BOOLEAN DEFAULT false
 );
 
+-- One admission per registration, including writes made outside the API.
+-- Existing duplicate attendance records must be reconciled explicitly.
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_records_registration_unique
+    ON attendance_records (registration_id);
+
 -- 10. AUDIT LOGS TABLE
 CREATE TABLE IF NOT EXISTS audit_logs (
     id VARCHAR(64) PRIMARY KEY,

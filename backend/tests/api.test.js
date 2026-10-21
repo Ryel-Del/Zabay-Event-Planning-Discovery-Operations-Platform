@@ -53,6 +53,71 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.equal(events.status, 200);
   assert.ok(events.body.data.some((row) => row.id === eventId));
 
+  const register = (overrides = {}) => request(app).post('/api/attendees/register').send({
+    event_id: eventId,
+    attendee_name: 'Presentation Attendee',
+    attendee_email: 'attendee@example.test',
+    ticket_type: 'General Admission',
+    ...overrides,
+  });
+  assert.equal((await register({ attendee_email: '' })).status, 400);
+  assert.equal((await register({ event_id: 'missing-event' })).status, 404);
+  const firstRegistration = await register({ amount_paid: 999 });
+  const secondRegistration = await register();
+  assert.equal(firstRegistration.status, 201);
+  assert.equal(secondRegistration.status, 201);
+  assert.match(firstRegistration.body.data.id, /^reg-[0-9a-f-]{36}$/);
+  assert.notEqual(firstRegistration.body.data.qr_pass_code, secondRegistration.body.data.qr_pass_code);
+  assert.equal(Number(firstRegistration.body.data.amount_paid), 0);
+  const checkIn = (qr_pass_code) => request(app).post('/api/attendees/checkin').send({ qr_pass_code });
+  assert.equal((await checkIn('')).status, 400);
+  assert.equal((await checkIn('UNKNOWN-PASS')).status, 404);
+  const firstPass = firstRegistration.body.data.qr_pass_code;
+  assert.equal((await checkIn(firstPass)).status, 200);
+  const duplicate = await checkIn(firstPass);
+  assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.body.code, 'DUPLICATE_CHECK_IN');
+
+  const concurrentPass = secondRegistration.body.data.qr_pass_code;
+  const concurrentCheckIns = await Promise.all([checkIn(concurrentPass), checkIn(concurrentPass)]);
+  assert.deepEqual(concurrentCheckIns.map((reply) => reply.status).sort(), [200, 409]);
+  const attendance = await pool.query(
+    'SELECT registration_id, count(*)::int AS count FROM attendance_records WHERE registration_id = ANY($1::varchar[]) GROUP BY registration_id',
+    [[firstRegistration.body.data.id, secondRegistration.body.data.id]]
+  );
+  assert.equal(attendance.rows.length, 2);
+  assert.ok(attendance.rows.every((row) => row.count === 1));
+  await assert.rejects(pool.query(
+    `INSERT INTO attendance_records (id, event_id, registration_id, attendee_name, verified_by)
+     VALUES ($1, $2, $3, 'Duplicate', 'test')`,
+    [`test-attendance-duplicate-${Date.now()}`, eventId, firstRegistration.body.data.id]
+  ), (error) => error.code === '23505');
+
+  const cancelled = await register();
+  assert.equal(cancelled.status, 201);
+  await pool.query("UPDATE registrations SET status = 'cancelled' WHERE id = $1", [cancelled.body.data.id]);
+  const cancelledScan = await checkIn(cancelled.body.data.qr_pass_code);
+  assert.equal(cancelledScan.status, 409);
+  assert.equal(cancelledScan.body.code, 'CANCELLED_REGISTRATION');
+  const cancelledAttendance = await pool.query(
+    'SELECT count(*)::int AS count FROM attendance_records WHERE registration_id = $1', [cancelled.body.data.id]
+  );
+  assert.equal(cancelledAttendance.rows[0].count, 0);
+
+  const rollbackRegistration = await register();
+  assert.equal(rollbackRegistration.status, 201);
+  const failedAttendanceInsert = await request(app).post('/api/attendees/checkin').send({
+    qr_pass_code: rollbackRegistration.body.data.qr_pass_code,
+    verified_by_id: 'x'.repeat(65),
+  });
+  assert.equal(failedAttendanceInsert.status, 500);
+  const rolledBack = await pool.query(
+    `SELECT r.status, count(a.id)::int AS attendance_count
+     FROM registrations r LEFT JOIN attendance_records a ON a.registration_id = r.id
+     WHERE r.id = $1 GROUP BY r.id`, [rollbackRegistration.body.data.id]
+  );
+  assert.deepEqual(rolledBack.rows, [{ status: 'confirmed', attendance_count: 0 }]);
+
   const taskId = `test-task-${Date.now()}`;
   await pool.query(
     `INSERT INTO tasks (id, event_id, title, track, status, priority, start_time, end_time)
