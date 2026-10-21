@@ -219,6 +219,18 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.equal(stillPlanning.body.data.status, 'planning');
   assert.equal(stillPlanning.body.data.venue_id, null);
   assert.equal(stillPlanning.body.data.hall_id, null);
+  const retryBooking = await book({
+    ...slot(2, 'vh-trop-dagohoy'), event_id: planningId,
+    event_title: 'Unbooked planning event',
+  });
+  assert.equal(retryBooking.status, 201);
+  const afterRetry = await request(app).get(`/api/events/${planningId}`);
+  assert.equal(afterRetry.body.data.id, planningId);
+  assert.equal(afterRetry.body.data.hall_id, 'vh-trop-dagohoy');
+  assert.equal(new Date(afterRetry.body.data.start_date).toISOString(), '2030-01-02T10:00:00.000Z');
+  assert.equal(new Date(afterRetry.body.data.end_date).toISOString(), '2030-01-02T12:00:00.000Z');
+  const matchingEvents = await pool.query('SELECT count(*)::int AS count FROM events WHERE id = $1', [planningId]);
+  assert.equal(matchingEvents.rows[0].count, 1);
   assert.equal(hallBooking.status, 201);
   const sameHallConflict = await book({ ...slot(2, 'vh-trop-harbor'), start_time: '2030-01-02T11:00:00Z' });
   assert.equal(sameHallConflict.status, 409);
