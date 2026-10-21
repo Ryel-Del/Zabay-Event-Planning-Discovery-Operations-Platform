@@ -23,10 +23,10 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [lastScannedCode, setLastScannedCode] = useState<string | null>(null);
-  const [scanFlash, setScanFlash] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const verificationInFlight = useRef(false);
+  const isOpenRef = useRef(isOpen);
+  isOpenRef.current = isOpen;
 
   const [result, setResult] = useState<{
     success: boolean;
@@ -39,6 +39,8 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const cameraRequestRef = useRef(0);
+  const cameraStartingRef = useRef(false);
 
   // Handle initial code pre-fill
   useEffect(() => {
@@ -51,9 +53,31 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     }
   }, [initialCode, isOpen]);
 
+  const releaseCamera = () => {
+    if (animFrameRef.current !== null) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    videoRef.current?.pause();
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const stopCamera = () => {
+    cameraRequestRef.current += 1;
+    cameraStartingRef.current = false;
+    releaseCamera();
+    setCameraActive(false);
+  };
+
   const handleManualVerify = async (code: string) => {
     if (verificationInFlight.current) return;
+    stopCamera();
     verificationInFlight.current = true;
+    setResult(null);
     setVerifying(true);
     try {
       setResult(await checkInAttendee(code));
@@ -65,32 +89,35 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     }
   };
 
-  // Stop camera tracks cleanly
-  const stopCamera = () => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraActive(false);
-  };
-
   // Start live webcam feed
   const startCamera = async () => {
+    if (verificationInFlight.current || cameraStartingRef.current || cameraActive) return;
+    cameraStartingRef.current = true;
+    const requestId = ++cameraRequestRef.current;
+    setResult(null);
+    setPassCodeInput('');
     setCameraError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
       });
+      if (!isOpenRef.current || requestId !== cameraRequestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.setAttribute('playsinline', 'true');
         await videoRef.current.play();
+        if (!isOpenRef.current || requestId !== cameraRequestRef.current) {
+          stopCamera();
+          return;
+        }
         setCameraActive(true);
+      } else {
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
     } catch (err: any) {
       console.warn('Camera access issue:', err);
@@ -99,7 +126,9 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
           ? 'Camera permission denied. Please allow camera access in your browser settings.'
           : 'Could not access camera device. You can still enter a pass code manually.'
       );
-      setCameraActive(false);
+      stopCamera();
+    } finally {
+      if (requestId === cameraRequestRef.current) cameraStartingRef.current = false;
     }
   };
 
@@ -128,18 +157,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
 
           if (qr && qr.data) {
             const scanned = qr.data.trim();
-            // Prevent immediate re-trigger loop on same code
-            if (scanned !== lastScannedCode) {
-              setLastScannedCode(scanned);
-              setPassCodeInput(scanned);
-              setScanFlash(true);
-              setTimeout(() => setScanFlash(false), 800);
-
-              void handleManualVerify(scanned);
-
-              // Allow scanning another code after 2.5s
-              setTimeout(() => setLastScannedCode(null), 2500);
-            }
+            isScanning = false;
+            setPassCodeInput(scanned);
+            stopCamera();
+            void handleManualVerify(scanned);
+            return;
           }
         }
       }
@@ -153,13 +175,12 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
       isScanning = false;
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [cameraActive, isOpen, lastScannedCode]);
+  }, [cameraActive, isOpen]);
 
-  // Teardown when modal closes
+  // Teardown when the modal closes or unmounts.
   useEffect(() => {
-    if (!isOpen) {
-      stopCamera();
-    }
+    if (!isOpen) stopCamera();
+    return () => releaseCamera();
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -177,6 +198,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
         {/* Close Button */}
         <button
           onClick={() => {
+            isOpenRef.current = false;
             stopCamera();
             onClose();
           }}
@@ -213,11 +235,6 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
           {/* Hidden Canvas for QR Extraction */}
           <canvas ref={canvasRef} className="hidden" />
 
-          {/* Flash Feedback overlay when code is read */}
-          {scanFlash && (
-            <div className="absolute inset-0 bg-[#3E6CB5]/30 dark:bg-[#7EA6E0]/40 z-20 pointer-events-none animate-pulse" />
-          )}
-
           {/* Camera Inactive / Placeholder View */}
           {!cameraActive && (
             <div className="text-center p-6 space-y-3 z-10">
@@ -232,10 +249,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               </div>
               <button
                 onClick={startCamera}
+                disabled={verifying}
                 className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5"
               >
                 <Camera className="w-3.5 h-3.5" />
-                <span>Start Webcam Scanner</span>
+                <span>{result ? 'Scan Next Pass' : 'Start Webcam Scanner'}</span>
               </button>
             </div>
           )}
