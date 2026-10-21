@@ -61,23 +61,21 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
       banner_url,
     } = req.body;
 
-    const id = `evt-${Date.now()}`;
     const sql = `
       INSERT INTO events (
-        id, title, description, category, event_type, is_private,
+        title, description, category, event_type, is_private,
         status, start_date, end_date, organizer_id, venue_id,
         hall_id, hall_name, expected_attendance, max_capacity,
         ticket_price, budget, banner_url, created_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        'planning', $7, $8, $9, $10,
-        $11, $12, $13, $14,
-        $15, $16, $17, NOW()
+        $1, $2, $3, $4, $5,
+        'planning', $6, $7, $8, $9,
+        $10, $11, $12, $13,
+        $14, $15, $16, NOW()
       ) RETURNING *
     `;
 
     const result = await query(sql, [
-      id,
       title,
       description,
       category,

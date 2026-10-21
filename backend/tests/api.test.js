@@ -41,7 +41,10 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   });
   assert.equal(event.status, 201);
   const eventId = event.body.data.id;
+  assert.match(eventId, /^evt-[0-9a-f-]{36}$/);
+  let planningId;
   t.after(async () => {
+    if (planningId) await pool.query('DELETE FROM events WHERE id = $1', [planningId]);
     await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
     await pool.end();
   });
@@ -130,6 +133,27 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   }
 
   const hallBooking = await book(slot(2, 'vh-trop-harbor'));
+  assert.equal(hallBooking.status, 201);
+  const bookedEvent = await request(app).get(`/api/events/${eventId}`);
+  assert.equal(bookedEvent.body.data.venue_id, 'ven-6');
+  assert.equal(bookedEvent.body.data.hall_id, 'vh-trop-harbor');
+
+  const planning = await request(app).post('/api/events').send({
+    title: 'Unbooked planning event', category: 'test',
+    start_date: '2030-01-02T10:00:00Z', end_date: '2030-01-02T12:00:00Z',
+    organizer_id: 'usr-org-1',
+  });
+  assert.equal(planning.status, 201);
+  planningId = planning.body.data.id;
+  const rejectedBooking = await book({
+    ...slot(2, 'vh-trop-harbor'), event_id: planningId,
+    event_title: 'Unbooked planning event',
+  });
+  assert.equal(rejectedBooking.status, 409);
+  const stillPlanning = await request(app).get(`/api/events/${planningId}`);
+  assert.equal(stillPlanning.body.data.status, 'planning');
+  assert.equal(stillPlanning.body.data.venue_id, null);
+  assert.equal(stillPlanning.body.data.hall_id, null);
   assert.equal(hallBooking.status, 201);
   const sameHallConflict = await book({ ...slot(2, 'vh-trop-harbor'), start_time: '2030-01-02T11:00:00Z' });
   assert.equal(sameHallConflict.status, 409);
