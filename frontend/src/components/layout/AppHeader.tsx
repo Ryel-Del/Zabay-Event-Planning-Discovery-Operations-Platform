@@ -519,7 +519,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                   : currentRole === 'venue_manager'
                   ? 'Venue Manager'
                   : currentRole === 'staff'
-                  ? 'Staff (View-Only)'
+                  ? 'Staff & Field Crew'
                   : 'Public Attendee'}
               </p>
             </div>
@@ -604,7 +604,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                     <Building2 className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />
                     <div className="text-left">
                       <p className="font-semibold">Venue Partner Hub</p>
-                      <p className="text-[10px] text-slate-500">Capacity & EXCLUDE bookings</p>
+                      <p className="text-[10px] text-slate-500">Facility availability & collision-safe bookings</p>
                     </div>
                   </div>
                   {currentRole === 'venue_manager' && <Check className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />}
@@ -622,7 +622,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                     <Users className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />
                     <div className="text-left">
                       <p className="font-semibold">Event Staff Portal</p>
-                      <p className="text-[10px] text-slate-500">View-only shifts, tasks & run-of-show</p>
+                      <p className="text-[10px] text-slate-500">Shift pass, duties checklist & gate scanner</p>
                     </div>
                   </div>
                   {currentRole === 'staff' && <Check className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />}
