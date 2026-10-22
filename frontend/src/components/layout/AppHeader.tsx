@@ -62,6 +62,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
     notifications,
     unreadNotificationCount,
     dismissNotification,
+    exitStaffPreview,
   } = useApp();
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -364,6 +365,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           >
             <Layers className="w-3.5 h-3.5 text-[#D4E4F7]" />
             <span>Organizer Studio</span>
+          </button>
+        )}
+
+        {/* Exit Staff Preview CTA (When viewing Staff Shift Portal) */}
+        {currentRole === 'staff' && (
+          <button
+            onClick={exitStaffPreview}
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-[#D4E4F7]" />
+            <span>Back to Studio</span>
           </button>
         )}
 

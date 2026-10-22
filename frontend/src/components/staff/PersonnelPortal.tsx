@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Clock,
@@ -15,6 +15,8 @@ import {
   Radio,
   QrCode,
   ShieldCheck,
+  Eye,
+  ArrowLeft,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
@@ -28,10 +30,13 @@ export const PersonnelPortal: React.FC = () => {
     venues,
     updateTaskStatus,
     notifications,
+    activeStaffId,
+    exitStaffPreview,
   } = useApp();
 
-  // Find logged-in staff member or match by name/email; default to Carlos Ruiz (per-3)
+  // Find staff member by activeStaffId or match by email/name; default to Carlos Mendoza (per-3)
   const defaultPersonnel =
+    (activeStaffId ? personnel.find((p) => p.id === activeStaffId) : null) ||
     personnel.find(
       (p) =>
         p.email === currentUser.email ||
@@ -45,6 +50,13 @@ export const PersonnelPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'venue_contacts'>('my_tasks');
   const [searchRunOfShow, setSearchRunOfShow] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Sync when activeStaffId changes from external preview click
+  useEffect(() => {
+    if (activeStaffId) {
+      setSelectedPersonnelId(activeStaffId);
+    }
+  }, [activeStaffId]);
 
   const currentPerson = personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel;
 
@@ -87,6 +99,36 @@ export const PersonnelPortal: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Organizer Staff-Preview Mode Banner */}
+      <div className="bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#3E6CB5] text-white flex items-center justify-center shrink-0">
+            <Eye className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#244A85] dark:text-[#8BB0E8]">
+                Staff Shift Preview Mode
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
+                Active Persona: {currentPerson?.name || 'Field Crew'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+              You are testing how staff members view assigned tasks, duty checklists, and camera gate check-in.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={exitStaffPreview}
+          className="px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Return to Organizer Studio</span>
+        </button>
+      </div>
+
       {/* Real-Time Operational Change Alerts */}
       {notifications.length > 0 && (
         <div className="bg-amber-500 text-white p-4 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-in slide-in-from-top-1">
@@ -620,7 +662,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Lead Event Organizer</p>
-                    <p className="text-[10px] text-slate-400">Marcus Vance • Zabay Operations</p>
+                    <p className="text-[10px] text-slate-400">Mark Bautista • Zabay Operations</p>
                   </div>
                   <a
                     href="tel:+639173891029"
@@ -633,7 +675,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Security & Medical Lead</p>
-                    <p className="text-[10px] text-slate-400">Aisha Robinson • First Aid Post</p>
+                    <p className="text-[10px] text-slate-400">Aileen Robles • First Aid Post</p>
                   </div>
                   <a
                     href="tel:+639205509921"
@@ -646,7 +688,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Technical & AV Lead</p>
-                    <p className="text-[10px] text-slate-400">Darius Thorne • Audio Console Desk</p>
+                    <p className="text-[10px] text-slate-400">Danilo Torralba • Audio Console Desk</p>
                   </div>
                   <a
                     href="tel:+639177721049"

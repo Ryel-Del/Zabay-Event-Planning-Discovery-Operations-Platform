@@ -21,8 +21,8 @@ import type {
 
 export const mockCurrentUser: User = {
   id: 'usr-org-1',
-  name: 'Marcus Vance',
-  email: 'marcus.vance@zabay.ph',
+  name: 'Mark Bautista',
+  email: 'mark.bautista@zabay.ph',
   role: 'organizer',
   phone: '+63 (917) 389-1029',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -35,8 +35,8 @@ export const mockUsers: User[] = [
   mockCurrentUser,
   {
     id: 'usr-vm-1',
-    name: 'Elena Rostova',
-    email: 'elena@boholculturalcenter.ph',
+    name: 'Maria Elena Santos',
+    email: 'elena.santos@boholculturalcenter.ph',
     role: 'venue_manager',
     phone: '+63 (38) 411-3520',
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
@@ -46,8 +46,8 @@ export const mockUsers: User[] = [
   },
   {
     id: 'usr-stf-1',
-    name: 'Carlos Ruiz',
-    email: 'carlos.r@stagemaster.ph',
+    name: 'Carlos Mendoza',
+    email: 'carlos.mendoza@stagemaster.ph',
     role: 'staff',
     phone: '+63 (919) 304-9844',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
@@ -898,41 +898,41 @@ export const mockResources: Resource[] = [
 export const mockPersonnel: Personnel[] = [
   {
     id: 'per-1',
-    name: 'Darius Thorne',
+    name: 'Danilo Torralba',
     role: 'Sound Engineer',
     skills: ['Acoustic Tuning', 'Arena Sound Systems', 'Wireless Mic Arrays'],
     phone: '+63 (917) 772-1049',
-    email: 'darius.thorne@boholaudio.ph',
+    email: 'danilo.torralba@boholaudio.ph',
     hourly_rate: 550,
     is_available: true,
   },
   {
     id: 'per-2',
-    name: 'Maya Lin',
+    name: 'Maria Bea Lim',
     role: 'Lighting Tech',
     skills: ['GrandMA3 Programming', 'Court Illumination', 'Stage Spotlights'],
     phone: '+63 (928) 881-2299',
-    email: 'maya.lin@luminaevents.ph',
+    email: 'bea.lim@luminaevents.ph',
     hourly_rate: 500,
     is_available: true,
   },
   {
     id: 'per-3',
-    name: 'Carlos Ruiz',
+    name: 'Carlos Mendoza',
     role: 'Stage Manager',
     skills: ['Logistics Direction', 'Floor Setup', 'Vendor Coordination'],
     phone: '+63 (919) 304-9844',
-    email: 'carlos.r@stagemaster.ph',
+    email: 'carlos.mendoza@stagemaster.ph',
     hourly_rate: 650,
     is_available: true,
   },
   {
     id: 'per-4',
-    name: 'Aisha Robinson',
+    name: 'Aileen Robles',
     role: 'Security Lead',
     skills: ['Crowd Safety', 'Emergency Dispatch', 'CPR / First Aid'],
     phone: '+63 (920) 550-9921',
-    email: 'aisha.r@safeguard.ph',
+    email: 'aileen.robles@safeguard.ph',
     hourly_rate: 400,
     is_available: true,
   },
@@ -948,11 +948,11 @@ export const mockPersonnel: Personnel[] = [
   },
   {
     id: 'per-6',
-    name: 'Elena Rostova',
+    name: 'Maria Elena Santos',
     role: 'Event Coordinator',
     skills: ['Guest Relations', 'Team Coordination', 'Registration Management'],
     phone: '+63 (917) 412-9901',
-    email: 'elena.rostova@zabay.ph',
+    email: 'elena.santos@zabay.ph',
     hourly_rate: 600,
     is_available: true,
   },
@@ -973,7 +973,7 @@ export const mockTasks: Task[] = [
     track: 'venue_logistics',
     dependencies: [],
     personnel_assignments: [
-      { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+      { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
     ],
     resource_assignments: [
       { resource_id: 'res-3', resource_name: 'Chauvet Moving Head Stage Spotlights', quantity: 12 },
@@ -993,7 +993,7 @@ export const mockTasks: Task[] = [
     track: 'technical_av',
     dependencies: ['task-1'],
     personnel_assignments: [
-      { personnel_id: 'per-2', personnel_name: 'Maya Lin', role: 'Lighting Tech' },
+      { personnel_id: 'per-2', personnel_name: 'Maria Bea Lim', role: 'Lighting Tech' },
       { personnel_id: 'per-5', personnel_name: 'Mark Tan', role: 'Tournament Referee' },
     ],
     resource_assignments: [
@@ -1014,7 +1014,7 @@ export const mockTasks: Task[] = [
     track: 'technical_av',
     dependencies: ['task-1'],
     personnel_assignments: [
-      { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
+      { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
     ],
     resource_assignments: [
       { resource_id: 'res-1', resource_name: 'Meyer Sound Arena Line-Array Audio Rig', quantity: 4 },
@@ -1034,7 +1034,7 @@ export const mockTasks: Task[] = [
     track: 'day_of_ops',
     dependencies: ['task-1'],
     personnel_assignments: [
-      { personnel_id: 'per-4', personnel_name: 'Aisha Robinson', role: 'Security Lead' },
+      { personnel_id: 'per-4', personnel_name: 'Aileen Robles', role: 'Security Lead' },
     ],
     resource_assignments: [],
     downstream_impact_count: 2,
@@ -1052,7 +1052,7 @@ export const mockTasks: Task[] = [
     track: 'marketing_tickets',
     dependencies: ['task-3'],
     personnel_assignments: [
-      { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+      { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
       { personnel_id: 'per-5', personnel_name: 'Mark Tan', role: 'Tournament Referee' },
     ],
     resource_assignments: [],
@@ -1071,7 +1071,7 @@ export const mockTasks: Task[] = [
     track: 'day_of_ops',
     dependencies: ['task-5'],
     personnel_assignments: [
-      { personnel_id: 'per-4', personnel_name: 'Aisha Robinson', role: 'Security Lead' },
+      { personnel_id: 'per-4', personnel_name: 'Aileen Robles', role: 'Security Lead' },
     ],
     resource_assignments: [
       { resource_id: 'res-4', resource_name: 'Crowd Safety Barricades & Turnstiles', quantity: 12 },
@@ -1091,7 +1091,7 @@ export const mockTasks: Task[] = [
     track: 'venue_logistics',
     dependencies: [],
     personnel_assignments: [
-      { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+      { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
     ],
     resource_assignments: [],
     downstream_impact_count: 0,
@@ -1109,7 +1109,7 @@ export const mockTasks: Task[] = [
     track: 'venue_logistics',
     dependencies: ['task-1'],
     personnel_assignments: [
-      { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+      { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
     ],
     resource_assignments: [],
     downstream_impact_count: 0,
@@ -1138,7 +1138,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1153,7 +1153,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'technical_av',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
+          { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
         ],
         resource_assignments: [
           { resource_id: 'res-1', resource_name: 'Meyer Sound Arena Line-Array Audio Rig', quantity: 2 },
@@ -1170,7 +1170,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'marketing_tickets',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
           { personnel_id: 'per-5', personnel_name: 'Mark Tan', role: 'Tournament Referee' },
         ],
         resource_assignments: [],
@@ -1186,7 +1186,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-4', personnel_name: 'Aisha Robinson', role: 'Security Lead' },
+          { personnel_id: 'per-4', personnel_name: 'Aileen Robles', role: 'Security Lead' },
         ],
         resource_assignments: [
           { resource_id: 'res-4', resource_name: 'Crowd Safety Barricades & Turnstiles', quantity: 4 },
@@ -1203,7 +1203,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1218,7 +1218,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1244,7 +1244,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-4', personnel_name: 'Aisha Robinson', role: 'Security Lead' },
+          { personnel_id: 'per-4', personnel_name: 'Aileen Robles', role: 'Security Lead' },
         ],
         resource_assignments: [],
       },
@@ -1259,7 +1259,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'technical_av',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-2', personnel_name: 'Maya Lin', role: 'Lighting Tech' },
+          { personnel_id: 'per-2', personnel_name: 'Maria Bea Lim', role: 'Lighting Tech' },
         ],
         resource_assignments: [
           { resource_id: 'res-3', resource_name: 'Chauvet Moving Head Stage Spotlights', quantity: 24 },
@@ -1276,7 +1276,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1291,7 +1291,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'marketing_tickets',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1306,7 +1306,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-4', personnel_name: 'Aisha Robinson', role: 'Security Lead' },
+          { personnel_id: 'per-4', personnel_name: 'Aileen Robles', role: 'Security Lead' },
         ],
         resource_assignments: [
           { resource_id: 'res-4', resource_name: 'Crowd Safety Barricades & Turnstiles', quantity: 8 },
@@ -1323,7 +1323,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1349,7 +1349,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [
           { resource_id: 'res-6', resource_name: 'Round Banquet Tables & Chiavari Chairs', quantity: 35 },
@@ -1366,8 +1366,8 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'technical_av',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
-          { personnel_id: 'per-2', personnel_name: 'Maya Lin', role: 'Lighting Tech' },
+          { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
+          { personnel_id: 'per-2', personnel_name: 'Maria Bea Lim', role: 'Lighting Tech' },
         ],
         resource_assignments: [
           { resource_id: 'res-1', resource_name: 'Meyer Sound Arena Line-Array Audio Rig', quantity: 2 },
@@ -1384,7 +1384,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1399,7 +1399,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'marketing_tickets',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1414,7 +1414,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
+          { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
         ],
         resource_assignments: [],
       },
@@ -1440,7 +1440,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1455,7 +1455,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'technical_av',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
+          { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
         ],
         resource_assignments: [
           { resource_id: 'res-2', resource_name: 'Christie 4K 30,000 Lumen Projector', quantity: 2 },
@@ -1472,7 +1472,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'marketing_tickets',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1487,7 +1487,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1502,7 +1502,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1528,7 +1528,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1543,7 +1543,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'technical_av',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-1', personnel_name: 'Darius Thorne', role: 'Sound Engineer' },
+          { personnel_id: 'per-1', personnel_name: 'Danilo Torralba', role: 'Sound Engineer' },
         ],
         resource_assignments: [
           { resource_id: 'res-1', resource_name: 'Meyer Sound Arena Line-Array Audio Rig', quantity: 2 },
@@ -1560,7 +1560,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'marketing_tickets',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-6', personnel_name: 'Elena Rostova', role: 'Event Coordinator' },
+          { personnel_id: 'per-6', personnel_name: 'Maria Elena Santos', role: 'Event Coordinator' },
         ],
         resource_assignments: [],
       },
@@ -1575,7 +1575,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'venue_logistics',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1590,7 +1590,7 @@ export const mockWorkflowKits: WorkflowTemplateKit[] = [
         track: 'day_of_ops',
         dependencies: [],
         personnel_assignments: [
-          { personnel_id: 'per-3', personnel_name: 'Carlos Ruiz', role: 'Stage Manager' },
+          { personnel_id: 'per-3', personnel_name: 'Carlos Mendoza', role: 'Stage Manager' },
         ],
         resource_assignments: [],
       },
@@ -1657,7 +1657,7 @@ export const mockAuditLogs: AuditLog[] = [
   {
     id: 'aud-01',
     user_id: 'usr-org-1',
-    user_name: 'Marcus Vance',
+    user_name: 'Mark Bautista',
     action: 'SCHEDULE_REBALANCED',
     entity_type: 'task',
     entity_id: 'task-3',
@@ -1671,7 +1671,7 @@ export const mockAuditLogs: AuditLog[] = [
   {
     id: 'aud-02',
     user_id: 'usr-org-1',
-    user_name: 'Marcus Vance',
+    user_name: 'Mark Bautista',
     action: 'VENUE_CHANGE',
     entity_type: 'venue',
     entity_id: 'ven-3',
@@ -1681,7 +1681,7 @@ export const mockAuditLogs: AuditLog[] = [
   {
     id: 'aud-03',
     user_id: 'usr-staff-1',
-    user_name: 'Aisha Robinson',
+    user_name: 'Aileen Robles',
     action: 'CHECK_IN',
     entity_type: 'registration',
     entity_id: 'reg-02',

@@ -78,11 +78,11 @@ export const AnalyticsDashboard: React.FC = () => {
 
   // Chart 3: Personnel Workload in Hours (v_personnel_workload)
   const personnelWorkloadData = [
-    { name: 'Darius (Sound)', scheduledHours: 7.5, capacityHours: 8 },
-    { name: 'Maya (Lights)', scheduledHours: 6.0, capacityHours: 8 },
+    { name: 'Danilo (Sound)', scheduledHours: 7.5, capacityHours: 8 },
+    { name: 'Bea (Lights)', scheduledHours: 6.0, capacityHours: 8 },
     { name: 'Carlos (Stage)', scheduledHours: 8.0, capacityHours: 8 },
-    { name: 'Aisha (Security)', scheduledHours: 7.0, capacityHours: 8 },
-    { name: 'Zachary (Net)', scheduledHours: 5.5, capacityHours: 8 },
+    { name: 'Aileen (Security)', scheduledHours: 7.0, capacityHours: 8 },
+    { name: 'Mark (Referee)', scheduledHours: 5.5, capacityHours: 8 },
   ];
 
   // Chart 4: Revenue by Tier with matte organic tones

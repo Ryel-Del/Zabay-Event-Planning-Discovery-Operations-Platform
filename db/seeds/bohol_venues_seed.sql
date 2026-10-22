@@ -5,9 +5,9 @@
 -- Insert Initial Users
 INSERT INTO users (id, name, email, role, phone, organization, location, bio)
 VALUES 
-  ('usr-org-1', 'Marcus Vance', 'marcus.vance@zabay.ph', 'organizer', '+63 (917) 555-0192', 'Bohol Youth Leadership Council', 'Tagbilaran City', 'Lead event director specialized in university conferences and athletics.'),
-  ('usr-vm-1', 'Elena Rostova', 'elena.rostova@boholculturalcenter.ph', 'venue_manager', '+63 (38) 411-3520', 'Bohol Cultural Center', 'Cogon District, Tagbilaran', 'Venue director overseeing plenary stages, acoustic rigging, and logistics.'),
-  ('usr-stf-1', 'Carlos Ruiz', 'carlos.ruiz@crew.zabay.ph', 'staff', '+63 (920) 441-8899', 'Zabay Stage Crew & AV Ops', 'Downtown District, Tagbilaran', 'Stage manager handling audio console, referee sync, and VIP ingress.'),
+  ('usr-org-1', 'Mark Bautista', 'mark.bautista@zabay.ph', 'organizer', '+63 (917) 555-0192', 'Bohol Youth Leadership Council', 'Tagbilaran City', 'Lead event director specialized in university conferences and athletics.'),
+  ('usr-vm-1', 'Maria Elena Santos', 'elena.santos@boholculturalcenter.ph', 'venue_manager', '+63 (38) 411-3520', 'Bohol Cultural Center', 'Cogon District, Tagbilaran', 'Venue director overseeing plenary stages, acoustic rigging, and logistics.'),
+  ('usr-stf-1', 'Carlos Mendoza', 'carlos.mendoza@crew.zabay.ph', 'staff', '+63 (920) 441-8899', 'Zabay Stage Crew & AV Ops', 'Downtown District, Tagbilaran', 'Stage manager handling audio console, referee sync, and VIP ingress.'),
   ('usr-att-1', 'Sofia Ramos', 'sofia.ramos@bisu.edu.ph', 'attendee', '+63 (918) 772-3341', 'Bohol Island State University', 'Dampas, Tagbilaran', 'Student delegate and tech enthusiast attending local seminars.')
 ON CONFLICT (id) DO NOTHING;
 
