@@ -324,7 +324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'VENUE_CHANGE',
       entity_type: 'venue',
       entity_id: changeDetails.eventId,
-      change_summary: `BROADCAST: ${changeDetails.summary}`,
+      change_summary: `In-app notice (current session): ${changeDetails.summary}`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [auditLog, ...prev]);

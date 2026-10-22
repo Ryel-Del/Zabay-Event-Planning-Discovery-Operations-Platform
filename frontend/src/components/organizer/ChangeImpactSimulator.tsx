@@ -90,7 +90,7 @@ export const ChangeImpactSimulator: React.FC = () => {
     // 1. Update task timings in state & audit log
     applyTaskDelay(selectedTask.id, delayMinutes, delayReason);
     
-    // 2. Broadcast priority notification to crew & attendees
+    // 2. Add a notice to the current browser session
     const targetAffected = scheduleImpactResult.affectedTasks[0];
     const newTiming = targetAffected ? `${targetAffected.newStart} - ${targetAffected.newEnd}` : `+${delayMinutes}m`;
     broadcastEventChange({
@@ -102,7 +102,7 @@ export const ChangeImpactSimulator: React.FC = () => {
     });
 
     setAppliedFeedback(
-      `✓ Schedule updated! ${selectedTask.title} shifted +${delayMinutes}m. ${affectedDependentTasks.length} dependent tasks synchronized, ${unaffectedTasks.length} independent tasks untouched. Live alert dispatched to field crew.`
+      `✓ Sample schedule updated! ${selectedTask.title} shifted +${delayMinutes}m. ${affectedDependentTasks.length} dependent tasks adjusted, ${unaffectedTasks.length} independent tasks untouched. An in-app notice was added for this session.`
     );
     setTimeout(() => setAppliedFeedback(null), 6000);
   };
@@ -275,17 +275,17 @@ export const ChangeImpactSimulator: React.FC = () => {
           {/* Step 3: Apply & Notify Action Button */}
           <div className="lg:col-span-5 space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              3. Confirm & Dispatch
+              3. Apply Sample Change
             </label>
             <button
               onClick={handleApply}
               className="w-full py-3 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4 text-[#D4E4F7]" />
-              <span>Apply Schedule Shift & Notify Crew</span>
+              <span>Apply Shift & Add In-App Notice</span>
             </button>
             <p className="text-[10px] text-slate-400 text-center">
-              Updates master timetable and pushes priority alerts to staff on duty.
+              Updates this session's sample timetable and adds an in-app notice.
             </p>
           </div>
         </div>
@@ -326,11 +326,11 @@ export const ChangeImpactSimulator: React.FC = () => {
 
           {scheduleImpactResult.hasConflicts ? (
             <p className="text-[#C45547] dark:text-[#E07D70] font-bold text-[11px] pt-1">
-              ⚠️ <strong>Curfew Warning:</strong> Pushing this task delays downstream sessions past the 17:00 venue closing window. Consider shortening buffer breaks or requesting a venue overtime extension.
+              ⚠️ <strong>Simulated conflict:</strong> This delay may affect dependent tasks. Review actual venue hours and bookings before changing the live schedule.
             </p>
           ) : (
             <p className="text-[#2B6149] dark:text-[#81B89B] font-bold text-[11px] pt-1">
-              ✓ <strong>Schedule Feasible:</strong> All dependent shifts remain safely within the venue booking hours.
+              ✓ <strong>No simulated conflict:</strong> Review actual venue hours and bookings before changing the live schedule.
             </p>
           )}
         </div>
