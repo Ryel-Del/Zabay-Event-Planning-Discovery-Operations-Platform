@@ -14,6 +14,7 @@ import {
   Check,
   Filter,
   Heart,
+  FileText,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { TaskStatus, TaskPriority, TaskTrack } from '../../types';
@@ -137,6 +138,8 @@ export const TaskKanbanBoard: React.FC = () => {
         return <Briefcase className="w-4 h-4 text-[#2B6149] dark:text-[#81B89B]" />;
       case 'Heart':
         return <Heart className="w-4 h-4 text-rose-500 dark:text-rose-400" />;
+      case 'FileText':
+        return <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
       default:
         return <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />;
     }
