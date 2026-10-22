@@ -101,6 +101,12 @@ interface AppContextType {
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
   removePersonnel: (id: string) => void;
+
+  // Staff Portal Preview & Crew Inspection
+  activeStaffId: string | null;
+  setActiveStaffId: (id: string | null) => void;
+  previewStaffPortal: (staffId?: string) => void;
+  exitStaffPreview: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -122,9 +128,40 @@ const minutesToTime = (mins: number) => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
   const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
+  const [activeStaffId, setActiveStaffId] = useState<string | null>('per-3');
+
+  const previewStaffPortal = (staffId?: string) => {
+    const targetStaffId = staffId || activeStaffId || 'per-3';
+    setActiveStaffId(targetStaffId);
+    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0];
+    if (targetPerson) {
+      setCurrentUser({
+        id: `usr-stf-${targetPerson.id}`,
+        name: targetPerson.name,
+        email: targetPerson.email,
+        role: 'staff',
+        phone: targetPerson.phone,
+        organization: 'Zabay Stage Crew & Operations',
+        location: 'Downtown District, Tagbilaran City',
+        bio: `${targetPerson.role} active on shift in event run-of-show.`,
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      });
+    }
+    setCurrentRole('staff');
+  };
+
+  const exitStaffPreview = () => {
+    setCurrentRole('organizer');
+    const orgUser = mockUsers.find((u) => u.role === 'organizer') || mockCurrentUser;
+    setCurrentUser(orgUser);
+  };
 
   const setRoleWithUser = (role: UserRole) => {
     setCurrentRole(role);
+    if (role === 'staff') {
+      previewStaffPortal();
+      return;
+    }
     const user = mockUsers.find((u) => u.role === role);
     if (user) setCurrentUser(user);
   };
@@ -992,10 +1029,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addPersonnel,
       updatePersonnel,
       removePersonnel,
+      activeStaffId,
+      setActiveStaffId,
+      previewStaffPortal,
+      exitStaffPreview,
     }),
     [
       currentUser,
       currentRole,
+      activeStaffId,
       theme,
       isDemoMode,
       isLiveBackend,

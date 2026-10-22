@@ -34,7 +34,14 @@ const ROLE_OPTIONS = [
 ] as const;
 
 export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitchToStaffView }) => {
-  const { personnel, tasks, selectedEvent, addPersonnel, updatePersonnel, removePersonnel } = useApp();
+  const { personnel, tasks, selectedEvent, addPersonnel, updatePersonnel, removePersonnel, previewStaffPortal } = useApp();
+
+  const handlePreviewStaff = (staffId: string = 'per-3') => {
+    previewStaffPortal(staffId);
+    if (onSwitchToStaffView) {
+      onSwitchToStaffView();
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('All');
@@ -142,16 +149,14 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
-          {onSwitchToStaffView && (
-            <button
-              onClick={onSwitchToStaffView}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-              title="Open the View-Only Staff Portal"
-            >
-              <Eye className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-              <span>Preview as Staff</span>
-            </button>
-          )}
+          <button
+            onClick={() => handlePreviewStaff('per-3')}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+            title="Open the Staff Shift Portal"
+          >
+            <Eye className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+            <span>Preview as Staff</span>
+          </button>
 
           <button
             onClick={() => setIsAddModalOpen(true)}
@@ -367,16 +372,27 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
               {/* Bottom Actions */}
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <button
-                  onClick={() => updatePersonnel(person.id, { is_available: !person.is_available })}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer ${
-                    person.is_available
-                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
-                  }`}
-                >
-                  {person.is_available ? '✓ Ready on Shift' : '○ Set Available'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => updatePersonnel(person.id, { is_available: !person.is_available })}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
+                      person.is_available
+                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {person.is_available ? '✓ Ready' : '○ Standby'}
+                  </button>
+
+                  <button
+                    onClick={() => handlePreviewStaff(person.id)}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] text-[10px] font-semibold hover:bg-[#D4E4F7] transition-colors cursor-pointer"
+                    title={`Preview ${person.name}'s Shift Portal`}
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>View Shift</span>
+                  </button>
+                </div>
 
                 {deleteConfirmId === person.id ? (
                   <div className="flex items-center gap-1.5">
