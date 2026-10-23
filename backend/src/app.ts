@@ -33,6 +33,7 @@ if (production) {
   const assets = path.resolve(__dirname, '../../frontend/dist');
   if (existsSync(path.join(assets, 'index.html'))) {
     app.use(express.static(assets, { index: false }));
+    app.get('/assets/*', (_req, res) => res.status(404).send('Asset not found'));
     app.get('*', (_req, res) => res.sendFile(path.join(assets, 'index.html')));
   } else {
     app.get('*', (_req, res) => res.status(503).send('Frontend build is unavailable'));

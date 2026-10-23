@@ -21,4 +21,5 @@ curl --fail --silent "http://127.0.0.1:$PORT/" | grep -q '/assets/'
 curl --fail --silent "http://127.0.0.1:$PORT/organizer" | grep -q '/assets/'
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/api/ready")" = 503
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/api/unknown")" = 404
+test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/assets/missing.js")" = 404
 echo 'Production smoke passed: startup, assets, SPA, API, failed DB readiness, missing secrets.'
