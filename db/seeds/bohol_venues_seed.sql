@@ -1,5 +1,5 @@
 -- ========================================================
--- ZABAY SEED DATA: VERIFIED BOHOL VENUES & HALLS
+-- ZABAY SEED DATA: SYNTHETIC DEMONSTRATION VENUES, HALLS, AND USERS
 -- ========================================================
 
 -- Insert Initial Users
@@ -11,7 +11,7 @@ VALUES
   ('usr-att-1', 'Sofia Ramos', 'sofia.ramos@bisu.edu.ph', 'attendee', '+63 (918) 772-3341', 'Bohol Island State University', 'Dampas, Tagbilaran', 'Student delegate and tech enthusiast attending local seminars.')
 ON CONFLICT (id) DO NOTHING;
 
--- Insert Venues with Accurate Bohol GPS Coordinates
+-- Insert demonstration venues with illustrative coordinates and unverified details
 INSERT INTO venues (id, name, city, address, lat, lng, capacity, hourly_rate, facilities, power_kw_capacity, is_indoor, manager_id, contact_email, contact_phone)
 VALUES
   ('ven-1', 'Bohol Cultural Center', 'Tagbilaran City', 'J.A. Clarin St, Cogon District, Tagbilaran City, Bohol', 9.64819, 123.85582, 2200, 3500.00, ARRAY['Dedicated Gigabit Fiber WiFi', '4K Laser Projection System', 'Dual Keynote Stages', 'Backstage VIP Green Rooms', 'Surround Line-Array Sound', 'Heavy Loading Dock & Staging Bay', 'Commercial Prep Kitchen', 'Wheelchair & ADA Accessible'], 450, true, 'usr-vm-1', 'events@boholculturalcenter.ph', '+63 (38) 411-3520'),
