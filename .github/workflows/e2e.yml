@@ -1,0 +1,53 @@
+name: End-to-end
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'db/**'
+      - 'scripts/run-e2e.sh'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'db/**'
+      - 'scripts/run-e2e.sh'
+      - '.github/workflows/e2e.yml'
+
+jobs:
+  cypress:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: zabay_e2e_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CI: 'true'
+      ZABAY_E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/zabay_e2e_test
+      ZABAY_E2E_API_PORT: 5500
+      ZABAY_E2E_FRONTEND_PORT: 5174
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run Cypress against PostgreSQL 16
+        run: npm run test:e2e:local --prefix frontend
+      - name: Upload Cypress failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-failure-screenshots
+          path: frontend/cypress/screenshots
+          if-no-files-found: ignore
