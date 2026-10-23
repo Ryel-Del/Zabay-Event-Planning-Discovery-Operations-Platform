@@ -101,6 +101,73 @@ describe('event creation and venue booking', () => {
     cy.get('[data-cy="saved-planning-event"]').should('not.exist');
   });
 
+  it('keeps a conflicting event in planning and creates a new event after closing and reopening', () => {
+    const unique = Date.now();
+    const titleA = `E2E recovery A ${unique}`;
+    const titleB = `E2E recovery B ${unique}`;
+    const titleC = `E2E recovery C ${unique}`;
+
+    openWizardWithEvent(titleA, 'vh-trop-harbor', '2035-11-23');
+    cy.get('[data-cy="event-save"]').click();
+    cy.wait('@createEvent').then(({ response }) => {
+      expect(response?.statusCode).to.eq(201);
+      const eventA = response!.body.data.id as string;
+      cy.wait('@bookVenue').its('response.statusCode').should('eq', 201);
+      cy.task('db:eventBookingState', { eventId: eventA }).then((state) => {
+        expect(state).to.include({ hall_id: 'vh-trop-harbor', booking_count: 1 });
+      });
+    });
+
+    openWizardWithEvent(titleB, 'vh-trop-harbor', '2035-11-23');
+    cy.get('[data-cy="event-save"]').click();
+    cy.wait('@createEvent').then(({ response }) => {
+      expect(response?.statusCode).to.eq(201);
+      const eventB = response!.body.data.id as string;
+      cy.wait('@bookVenue').then(({ response: bookingResponse }) => {
+        expect(bookingResponse?.statusCode).to.eq(409);
+        cy.get('[data-cy="saved-planning-event"]').should('contain.text', eventB);
+        cy.get('[data-cy="event-submit-error"]').should('be.visible');
+        cy.task('db:eventBookingState', { eventId: eventB }).then((state) => {
+          expect(state).to.include({ id: eventB, status: 'planning', venue_id: null, hall_id: null, booking_count: 0 });
+        });
+      });
+
+      cy.get('[data-cy="event-wizard"] button').first().click();
+      cy.get('[data-cy="event-wizard"]').should('not.exist');
+      cy.get('[data-cy="event-picker"]').click();
+      cy.get('[data-cy="header-create-event"]').click();
+      cy.get('[data-cy="event-title"]').should('have.value', '');
+      cy.get('[data-cy="saved-planning-event"]').should('not.exist');
+      cy.get('[data-cy="event-title"]').type(titleC);
+      cy.get('[data-cy="wizard-continue"]').click();
+      cy.get('[data-cy="event-venue"]').select('ven-6');
+      cy.get('[data-cy="event-hall"]').select('vh-trop-dagohoy');
+      cy.get('[data-cy="event-start-date"]').clear().type('2035-11-23');
+      cy.get('[data-cy="event-end-date"]').clear().type('2035-11-23');
+      cy.get('[data-cy="wizard-continue"]').click();
+      cy.get('[data-cy="wizard-continue"]').click();
+      cy.get('[data-cy="event-save"]').click();
+      cy.wait('@createEvent').then(({ response: responseC }) => {
+        expect(responseC?.statusCode).to.eq(201);
+        const eventC = responseC!.body.data.id as string;
+        expect(eventC).not.to.eq(eventB);
+        cy.wait('@bookVenue').its('response.statusCode').should('eq', 201);
+        cy.task('db:eventBookingState', { eventId: eventC }).then((state) => {
+          expect(state).to.include({ id: eventC, hall_id: 'vh-trop-dagohoy', booking_count: 1 });
+        });
+        cy.task('db:eventBookingState', { eventId: eventB }).then((state) => {
+          expect(state).to.include({ id: eventB, status: 'planning', booking_count: 0 });
+        });
+        cy.request('/api/events').then(({ body }) => {
+          expect(body.data.filter((event: { title: string }) => event.title === titleB))
+            .to.have.length(1);
+          expect(body.data.filter((event: { title: string }) => event.title === titleC))
+            .to.have.length(1);
+        });
+      });
+    });
+  });
+
   it('reports a booking network failure without claiming a reservation succeeded', () => {
     const title = `E2E booking network failure ${Date.now()}`;
     cy.intercept('POST', '/api/venues/ven-6/book', { forceNetworkError: true }).as('failedBooking');

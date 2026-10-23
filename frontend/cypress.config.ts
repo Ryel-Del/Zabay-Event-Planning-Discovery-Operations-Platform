@@ -100,6 +100,18 @@ export default defineConfig({
           );
           return result.rows[0].count as number;
         },
+        async 'db:eventBookingState'({ eventId }: { eventId: string }) {
+          const result = await pool.query(
+            `SELECT e.id, e.status, e.venue_id, e.hall_id,
+                    count(b.id)::int AS booking_count
+             FROM events e
+             LEFT JOIN venue_bookings b ON b.event_id = e.id
+             WHERE e.id = $1
+             GROUP BY e.id`,
+            [eventId]
+          );
+          return result.rows[0] || null;
+        },
       });
 
       on('after:run', async () => {
