@@ -75,7 +75,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
         </button>
 
         {!completedReg ? (
-          <form onSubmit={handlePay} className="space-y-4">
+          <form data-cy="registration-form" onSubmit={handlePay} className="space-y-4">
             {/* Header */}
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-stone-200/60 dark:bg-stone-800/80 border border-stone-300/60 dark:border-stone-700/60 rounded-xl">
@@ -137,6 +137,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   Full Attendee Name
                 </label>
                 <input
+                  data-cy="registration-name"
                   type="text"
                   required
                   value={name}
@@ -150,6 +151,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   Ticket Confirmation Email
                 </label>
                 <input
+                  data-cy="registration-email"
                   type="email"
                   required
                   value={email}
@@ -163,11 +165,12 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               Listed ticket price: ₱{price}. This prototype records registration and issues a pass; it does not collect payment.
             </p>
 
-            {submitError && <p role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</p>}
+            {submitError && <p data-cy="registration-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</p>}
 
             {/* Submit button - High contrast & trustworthy */}
             <button
               type="submit"
+              data-cy="registration-submit"
               disabled={isProcessing}
               className="w-full py-3 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
@@ -210,7 +213,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-stone-500">QR Pass Code:</span>
-                <span className="font-mono text-stone-900 dark:text-stone-100 font-bold">{completedReg.qr_pass_code}</span>
+                <span data-cy="registered-pass-code" className="font-mono text-stone-900 dark:text-stone-100 font-bold">{completedReg.qr_pass_code}</span>
               </div>
             </div>
 

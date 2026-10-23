@@ -101,6 +101,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
         <div className="flex items-center gap-2 bg-[#F1F5FB] dark:bg-[#111722] p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <button
             onClick={() => setActiveTab('browse')}
+            data-cy="browse-events"
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'browse'
                 ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/60 dark:border-slate-700/60'
@@ -111,6 +112,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           </button>
           <button
             onClick={() => setActiveTab('passes')}
+            data-cy="my-digital-passes"
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'passes'
                 ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/60 dark:border-slate-700/60'
@@ -131,6 +133,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
             <div className="relative flex-1">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
+                data-cy="event-search"
                 type="text"
                 placeholder="Search events, topics, or keynotes..."
                 value={searchQuery}
@@ -217,6 +220,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                 return (
                   <div
                     key={event.id}
+                    data-cy="event-card"
                     onClick={() => setSelectedEventDetail(event)}
                     className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                   >
@@ -298,6 +302,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                           e.stopPropagation();
                           setSelectedEventForCheckout(event);
                         }}
+                        data-cy="event-register"
                         className="py-2.5 px-3.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                         title="Register for a digital pass"
                       >

@@ -203,7 +203,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div data-cy="event-wizard" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
@@ -263,10 +263,10 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
 
         {/* Wizard Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
-          {persistedEvent && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          {persistedEvent && <div data-cy="saved-planning-event" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
             Event {persistedEvent.id} is saved in planning. Its details and dates are locked here; choose another venue or hall, then continue to retry booking. Closing keeps this event and starts a fresh wizard next time.
           </div>}
-          {persistedEvent && submitError && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
+          {persistedEvent && submitError && <div data-cy="event-submit-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
           {/* STEP 1: BASICS */}
           {currentStep === 1 && (
             <fieldset disabled={Boolean(persistedEvent) || saving} className="space-y-4 animate-in fade-in duration-150">
@@ -295,6 +295,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   Event Title <span className="text-rose-500">*</span>
                 </label>
                 <input
+                  data-cy="event-title"
                   type="text"
                   required
                   placeholder="e.g. Bohol Tech Summit or Sandugo Cultural Expo"
@@ -401,6 +402,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   Select Bohol Venue
                 </label>
                 <select
+                  data-cy="event-venue"
                   value={venueId}
                   onChange={(e) => {
                     setVenueId(e.target.value);
@@ -423,6 +425,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                     Select Specific Hall / Ballroom
                   </label>
                   <select
+                    data-cy="event-hall"
                     value={hallId}
                     onChange={(e) => setHallId(e.target.value)}
                     className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
@@ -525,6 +528,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                       Start Date
                     </label>
                     <input
+                      data-cy="event-start-date"
                       type="date"
                       disabled={Boolean(persistedEvent) || saving}
                       value={startDate}
@@ -542,6 +546,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                       End Date
                     </label>
                     <input
+                      data-cy="event-end-date"
                       type="date"
                       disabled={Boolean(persistedEvent) || saving}
                       min={startDate}
@@ -692,8 +697,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             </div>
           )}
 
-          {!persistedEvent && submitError && <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
-          {!isDemoMode && !isLiveBackend && <div role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">PostgreSQL is unavailable. Event saving requires a database connection. Sample Data mode is available for a local demo.</div>}
+          {!persistedEvent && submitError && <div data-cy="event-submit-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
+          {!isDemoMode && !isLiveBackend && <div data-cy="backend-unavailable" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">PostgreSQL is unavailable. Event saving requires a database connection. Sample Data mode is available for a local demo.</div>}
           {/* Footer Navigation Actions */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             {currentStep > 1 ? (
@@ -721,6 +726,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
               <button
                 type="button"
                 onClick={handleNext}
+                data-cy="wizard-continue"
                 disabled={saving || (currentStep === 1 && !title.trim())}
                 className="px-5 py-2 bg-[#3E6CB5] hover:bg-[#325896] disabled:opacity-50 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
@@ -730,6 +736,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             ) : (
               <button
                 type="submit"
+                data-cy="event-save"
                 disabled={saving || (!isDemoMode && !isLiveBackend)}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >

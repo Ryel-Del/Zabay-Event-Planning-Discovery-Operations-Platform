@@ -40,6 +40,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           return (
             <div
               key={reg.id}
+              data-cy="digital-pass"
               className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${
                 isCheckedIn
                   ? 'bg-stone-100 dark:bg-[#1A1815] border-stone-300/80 dark:border-stone-800'
@@ -112,7 +113,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                         includeMargin={false}
                       />
                     </div>
-                    <span className="text-[9px] font-mono font-bold text-slate-800 mt-1">
+                    <span data-cy="digital-pass-code" className="text-[9px] font-mono font-bold text-slate-800 mt-1">
                       {reg.qr_pass_code}
                     </span>
                   </div>
@@ -134,6 +135,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   {onScanPass && (
                     <button
                       onClick={() => onScanPass(reg.qr_pass_code)}
+                      data-cy="open-pass-scanner"
                       className="px-2.5 py-1 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-medium transition-colors"
                     >
                       Open Scanner

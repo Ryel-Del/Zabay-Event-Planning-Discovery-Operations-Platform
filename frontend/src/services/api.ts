@@ -138,10 +138,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     }
 
     return data as ApiResponse<T>;
-  } catch (error: any) {
+  } catch {
     return {
       success: false,
-      error: error?.message || 'Network error: Unable to connect to the backend API server.',
+      error: 'Backend API is unavailable. No database change was confirmed.',
       code: 'NETWORK_ERROR',
     };
   }

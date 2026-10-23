@@ -38,6 +38,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
         <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
           <button
             onClick={() => setIsCreateModalOpen(true)}
+            data-cy="open-event-wizard"
             className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />

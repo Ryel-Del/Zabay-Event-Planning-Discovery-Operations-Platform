@@ -193,7 +193,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
+    <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-[#F8FAFD] dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative space-y-5 transition-colors max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
@@ -303,6 +303,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
           </label>
           <div className="flex gap-2">
             <input
+              data-cy="manual-pass-code"
               type="text"
               value={passCodeInput}
               onChange={(e) => setPassCodeInput(e.target.value)}
@@ -311,6 +312,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             />
             <button
               onClick={() => handleManualVerify(passCodeInput)}
+              data-cy="verify-pass"
               disabled={verifying}
               className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
@@ -350,6 +352,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
         {/* Result Verification Feedback */}
         {result && (
           <div
+            data-cy="checkin-result"
             className={`p-4 rounded-xl border text-xs space-y-2 transition-all animate-in fade-in duration-150 ${
               result.success
                 ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'

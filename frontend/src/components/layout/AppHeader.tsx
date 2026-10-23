@@ -140,6 +140,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
         {currentRole !== 'attendee' ? (
           <button
             onClick={() => setCurrentRole('attendee')}
+            data-cy="attendee-mode"
             className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
@@ -159,6 +160,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           <div className="relative" ref={eventPickerRef}>
             <button
               onClick={() => setIsEventPickerOpen(!isEventPickerOpen)}
+              data-cy="event-picker"
               className="flex items-center gap-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1A2536] px-3.5 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all cursor-pointer text-left"
             >
               <Calendar className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
@@ -287,6 +289,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
                       setIsEventPickerOpen(false);
                       setIsCreateModalOpen(true);
                     }}
+                    data-cy="header-create-event"
                     className="w-full py-2 px-3 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -384,6 +387,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
           <>
             <button
               onClick={onOpenScanner}
+              data-cy="gate-scanner-open"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
               title="Open Webcam QR Gate Scanner"
             >
@@ -426,7 +430,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
             }`}
           />
           <Database className="w-3 h-3 opacity-70" />
-          <span>{isDemoMode ? 'Sample Mode' : isLiveBackend ? 'Postgres Live' : backendHealth ? 'API Only' : 'Offline'}</span>
+          <span data-cy="backend-status">{isDemoMode ? 'Sample Mode' : isLiveBackend ? 'Postgres Live' : backendHealth ? 'API Only' : 'Offline'}</span>
         </div>
 
         {/* Live Notification Center */}
