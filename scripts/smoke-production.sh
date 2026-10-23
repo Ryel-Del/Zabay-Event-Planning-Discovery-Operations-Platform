@@ -15,8 +15,8 @@ for attempt in {1..30}; do
   if curl --fail --silent "http://127.0.0.1:$PORT/api/health" >/dev/null; then break; fi
   sleep 1
 done
-curl --fail --silent "http://127.0.0.1:$PORT/" | rg -q '/assets/'
-curl --fail --silent "http://127.0.0.1:$PORT/organizer" | rg -q '/assets/'
+curl --fail --silent "http://127.0.0.1:$PORT/" | grep -q '/assets/'
+curl --fail --silent "http://127.0.0.1:$PORT/organizer" | grep -q '/assets/'
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/api/ready")" = 503
 test "$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:$PORT/api/unknown")" = 404
 echo 'Production smoke passed: startup, assets, SPA, API, failed DB readiness, missing secret.'
