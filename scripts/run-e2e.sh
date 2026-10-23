@@ -137,5 +137,5 @@ cd "$ROOT_DIR/frontend"
 if [[ "${1:-}" == "--open" ]]; then
   ./node_modules/.bin/cypress open --browser chrome
 else
-  ./node_modules/.bin/cypress run --browser chrome
+  ./node_modules/.bin/cypress run --browser chrome "$@"
 fi

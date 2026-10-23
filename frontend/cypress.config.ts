@@ -1,5 +1,10 @@
 import { defineConfig } from 'cypress';
 import { Pool } from 'pg';
+import { randomUUID } from 'node:crypto';
+import { unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { writeQrVideo } from './cypress/support/qr-video';
 
 const testDatabaseUrl = process.env.ZABAY_E2E_DATABASE_URL;
 
@@ -27,8 +32,55 @@ export default defineConfig({
     video: false,
     setupNodeEvents(on) {
       const pool = new Pool({ connectionString: assertTestDatabase(testDatabaseUrl), max: 2 });
+      const videoPath = join(tmpdir(), `zabay-camera-${process.pid}.y4m`);
+      let cameraRegistration: { id: string; qr_pass_code: string } | null = null;
+
+      on('before:spec', async (spec) => {
+        if (!spec.relative.endsWith('camera.cy.ts')) return;
+        const api = `http://127.0.0.1:${process.env.ZABAY_E2E_API_PORT || '5500'}`;
+        const post = async (endpoint: string, body: object) => {
+          const response = await fetch(`${api}${endpoint}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (!response.ok) throw new Error(`Camera fixture API ${endpoint}: HTTP ${response.status}`);
+          return (await response.json()).data;
+        };
+        const event = await post('/api/events', {
+          title: `E2E camera ${randomUUID()}`,
+          category: 'Community & Civic',
+          event_type: 'public',
+          is_private: false,
+          start_date: '2035-12-11T08:00:00Z',
+          end_date: '2035-12-11T17:00:00Z',
+          organizer_id: 'usr-org-1',
+          expected_attendance: 20,
+          max_capacity: 100,
+          ticket_price: 10,
+        });
+        cameraRegistration = await post('/api/attendees/register', {
+          event_id: event.id,
+          attendee_name: 'Cypress Camera Attendee',
+          attendee_email: `camera-${randomUUID()}@example.test`,
+          ticket_type: 'General Admission',
+        });
+        writeQrVideo(videoPath, cameraRegistration!.qr_pass_code);
+      });
+
+      on('before:browser:launch', (browser, launchOptions) => {
+        if (browser.family !== 'chromium') return launchOptions;
+        launchOptions.args.push('--use-fake-ui-for-media-stream');
+        launchOptions.args.push('--use-fake-device-for-media-stream');
+        launchOptions.args.push(`--use-file-for-fake-video-capture=${videoPath}`);
+        return launchOptions;
+      });
 
       on('task', {
+        'camera:registration'() {
+          if (!cameraRegistration) throw new Error('Camera registration was not created before the camera spec');
+          return cameraRegistration;
+        },
         async 'db:registrationState'({ registrationId }: { registrationId: string }) {
           const result = await pool.query(
             `SELECT r.id, r.event_id, r.status, r.qr_pass_code,
@@ -50,7 +102,10 @@ export default defineConfig({
         },
       });
 
-      on('after:run', () => pool.end());
+      on('after:run', async () => {
+        await pool.end();
+        try { unlinkSync(videoPath); } catch { /* no fixture was created */ }
+      });
     },
   },
 });
