@@ -100,11 +100,11 @@ FRONTEND_PORT="${ZABAY_E2E_FRONTEND_PORT:-5174}"
 API_URL="http://127.0.0.1:${API_PORT}"
 FRONTEND_URL="http://127.0.0.1:${FRONTEND_PORT}"
 
-DATABASE_URL="$DATABASE_URL" PORT="$API_PORT" CLIENT_URL="$FRONTEND_URL" \
+DATABASE_URL="$DATABASE_URL" PORT="$API_PORT" CLIENT_URL="$FRONTEND_URL" OPERATOR_USERNAME=zabay-e2e OPERATOR_PASSWORD=zabay-e2e-long-password \
   node "$ROOT_DIR/backend/dist/server.js" &
 API_PID=$!
 
-ZABAY_API_URL="$API_URL" "$ROOT_DIR/frontend/node_modules/.bin/vite" \
+ZABAY_API_URL="$API_URL" "$ROOT_DIR/frontend/node_modules/.bin/vite" "$ROOT_DIR/frontend" \
   --host 127.0.0.1 --port "$FRONTEND_PORT" --strictPort &
 FRONTEND_PID=$!
 
@@ -127,12 +127,14 @@ for attempt in {1..60}; do
   sleep 1
 done
 if [[ "$api_ready" != 1 || "$frontend_ready" != 1 ]]; then
-  echo 'API or frontend did not become ready.' >&2
+  echo "API or frontend did not become ready (api=$api_ready frontend=$frontend_ready)." >&2
   exit 1
 fi
 
 export ZABAY_E2E_DATABASE_URL="$DATABASE_URL"
 export CYPRESS_BASE_URL="$FRONTEND_URL"
+export CYPRESS_OPERATOR_USERNAME=zabay-e2e
+export CYPRESS_OPERATOR_PASSWORD=zabay-e2e-long-password
 cd "$ROOT_DIR/frontend"
 if [[ "${1:-}" == "--open" ]]; then
   ./node_modules/.bin/cypress open --browser chrome

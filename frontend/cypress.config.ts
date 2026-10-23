@@ -38,10 +38,14 @@ export default defineConfig({
       on('before:spec', async (spec) => {
         if (!spec.relative.endsWith('camera.cy.ts')) return;
         const api = `http://127.0.0.1:${process.env.ZABAY_E2E_API_PORT || '5500'}`;
+        const login = await fetch(`${api}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: process.env.CYPRESS_OPERATOR_USERNAME, password: process.env.CYPRESS_OPERATOR_PASSWORD }) });
+        if (!login.ok) throw new Error(`Camera fixture login: HTTP ${login.status}`);
+        const csrf = (await login.json()).csrfToken;
+        const cookie = login.headers.get('set-cookie')?.split(';')[0] || '';
         const post = async (endpoint: string, body: object) => {
           const response = await fetch(`${api}${endpoint}`, {
             method: 'POST',
-            headers: { 'content-type': 'application/json' },
+            headers: { 'content-type': 'application/json', cookie, 'x-csrf-token': csrf },
             body: JSON.stringify(body),
           });
           if (!response.ok) throw new Error(`Camera fixture API ${endpoint}: HTTP ${response.status}`);
