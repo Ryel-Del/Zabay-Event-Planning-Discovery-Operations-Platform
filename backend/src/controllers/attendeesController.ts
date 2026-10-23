@@ -9,14 +9,14 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
     if (typeof event_id !== 'string' || !event_id.trim() ||
         typeof attendee_name !== 'string' || !attendee_name.trim() || attendee_name.trim().length > 255 ||
         typeof attendee_email !== 'string' || attendee_email.trim().length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(attendee_email.trim()) ||
-        typeof ticket_type !== 'string' || !ticket_type.trim() || ticket_type.trim().length > 64) {
+        typeof ticket_type !== 'string' || !['General Admission', 'VIP Access'].includes(ticket_type.trim())) {
       return res.status(400).json({
         success: false,
         error: 'event_id, attendee_name, valid attendee_email, and ticket_type are required',
       });
     }
 
-    const event = await query('SELECT id FROM events WHERE id = $1', [event_id.trim()]);
+    const event = await query("SELECT id FROM events WHERE id = $1 AND is_private = false AND event_type = 'public' AND status != $2", [event_id.trim(), 'cancelled']);
     if (event.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Event not found' });
     }
@@ -50,10 +50,10 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
   if (typeof qr_pass_code !== 'string' || !qr_pass_code.trim() || qr_pass_code.trim().length > 64) {
     return res.status(400).json({ success: false, error: 'qr_pass_code is required' });
   }
-  if (verified_by_id !== undefined &&
-      (typeof verified_by_id !== 'string' || !verified_by_id.trim())) {
+  if (verified_by_id !== undefined && (typeof verified_by_id !== 'string' || !verified_by_id.trim())) {
     return res.status(400).json({ success: false, error: 'verified_by_id must be a non-empty string' });
   }
+
 
   let client: PoolClient | undefined;
   try {
@@ -90,7 +90,7 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
        (id, event_id, registration_id, attendee_name, check_in_time, verified_by)
        VALUES ($1, $2, $3, $4, NOW(), $5)`,
       [`att-log-${randomUUID()}`, registration.event_id, registration.id,
-        registration.attendee_name, verified_by_id?.trim() || 'gate-scanner-01']
+        registration.attendee_name, verified_by_id?.trim() || 'operator']
     );
     await client.query('COMMIT');
     return res.json({
