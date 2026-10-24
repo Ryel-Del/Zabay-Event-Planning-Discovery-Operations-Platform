@@ -16,7 +16,7 @@ import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
 
 export const VenueMasterDetail: React.FC = () => {
-  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
+  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, isDemoMode } = useApp();
 
   // Interactive Requirement Controls for Student Orgs & Planners
   const [targetAttendance, setTargetAttendance] = useState<number>(
@@ -137,7 +137,7 @@ export const VenueMasterDetail: React.FC = () => {
 
   const activeVenueMatch = matchResults.find((m) => m.venue.id === selectedVenueId) || matchResults[0];
 
-  const handleBook = (venue: Venue) => {
+  const handleBook = async (venue: Venue) => {
     if (!selectedEvent) {
       setBookingFeedback({
         success: false,
@@ -146,7 +146,7 @@ export const VenueMasterDetail: React.FC = () => {
       setTimeout(() => setBookingFeedback(null), 4500);
       return;
     }
-    const res = bookVenue(
+    const res = await bookVenue(
       venue.id,
       selectedEvent.id,
       selectedEvent.start_date,
@@ -589,7 +589,7 @@ export const VenueMasterDetail: React.FC = () => {
                   {/* Action Bar */}
                   <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-[11px] text-slate-400">
-                      Protected by PostgreSQL <code className="font-mono text-[10px]">EXCLUDE USING gist</code>
+                      {isDemoMode ? 'Sample booking check' : 'Protected by PostgreSQL booking constraints'}
                     </span>
                     <button
                       onClick={() => handleBook(activeVenueMatch.venue)}

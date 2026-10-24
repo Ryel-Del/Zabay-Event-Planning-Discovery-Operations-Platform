@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS venue_halls (
 
 -- 4. EVENTS TABLE
 CREATE TABLE IF NOT EXISTS events (
-    id VARCHAR(64) PRIMARY KEY,
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('evt-' || gen_random_uuid()::text),
     title VARCHAR(255) NOT NULL,
     description TEXT,
     category VARCHAR(64) NOT NULL,
@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT chk_event_dates CHECK (end_date > start_date)
 );
+
+ALTER TABLE events ALTER COLUMN id SET DEFAULT ('evt-' || gen_random_uuid()::text);
 
 -- 5. VENUE BOOKINGS TABLE (With Database-Level Non-Overlap Enforcement)
 CREATE TABLE IF NOT EXISTS venue_bookings (
@@ -316,6 +318,11 @@ CREATE TABLE IF NOT EXISTS attendance_records (
     verified_by VARCHAR(64) NOT NULL,
     is_duplicate BOOLEAN DEFAULT false
 );
+
+-- One admission per registration, including writes made outside the API.
+-- Existing duplicate attendance records must be reconciled explicitly.
+CREATE UNIQUE INDEX IF NOT EXISTS attendance_records_registration_unique
+    ON attendance_records (registration_id);
 
 -- 10. AUDIT LOGS TABLE
 CREATE TABLE IF NOT EXISTS audit_logs (

@@ -15,10 +15,10 @@ interface AttendeeDirectoryDatagridProps {
 export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({
   onScanPassModal,
 }) => {
-  const { registrations, checkInAttendee, loadDemoData } = useApp();
+  const { registrations, checkInAttendee, loadDemoData, isDemoMode } = useApp();
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState<string>('all');
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   const filtered = registrations.filter((reg) => {
     const matchesSearch =
@@ -29,10 +29,9 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
     return matchesSearch && matchesTier;
   });
 
-  const handleQuickAdmit = (code: string) => {
-    const res = checkInAttendee(code);
-    setFeedback(res.message);
-    setTimeout(() => setFeedback(null), 3500);
+  const handleQuickAdmit = async (code: string) => {
+    const res = await checkInAttendee(code);
+    setFeedback({ success: res.success, message: res.message });
   };
 
   return (
@@ -45,7 +44,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
             Attendee Registration & Gate Admittance Directory
           </h2>
           <p className="text-xs text-stone-500">
-            Database records from `registrations` & `attendance` tables with duplicate-entry prevention.
+            {isDemoMode ? 'Sample registrations and local check-in.' : 'Registrations issued in this workspace; check-in is verified by PostgreSQL.'}
           </p>
         </div>
 
@@ -57,9 +56,9 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
       </div>
 
       {feedback && (
-        <div className="p-3 bg-[#EEF3ED] dark:bg-[#222D21] border border-[#5F7D5B]/30 rounded-xl text-xs font-semibold text-[#455C42] dark:text-[#A7C2A4] flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-[#5F7D5B] dark:text-[#A7C2A4] shrink-0" />
-          <span>{feedback}</span>
+        <div role="status" className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${feedback.success ? 'bg-[#EEF3ED] border-[#5F7D5B]/30 text-[#455C42]' : 'bg-rose-50 border-rose-300 text-rose-800'}`}>
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -98,7 +97,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
               <th className="py-3 px-4">Ticket Tier</th>
               <th className="py-3 px-4">Pass Serial</th>
               <th className="py-3 px-4">Registered Date</th>
-              <th className="py-3 px-4">Paid</th>
+              <th className="py-3 px-4">Payment Recorded</th>
               <th className="py-3 px-4">Admission Status</th>
               <th className="py-3 px-4 text-right">Actions</th>
             </tr>
@@ -110,7 +109,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                   <Users className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
                   <p className="font-semibold text-xs text-stone-800 dark:text-stone-200">No Registrations in Active Workspace</p>
                   <p className="text-[11px] text-stone-400 mt-1 max-w-sm mx-auto">
-                    When attendees purchase or claim passes, their digital QR tickets will populate this ledger for camera check-in.
+                    Registrations issued in this workspace will appear here for camera check-in.
                   </p>
                   <button
                     onClick={loadDemoData}
@@ -165,7 +164,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                         </>
                       ) : (
                         <>
-                          <Clock className="w-3 h-3" /> Confirmed / Pending
+                          <Clock className="w-3 h-3" /> {reg.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}
                         </>
                       )}
                     </span>
@@ -180,7 +179,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                         Inspect
                       </button>
 
-                      {!isCheckedIn && (
+                      {reg.status === 'confirmed' && (
                         <button
                           onClick={() => handleQuickAdmit(reg.qr_pass_code)}
                           className="px-2.5 py-1 text-[11px] font-semibold text-white dark:text-stone-900 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white rounded-lg transition-colors cursor-pointer"

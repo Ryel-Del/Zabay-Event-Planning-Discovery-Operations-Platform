@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
+import { QRCodeSVG } from 'qrcode.react';
 import {
-  CreditCard,
-  Lock,
+  Ticket,
   X,
   CheckCircle2,
   Sparkles,
@@ -24,39 +24,43 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser } = useApp();
+  const { registerForEvent, currentUser, isDemoMode } = useApp();
 
   const [ticketTier, setTicketTier] = useState<'General Admission' | 'VIP Access'>('General Admission');
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email);
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
-  const [expiry, setExpiry] = useState('12/28');
-  const [cvc, setCvc] = useState('921');
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedReg, setCompletedReg] = useState<Registration | null>(null);
+  const [submitError, setSubmitError] = useState('');
 
   if (!isOpen) return null;
 
   const price = ticketTier === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
 
-  const handlePay = (e: React.FormEvent) => {
+  const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isProcessing) return;
+    setSubmitError('');
     setIsProcessing(true);
-
-    setTimeout(() => {
-      setIsProcessing(false);
-      const res = registerForEvent(event.id, ticketTier, name, email);
+    try {
+      const res = await registerForEvent(event.id, ticketTier, name, email);
+      if (!res.success || !res.registration) {
+        setSubmitError(res.message);
+        return;
+      }
       setCompletedReg(res.registration);
-
       confetti({
         particleCount: 60,
         spread: 60,
         origin: { y: 0.6 },
         colors: ['#B68366', '#5F7D5B', '#A36B75', '#FAF9F5'],
       });
-
       onSuccess(res.registration);
-    }, 1200);
+    } catch {
+      setSubmitError('Registration could not be saved. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -71,17 +75,17 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
         </button>
 
         {!completedReg ? (
-          <form onSubmit={handlePay} className="space-y-4">
+          <form data-cy="registration-form" onSubmit={handlePay} className="space-y-4">
             {/* Header */}
             <div className="flex items-center gap-3">
               <div className="p-2.5 bg-stone-200/60 dark:bg-stone-800/80 border border-stone-300/60 dark:border-stone-700/60 rounded-xl">
-                <CreditCard className="w-6 h-6 text-[#B68366] dark:text-[#D4A58C]" />
+                <Ticket className="w-6 h-6 text-[#B68366] dark:text-[#D4A58C]" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                  Stripe Checkout
+                  Event Registration
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-200/80 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700 font-mono">
-                    256-Bit SSL
+                    {isDemoMode ? 'Sample Pass' : 'PostgreSQL Pass'}
                   </span>
                 </h3>
                 <p className="text-xs text-stone-500 dark:text-stone-400 truncate max-w-sm">
@@ -133,6 +137,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   Full Attendee Name
                 </label>
                 <input
+                  data-cy="registration-name"
                   type="text"
                   required
                   value={name}
@@ -146,6 +151,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   Ticket Confirmation Email
                 </label>
                 <input
+                  data-cy="registration-email"
                   type="email"
                   required
                   value={email}
@@ -155,54 +161,24 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               </div>
             </div>
 
-            {/* Payment Fields */}
-            <div className="bg-white dark:bg-[#171513] p-3.5 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
-              <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
-                <span className="flex items-center gap-1 font-semibold text-stone-700 dark:text-stone-300">
-                  <Lock className="w-3.5 h-3.5 text-[#5F7D5B] dark:text-[#97B394]" /> Encrypted Card Payment
-                </span>
-                <span className="text-[11px] font-mono text-stone-400">Stripe Webhook Verified</span>
-              </div>
+            <p className="rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-[#171513] p-3 text-xs text-stone-600 dark:text-stone-300">
+              Listed ticket price: ₱{price}. This prototype records registration and issues a pass; it does not collect payment.
+            </p>
 
-              <div>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  className="w-full bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
-                  placeholder="Card number"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
-                  placeholder="MM/YY"
-                />
-                <input
-                  type="text"
-                  value={cvc}
-                  onChange={(e) => setCvc(e.target.value)}
-                  className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-1.5 text-xs font-mono text-stone-900 dark:text-stone-100 focus:outline-none"
-                  placeholder="CVC"
-                />
-              </div>
-            </div>
+            {submitError && <p data-cy="registration-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</p>}
 
             {/* Submit button - High contrast & trustworthy */}
             <button
               type="submit"
+              data-cy="registration-submit"
               disabled={isProcessing}
               className="w-full py-3 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               {isProcessing ? (
-                <span>Confirming via Stripe Webhook...</span>
+                <span>Saving registration...</span>
               ) : (
                 <>
-                  <span>Pay ₱{price} & Receive Digital Pass</span>
+                  <span>Register & Receive Digital Pass</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -216,14 +192,17 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">Payment & Registration Confirmed</h3>
+              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">{isDemoMode ? 'Sample Pass Created' : 'Registration Saved'}</h3>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-                Stripe webhook recorded transaction <code className="text-[#885B43] dark:text-[#D5A78E] font-mono">{completedReg.payment_id}</code>
+                No payment was collected. Your QR pass is ready for check-in.
               </p>
             </div>
 
             {/* Digital Pass Preview Box */}
             <div className="p-4 bg-white dark:bg-[#171513] border border-stone-200 dark:border-stone-800 rounded-xl space-y-2 text-left">
+              <div className="flex justify-center rounded-lg bg-white p-2">
+                <QRCodeSVG value={completedReg.qr_pass_code} size={112} level="M" />
+              </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-stone-500">Attendee:</span>
                 <span className="font-bold text-stone-900 dark:text-stone-100">{completedReg.attendee_name}</span>
@@ -234,7 +213,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-stone-500">QR Pass Code:</span>
-                <span className="font-mono text-stone-900 dark:text-stone-100 font-bold">{completedReg.qr_pass_code}</span>
+                <span data-cy="registered-pass-code" className="font-mono text-stone-900 dark:text-stone-100 font-bold">{completedReg.qr_pass_code}</span>
               </div>
             </div>
 

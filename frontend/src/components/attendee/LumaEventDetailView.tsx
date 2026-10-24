@@ -68,7 +68,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
 
   const handleToggleFollow = () => {
     setIsFollowing(!isFollowing);
-    showToast(!isFollowing ? 'You are now following Marcus Vance (Organizer).' : 'Unfollowed organizer.');
+    showToast(!isFollowing ? 'You are now following Mark Bautista (Organizer).' : 'Unfollowed organizer.');
   };
 
   const handleSendInvite = (e: React.FormEvent) => {
@@ -197,7 +197,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
             <div className="flex items-center gap-3.5">
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                alt="Marcus Vance"
+                alt="Mark Bautista"
                 className="w-12 h-12 rounded-full object-cover ring-2 ring-[#3E6CB5]/30"
               />
               <div>
@@ -210,7 +210,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                  Marcus Vance
+                  Mark Bautista
                 </h3>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Lead Director @ ZABAY • 1,420 members • 12 hosted events
@@ -371,7 +371,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                   ₱{event.ticket_price}
                 </span>
                 <span className="text-[10px] text-slate-400 block font-mono">
-                  via Stripe Checkout
+                  listed ticket price
                 </span>
               </div>
             </div>
@@ -430,7 +430,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#3E6CB5] shrink-0" />
-                <span>Encrypted checkout powered by Stripe</span>
+                <span>Payment collection is not available in this prototype</span>
               </div>
             </div>
           </div>

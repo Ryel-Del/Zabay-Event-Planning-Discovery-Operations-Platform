@@ -38,6 +38,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
         <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
           <button
             onClick={() => setIsCreateModalOpen(true)}
+            data-cy="open-event-wizard"
             className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -158,7 +159,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">₱{totalRevenue.toLocaleString()}</span>
-              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Stripe confirmed</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">Avg ₱{selectedEvent.ticket_price} / ticket</p>
           </div>
@@ -251,7 +252,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               Passes & Attendee Feed
             </h4>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Luma-style invite links, ticket tiers, and Stripe checkout verification.
+              Event details, ticket tiers, QR registration, and gate check-in.
             </p>
           </div>
 

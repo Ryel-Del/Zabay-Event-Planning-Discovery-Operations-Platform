@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Ticket,
   MapPin,
+  AlertTriangle,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
@@ -11,7 +12,7 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues } = useApp();
+  const { registrations, events, venues, notifications, isDemoMode } = useApp();
 
   return (
     <div className="space-y-6">
@@ -22,7 +23,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
             My Digital QR Event Passes ({registrations.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Database-backed digital admission passes for rapid contactless gate verification.
+            {isDemoMode ? 'Sample passes for the local demo.' : 'QR passes returned by PostgreSQL during this session.'}
           </p>
         </div>
       </div>
@@ -32,21 +33,36 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           const event = events.find((e) => e.id === reg.event_id);
           const venue = venues.find((v) => v.id === event?.venue_id);
           const isCheckedIn = reg.status === 'checked_in';
+          const eventNotification = notifications.find(
+            (n) => n.eventId === reg.event_id || n.message.toLowerCase().includes(reg.event_title.toLowerCase())
+          );
 
           return (
             <div
               key={reg.id}
+              data-cy="digital-pass"
               className={`rounded-2xl border overflow-hidden shadow-sm transition-all ${
                 isCheckedIn
                   ? 'bg-stone-100 dark:bg-[#1A1815] border-stone-300/80 dark:border-stone-800'
                   : 'bg-white dark:bg-[#1E1C19] border-stone-200/90 dark:border-stone-800'
               }`}
             >
+              {/* Real-Time Event Change Banner */}
+              {eventNotification && (
+                <div className="bg-amber-500 text-white px-4 py-2 flex items-center justify-between gap-2 text-xs font-semibold animate-in slide-in-from-top-1">
+                  <div className="flex items-center gap-2 truncate">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 animate-bounce" />
+                    <span className="truncate">Notice: {eventNotification.message}</span>
+                  </div>
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-black/20 shrink-0">Updated</span>
+                </div>
+              )}
+
               {/* Pass Header Banner */}
               <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 border-b border-stone-200/80 dark:border-stone-800/80 flex justify-between items-start">
                 <div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                    Official Event Pass
+                    {isDemoMode ? 'Sample Event Pass' : 'Event Pass'}
                   </span>
                   <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight mt-0.5">
                     {reg.event_title}
@@ -59,7 +75,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                       : 'bg-[#F6EFE9] dark:bg-[#2B231D] text-[#885B43] dark:text-[#DEC0B0] border-[#B88568]/30'
                   }`}
                 >
-                  {isCheckedIn ? 'Admitted (Checked In)' : 'Active / Valid'}
+                  {isCheckedIn ? 'Admitted (Checked In)' : reg.status === 'cancelled' ? 'Cancelled' : 'Active / Valid'}
                 </div>
               </div>
 
@@ -97,7 +113,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                         includeMargin={false}
                       />
                     </div>
-                    <span className="text-[9px] font-mono font-bold text-slate-800 mt-1">
+                    <span data-cy="digital-pass-code" className="text-[9px] font-mono font-bold text-slate-800 mt-1">
                       {reg.qr_pass_code}
                     </span>
                   </div>
@@ -119,9 +135,10 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   {onScanPass && (
                     <button
                       onClick={() => onScanPass(reg.qr_pass_code)}
+                      data-cy="open-pass-scanner"
                       className="px-2.5 py-1 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-medium transition-colors"
                     >
-                      Test Scan Pass
+                      Open Scanner
                     </button>
                   )}
                 </div>

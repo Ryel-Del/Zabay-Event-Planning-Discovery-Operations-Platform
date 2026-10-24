@@ -3,45 +3,56 @@ import {
   GitBranch,
   AlertTriangle,
   CheckCircle2,
-  Zap,
   Sparkles,
   Info,
   RotateCcw,
+  Clock,
+  ArrowRight,
+  ShieldCheck,
+  Send,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
 export const ChangeImpactSimulator: React.FC = () => {
-  const { tasks, fnDownstreamImpact, fnScheduleImpact, applyTaskDelay, resetTasksToDefault } = useApp();
+  const {
+    tasks,
+    selectedEvent,
+    fnDownstreamImpact,
+    fnScheduleImpact,
+    applyTaskDelay,
+    resetTasksToDefault,
+    broadcastEventChange,
+  } = useApp();
 
   const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[2]?.id || tasks[0]?.id);
-  const [delayMinutes, setDelayMinutes] = useState<number>(45);
-  const [delayReason, setDelayReason] = useState<string>('Equipment delivery delayed in traffic');
+  const [delayMinutes, setDelayMinutes] = useState<number>(30);
+  const [delayReason, setDelayReason] = useState<string>('Equipment delivery delayed in highway traffic');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
 
-  // Student Organization & Event Presets
+  // Real-world operational delay scenarios
   const quickScenarios = [
     {
-      label: '🍕 Food / Catering Delivery Late',
+      label: '🍕 Catering & Concessions Late',
       minutes: 30,
-      reason: 'Pizza delivery van delayed in highway traffic',
+      reason: 'Catering delivery van delayed in highway traffic',
       taskId: tasks[4]?.id || tasks[0]?.id,
     },
     {
-      label: '🎤 Speaker / VIP Guest Delayed',
+      label: '🎤 Keynote Speaker Flight Delay',
       minutes: 45,
-      reason: 'Keynote speaker flight arrival delay',
+      reason: 'VIP guest arrival delayed at airport',
       taskId: tasks[2]?.id || tasks[0]?.id,
     },
     {
-      label: '🔊 AV / Stage & Sound Check Glitch',
-      minutes: 60,
-      reason: 'Audio mixer board HDMI handshaking error',
+      label: '🔊 Stage Audio & Sound Check Glitch',
+      minutes: 40,
+      reason: 'Sound board HDMI interface handshaking issue',
       taskId: tasks[1]?.id || tasks[0]?.id,
     },
     {
-      label: '⏱️ Student Project Demo Overrun',
+      label: '⏱️ Project Presentations Overrun',
       minutes: 25,
-      reason: 'Student pitch presentations ran past allotted Q&A slot',
+      reason: 'Morning session Q&A ran past allotted timeslot',
       taskId: tasks[3]?.id || tasks[0]?.id,
     },
   ];
@@ -61,13 +72,39 @@ export const ChangeImpactSimulator: React.FC = () => {
     [selectedTask, delayMinutes, fnScheduleImpact]
   );
 
+  // Separate downstream tasks from completely independent tasks
+  const affectedDependentTasks = useMemo(() => {
+    return scheduleImpactResult.affectedTasks.filter((at) => at.id !== selectedTask?.id);
+  }, [scheduleImpactResult, selectedTask]);
+
+  const unaffectedTasks = useMemo(() => {
+    if (!selectedTask) return [];
+    return tasks.filter(
+      (t) => t.id !== selectedTask.id && !downstreamResult.affectedTaskIds.includes(t.id)
+    );
+  }, [tasks, selectedTask, downstreamResult]);
+
   const handleApply = () => {
     if (!selectedTask) return;
+    
+    // 1. Update task timings in state & audit log
     applyTaskDelay(selectedTask.id, delayMinutes, delayReason);
+    
+    // 2. Add a notice to the current browser session
+    const targetAffected = scheduleImpactResult.affectedTasks[0];
+    const newTiming = targetAffected ? `${targetAffected.newStart} - ${targetAffected.newEnd}` : `+${delayMinutes}m`;
+    broadcastEventChange({
+      eventId: selectedEvent?.id || 'evt-1',
+      eventTitle: selectedEvent?.title || 'Event Schedule Update',
+      oldTime: `${selectedTask.start_time} - ${selectedTask.end_time}`,
+      newTime: newTiming,
+      summary: `Schedule Shift: "${selectedTask.title}" delayed by +${delayMinutes}m (${delayReason}). ${affectedDependentTasks.length} dependent tasks adjusted. Independent operations continue on schedule.`,
+    });
+
     setAppliedFeedback(
-      `Slippage of +${delayMinutes}m committed to database. ${scheduleImpactResult.affectedTasks.length} downstream dependencies synchronized.`
+      `✓ Sample schedule updated! ${selectedTask.title} shifted +${delayMinutes}m. ${affectedDependentTasks.length} dependent tasks adjusted, ${unaffectedTasks.length} independent tasks untouched. An in-app notice was added for this session.`
     );
-    setTimeout(() => setAppliedFeedback(null), 4500);
+    setTimeout(() => setAppliedFeedback(null), 6000);
   };
 
   const handleApplyScenario = (scenario: typeof quickScenarios[0]) => {
@@ -83,21 +120,21 @@ export const ChangeImpactSimulator: React.FC = () => {
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <GitBranch className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-            Change-Impact & Schedule Slippage Simulator
-            <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] font-mono">
-              Recursive CTE
+            Schedule Delay & Conflict Manager
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] font-medium">
+              Dependency Cascade
             </span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Intuitive ripple simulation for student clubs & event teams to test delays before committing changes.
+            Test how a delay in one task affects only its dependent downstream tasks, while leaving independent tracks on schedule.
           </p>
         </div>
 
-        {/* Status Pill */}
+        {/* Status Pill & Baseline Reset */}
         <div className="flex items-center gap-2">
           {scheduleImpactResult.hasConflicts ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#FDF1EF] dark:bg-[#2E1A17] text-[#C45547] dark:text-[#E07D70] border border-[#F5C2BC] dark:border-[#52251F]">
-              <AlertTriangle className="w-3.5 h-3.5" /> Infeasible (Curfew Collision)
+              <AlertTriangle className="w-3.5 h-3.5" /> Curfew Warning
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
@@ -107,8 +144,8 @@ export const ChangeImpactSimulator: React.FC = () => {
 
           <button
             onClick={resetTasksToDefault}
-            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title="Reset to Baseline Schedule"
+            className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Reset to Original Baseline Schedule"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -116,17 +153,17 @@ export const ChangeImpactSimulator: React.FC = () => {
       </div>
 
       {appliedFeedback && (
-        <div className="p-3 bg-[#EDF7F2] dark:bg-[#17271F] border border-[#BDE3CF] dark:border-[#234232] rounded-xl text-xs font-semibold text-[#2B6149] dark:text-[#81B89B] flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{appliedFeedback}</span>
+        <div className="p-3.5 bg-[#EDF7F2] dark:bg-[#17271F] border border-[#BDE3CF] dark:border-[#234232] rounded-xl text-xs font-semibold text-[#2B6149] dark:text-[#81B89B] flex items-center gap-2.5 animate-in fade-in">
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <span className="leading-snug">{appliedFeedback}</span>
         </div>
       )}
 
-      {/* Student Org Friendly Quick Scenarios */}
+      {/* Quick Common Scenarios */}
       <div className="space-y-2">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-          Quick Test Scenarios (Student Groups & Common Hiccups)
+          Common Delay Scenarios (Click to Test)
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {quickScenarios.map((scenario, i) => (
@@ -138,29 +175,31 @@ export const ChangeImpactSimulator: React.FC = () => {
               <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{scenario.label}</p>
               <div className="flex items-center justify-between text-[11px] text-slate-400">
                 <span>Delay: +{scenario.minutes}m</span>
-                <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">Test Scenario →</span>
+                <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">Simulate →</span>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Visual Configuration Stepper (Clean pill selector instead of raw native select) */}
+      {/* Configuration Controls */}
       <div className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 space-y-5">
+        {/* Step 1: Select Origin Task */}
         <div className="space-y-2">
           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            1. Select Origin Task to Adjust (Click to Select)
+            1. Select Task to Delay
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {tasks.slice(0, 6).map((task) => {
               const isSelected = task.id === selectedTaskId;
+              const hasDependents = tasks.some((t) => t.dependencies?.includes(task.id));
               return (
                 <button
                   key={task.id}
                   onClick={() => setSelectedTaskId(task.id)}
                   className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     isSelected
-                      ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border-[#3E6CB5] dark:border-[#7EA6E0] shadow-xs'
+                      ? 'bg-[#EBF3FC] dark:bg-[#1E293B] border-[#3E6CB5] dark:border-[#7EA6E0] shadow-xs ring-1 ring-[#3E6CB5]'
                       : 'bg-white dark:bg-[#171E2B] border-slate-200 dark:border-slate-800 hover:border-slate-300'
                   }`}
                 >
@@ -174,7 +213,9 @@ export const ChangeImpactSimulator: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
                     <span>{task.start_time} - {task.end_time}</span>
-                    <span className="text-[10px] uppercase font-sans text-slate-500 font-semibold">{task.status}</span>
+                    <span className="text-[10px] uppercase font-sans text-slate-500 font-semibold">
+                      {hasDependents ? 'Has Dependents' : 'Independent'}
+                    </span>
                   </div>
                 </button>
               );
@@ -182,12 +223,12 @@ export const ChangeImpactSimulator: React.FC = () => {
           </div>
         </div>
 
+        {/* Step 2: Delay Configuration & Reason */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-end pt-2 border-t border-slate-200/80 dark:border-slate-800">
-          {/* Step 2: Delay Configuration (7 cols) */}
-          <div className="lg:col-span-7 space-y-2">
+          <div className="lg:col-span-7 space-y-2.5">
             <div className="flex justify-between items-center text-xs">
               <label className="font-bold uppercase tracking-wider text-slate-500 text-[11px]">
-                2. Operational Slippage Duration:
+                2. Delay Duration:
               </label>
               <span className="font-mono font-bold text-base text-[#3E6CB5] dark:text-[#7EA6E0]">
                 +{delayMinutes} minutes
@@ -197,15 +238,15 @@ export const ChangeImpactSimulator: React.FC = () => {
             <input
               type="range"
               min={10}
-              max={150}
+              max={120}
               step={5}
               value={delayMinutes}
               onChange={(e) => setDelayMinutes(Number(e.target.value))}
               className="w-full accent-[#3E6CB5] cursor-pointer"
             />
 
-            <div className="flex gap-1.5 pt-1">
-              {[15, 30, 45, 60, 90, 120].map((mins) => (
+            <div className="flex gap-1.5 pt-0.5">
+              {[15, 30, 45, 60, 90].map((mins) => (
                 <button
                   key={mins}
                   onClick={() => setDelayMinutes(mins)}
@@ -219,107 +260,178 @@ export const ChangeImpactSimulator: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            <div className="pt-1">
+              <input
+                type="text"
+                placeholder="Reason for delay (e.g., Heavy traffic, AV soundboard issue)..."
+                value={delayReason}
+                onChange={(e) => setDelayReason(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#171E2B] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+              />
+            </div>
           </div>
 
-          {/* Step 3: Operational Commit Action (5 cols) */}
+          {/* Step 3: Apply & Notify Action Button */}
           <div className="lg:col-span-5 space-y-2">
             <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              3. Database Action
+              3. Apply Sample Change
             </label>
             <button
               onClick={handleApply}
               className="w-full py-3 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Zap className="w-4 h-4 text-[#D4E4F7]" />
-              <span>Propagate Slippage to Database</span>
+              <Send className="w-4 h-4 text-[#D4E4F7]" />
+              <span>Apply Shift & Add In-App Notice</span>
             </button>
+            <p className="text-[10px] text-slate-400 text-center">
+              Updates this session's sample timetable and adds an in-app notice.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Plain-English Cause & Effect Story Narrative (Friendly for Student Orgs) */}
-      <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/50 border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-4.5 space-y-2.5">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#244A85] dark:text-[#8BB0E8]">
-          <Info className="w-4 h-4 shrink-0" />
-          <span>Operational Impact Explanation (Plain English)</span>
+      {/* Visual Before vs After Summary */}
+      <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/50 border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-4.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-bold text-[#244A85] dark:text-[#8BB0E8]">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>Impact Summary & Reality Check</span>
+          </div>
+          <span className="text-[11px] text-slate-500 font-mono">
+            {affectedDependentTasks.length} dependent task(s) affected • {unaffectedTasks.length} task(s) on schedule
+          </span>
         </div>
 
-        <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1.5">
+        <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-2">
           <p>
-            If <strong>{selectedTask?.title}</strong> slips by <strong>+{delayMinutes} minutes</strong> ({delayReason}), it triggers a cascade across <strong>{downstreamResult.totalAffected} downstream dependent task(s)</strong>:
+            If <strong>{selectedTask?.title}</strong> is delayed by <strong>+{delayMinutes} minutes</strong> ({delayReason}):
           </p>
-          <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600 dark:text-slate-400 pl-1">
-            {scheduleImpactResult.affectedTasks.slice(0, 3).map((at, idx) => (
-              <li key={idx}>
-                <strong>{at.title}</strong> must be postponed from its original start to{' '}
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{at.newStart}</span> (finishing at {at.newEnd}).
-              </li>
-            ))}
-          </ul>
+          
+          <div className="p-3 bg-white dark:bg-[#171E2B] rounded-xl border border-[#C8DCF7]/70 dark:border-[#2D4160] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span className="font-semibold text-slate-900 dark:text-slate-100">
+              {selectedTask?.title}
+            </span>
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="line-through text-slate-400">{selectedTask?.start_time} - {selectedTask?.end_time}</span>
+              <ArrowRight className="w-3.5 h-3.5 text-[#3E6CB5]" />
+              <span className="font-bold text-[#3E6CB5] dark:text-[#7EA6E0]">
+                {selectedTask?.start_time} - {scheduleImpactResult.affectedTasks[0]?.newEnd || selectedTask?.end_time}
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-sans font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                +{delayMinutes}m
+              </span>
+            </div>
+          </div>
 
           {scheduleImpactResult.hasConflicts ? (
             <p className="text-[#C45547] dark:text-[#E07D70] font-bold text-[11px] pt-1">
-              💥 <strong>Critical Violation:</strong> The cumulative delay pushes closing tasks beyond the scheduled venue window (17:00)! You must compress buffer times between sessions or secure venue overtime.
+              ⚠️ <strong>Simulated conflict:</strong> This delay may affect dependent tasks. Review actual venue hours and bookings before changing the live schedule.
             </p>
           ) : (
             <p className="text-[#2B6149] dark:text-[#81B89B] font-bold text-[11px] pt-1">
-              ✓ <strong>Schedule Safe:</strong> The DAG finish-to-start predecessor constraints absorb this delay without violating the venue's operating curfew.
+              ✓ <strong>No simulated conflict:</strong> Review actual venue hours and bookings before changing the live schedule.
             </p>
           )}
         </div>
       </div>
 
-      {/* Visual Downstream Impact Cascade Waterfall */}
+      {/* SECTION 1: Affected Dependent Tasks */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            Cascade Waterfall Propagation ({scheduleImpactResult.affectedTasks.length} affected downstream stages)
+          <h3 className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+            Affected Dependent Tasks ({affectedDependentTasks.length})
           </h3>
-          <span className="text-[11px] text-slate-400 font-mono">
-            fn_schedule_impact(task_id, new_end)
+          <span className="text-[11px] text-slate-400">
+            These tasks directly or indirectly wait for {selectedTask?.title}
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#F8FAFD] dark:bg-[#111722] text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200/80 dark:border-slate-800">
-              <tr>
-                <th className="py-3 px-4">Stage</th>
-                <th className="py-3 px-4">Task Name</th>
-                <th className="py-3 px-4">Original Window</th>
-                <th className="py-3 px-4">Shifted Timing</th>
-                <th className="py-3 px-4">Feasibility</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-              {scheduleImpactResult.affectedTasks.map((t, idx) => {
-                const originalTask = tasks.find((tk) => tk.id === t.id);
-                return (
-                  <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">#{idx + 1}</td>
-                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100">{t.title}</td>
-                    <td className="py-3 px-4 font-mono text-slate-500 text-[11px]">
-                      {originalTask ? `${originalTask.start_time} - ${originalTask.end_time}` : '—'}
-                    </td>
-                    <td className="py-3 px-4 font-mono font-bold text-[#3E6CB5] dark:text-[#7EA6E0] text-[11px]">
-                      {t.newStart} → {t.newEnd}
-                    </td>
-                    <td className="py-3 px-4">
-                      {t.conflict ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70]">
-                          <AlertTriangle className="w-3 h-3" /> Clashing
+        {affectedDependentTasks.length > 0 ? (
+          <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#F8FAFD] dark:bg-[#111722] text-slate-500 uppercase font-semibold text-[10px] tracking-wider border-b border-slate-200/80 dark:border-slate-800">
+                <tr>
+                  <th className="py-3 px-4">Dependent Task</th>
+                  <th className="py-3 px-4">Original Time</th>
+                  <th className="py-3 px-4">Shifted Time</th>
+                  <th className="py-3 px-4">Delay Impact</th>
+                  <th className="py-3 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {affectedDependentTasks.map((t) => {
+                  const originalTask = tasks.find((tk) => tk.id === t.id);
+                  return (
+                    <tr key={t.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900 dark:text-slate-100">{t.title}</td>
+                      <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">
+                        {originalTask ? `${originalTask.start_time} - ${originalTask.end_time}` : '—'}
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-[#3E6CB5] dark:text-[#7EA6E0] text-[11px]">
+                        {t.newStart} → {t.newEnd}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          <Clock className="w-3 h-3" /> Pushed Back
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]">
-                          <CheckCircle2 className="w-3 h-3" /> Compatible
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td className="py-3 px-4">
+                        {t.conflict ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#FDF1EF] text-[#C45547] dark:bg-[#2E1A17] dark:text-[#E07D70]">
+                            <AlertTriangle className="w-3 h-3" /> Past Curfew
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]">
+                            <CheckCircle2 className="w-3 h-3" /> Compatible
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 text-center">
+            Zero downstream dependencies! Delaying <strong>{selectedTask?.title}</strong> will not disrupt any other task.
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: Unaffected Independent Tasks */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            Unaffected Independent Tasks ({unaffectedTasks.length})
+          </h3>
+          <span className="text-[11px] text-slate-400">
+            Running on original schedule without interruption
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {unaffectedTasks.slice(0, 6).map((task) => (
+            <div
+              key={task.id}
+              className="p-3 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/70 dark:border-slate-800 flex items-center justify-between gap-2"
+            >
+              <div className="truncate">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                  {task.title}
+                </p>
+                <p className="text-[11px] font-mono text-slate-400">
+                  {task.start_time} - {task.end_time}
+                </p>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full shrink-0">
+                On Schedule
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

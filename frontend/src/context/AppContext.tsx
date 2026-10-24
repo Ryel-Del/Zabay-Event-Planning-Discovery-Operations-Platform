@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type {
   User,
   UserRole,
@@ -13,6 +13,7 @@ import type {
   AuditLog,
   VenueMatchResult,
   WorkflowTemplateKit,
+  AppNotification,
 } from '../types';
 import {
   mockCurrentUser,
@@ -27,6 +28,7 @@ import {
   mockRegistrations,
   mockAuditLogs,
 } from '../mock/mockData';
+import api, { adaptEvent, adaptRegistration, adaptVenue, type HealthStatus } from '../services/api';
 
 interface AppContextType {
   currentUser: User;
@@ -41,10 +43,29 @@ interface AppContextType {
   loadDemoData: () => void;
   clearToCleanSlate: () => void;
 
+  // Live Database & API Status (Member 3 Connector)
+  isLiveBackend: boolean;
+  backendHealth: HealthStatus | null;
+  refreshBackendStatus: () => Promise<void>;
+
+  // Notification & Event Change Propagation System
+  notifications: AppNotification[];
+  unreadNotificationCount: number;
+  dismissNotification: (id: string) => void;
+  broadcastEventChange: (changeDetails: {
+    eventId: string;
+    eventTitle?: string;
+    oldVenue?: string;
+    newVenue?: string;
+    oldTime?: string;
+    newTime?: string;
+    summary: string;
+  }) => void;
+
   events: ZabayEvent[];
   selectedEvent: ZabayEvent | null;
   setSelectedEvent: (event: ZabayEvent | null) => void;
-  createEvent: (eventData: Partial<ZabayEvent>) => ZabayEvent;
+  createEvent: (eventData: Partial<ZabayEvent>) => Promise<ZabayEvent>;
 
   venues: Venue[];
   venueBookings: VenueBooking[];
@@ -67,18 +88,25 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id'>) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
-  checkInAttendee: (qrCode: string) => { success: boolean; message: string; registration?: Registration; isDuplicate?: boolean };
+  checkInAttendee: (qrCode: string) => Promise<{ success: boolean; message: string; registration?: Registration; isDuplicate?: boolean }>;
   bookVenue: (
     venueId: string,
     eventId: string,
     startTime: string,
     endTime: string,
-    hallId?: string
-  ) => { success: boolean; message: string };
-  registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => { success: boolean; registration: Registration };
+    hallId?: string,
+    eventTitle?: string
+  ) => Promise<{ success: boolean; message: string }>;
+  registerForEvent: (eventId: string, ticketType: 'General Admission' | 'VIP Access', attendeeName: string, attendeeEmail: string) => Promise<{ success: boolean; message: string; registration?: Registration }>;
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
   removePersonnel: (id: string) => void;
+
+  // Staff Portal Preview & Crew Inspection
+  activeStaffId: string | null;
+  setActiveStaffId: (id: string | null) => void;
+  previewStaffPortal: (staffId?: string) => void;
+  exitStaffPreview: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -100,9 +128,40 @@ const minutesToTime = (mins: number) => {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
   const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
+  const [activeStaffId, setActiveStaffId] = useState<string | null>('per-3');
+
+  const previewStaffPortal = (staffId?: string) => {
+    const targetStaffId = staffId || activeStaffId || 'per-3';
+    setActiveStaffId(targetStaffId);
+    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0];
+    if (targetPerson) {
+      setCurrentUser({
+        id: `usr-stf-${targetPerson.id}`,
+        name: targetPerson.name,
+        email: targetPerson.email,
+        role: 'staff',
+        phone: targetPerson.phone,
+        organization: 'Zabay Stage Crew & Operations',
+        location: 'Downtown District, Tagbilaran City',
+        bio: `${targetPerson.role} active on shift in event run-of-show.`,
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+      });
+    }
+    setCurrentRole('staff');
+  };
+
+  const exitStaffPreview = () => {
+    setCurrentRole('organizer');
+    const orgUser = mockUsers.find((u) => u.role === 'organizer') || mockCurrentUser;
+    setCurrentUser(orgUser);
+  };
 
   const setRoleWithUser = (role: UserRole) => {
     setCurrentRole(role);
+    if (role === 'staff') {
+      previewStaffPortal();
+      return;
+    }
     const user = mockUsers.find((u) => u.role === role);
     if (user) setCurrentUser(user);
   };
@@ -147,7 +206,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [venues] = useState<Venue[]>(mockVenues);
+  const [venues, setVenues] = useState<Venue[]>(() =>
+    typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true' ? mockVenues : []
+  );
   const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
       return mockVenueBookings;
@@ -187,7 +248,91 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return [];
   });
 
+  // Live Backend & PostgreSQL Connection State (Member 3 Connector)
+  const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
+  const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
+
+  const refreshBackendStatus = async () => {
+    try {
+      const res = await api.health.check();
+      setBackendHealth(res.success ? res.data || null : null);
+      if (!res.success || localStorage.getItem('zabay-demo-mode') === 'true') { setIsLiveBackend(false); return; }
+      const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
+      if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
+        setIsLiveBackend(false);
+        return;
+      }
+      const venueDetails = await Promise.all(venueRes.data.map((venue) => api.venues.getById(venue.id)));
+      if (venueDetails.some((detail) => !detail.success || !detail.data)) {
+        setIsLiveBackend(false);
+        return;
+      }
+      if (localStorage.getItem('zabay-demo-mode') === 'true') return;
+      const liveEvents = eventRes.data.map(adaptEvent);
+      setVenues(venueRes.data.map(adaptVenue));
+      setEvents(liveEvents);
+      setVenueBookings(venueDetails.flatMap((detail) => (detail.data?.bookings || []) as VenueBooking[]));
+      setSelectedEvent((previous) => liveEvents.find((event) => event.id === previous?.id) || liveEvents[0] || null);
+      setIsLiveBackend(true);
+    } catch {
+      setIsLiveBackend(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshBackendStatus();
+  }, []);
+
+  // Event Change Notifications & Live Alerts System
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const dismissNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const broadcastEventChange = (changeDetails: {
+    eventId: string;
+    eventTitle?: string;
+    oldVenue?: string;
+    newVenue?: string;
+    oldTime?: string;
+    newTime?: string;
+    summary: string;
+  }) => {
+    const title = changeDetails.eventTitle || 'Event Update Broadcast';
+    const newNotif: AppNotification = {
+      id: `notif-${Date.now()}`,
+      title: `Event Notice: ${title}`,
+      message: changeDetails.summary,
+      type: 'warning',
+      timestamp: new Date().toISOString(),
+      targetRole: 'all',
+      eventId: changeDetails.eventId,
+      read: false,
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
+
+    const auditLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'VENUE_CHANGE',
+      entity_type: 'venue',
+      entity_id: changeDetails.eventId,
+      change_summary: `In-app notice (current session): ${changeDetails.summary}`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+  };
+
   const loadDemoData = () => {
+    setIsLiveBackend(false);
+    setVenues(mockVenues);
     setEvents(mockEvents);
     setSelectedEvent(mockEvents[0]);
     setVenueBookings(mockVenueBookings);
@@ -203,6 +348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearToCleanSlate = () => {
+    setVenues([]);
     setEvents([]);
     setSelectedEvent(null);
     setVenueBookings([]);
@@ -215,11 +361,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('zabay-demo-mode', 'false');
       localStorage.removeItem('zabay_custom_personnel');
     }
+    void refreshBackendStatus();
   };
 
-  const createEvent = (data: Partial<ZabayEvent>): ZabayEvent => {
+  const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
+    if (!isDemoMode) {
+      if (!isLiveBackend) throw new Error('PostgreSQL is unavailable. Connect the database or choose Sample Data mode.');
+      const response = await api.events.create({
+        ...data,
+        organizer_id: currentUser.id,
+        venue_id: undefined,
+        hall_id: undefined,
+        hall_name: undefined,
+      });
+      if (!response.success || !response.data?.id) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        throw new Error(response.error || 'Event was not saved.');
+      }
+      const saved = adaptEvent(response.data);
+      setEvents((previous) => [saved, ...previous]);
+      setSelectedEvent(saved);
+      return saved;
+    }
     const newEvt: ZabayEvent = {
-      id: `evt-${Date.now()}`,
+      id: `demo-evt-${Date.now()}`,
       title: data.title || 'Untitled Bohol Event',
       description: data.description || 'Newly created event workspace.',
       category: data.category || 'Sports & Athletics',
@@ -551,7 +716,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Check-In Attendee with Database Duplicate Prevention
-  const checkInAttendee = (qrCode: string) => {
+  const checkInAttendee = async (qrCode: string) => {
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No attendee was checked in.' };
+      const response = await api.attendees.checkIn(qrCode);
+      if (!response.success || !response.data) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN', message: response.error || 'Check-in failed.' };
+      }
+      const known = registrations.find((registration) => registration.id === response.data?.id);
+      const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
+      const checkedIn = adaptRegistration(response.data, title);
+      setRegistrations((previous) => previous.some((registration) => registration.id === checkedIn.id)
+        ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
+        : [checkedIn, ...previous]);
+      return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
+    }
     const reg = registrations.find(
       (r) => r.qr_pass_code.toUpperCase() === qrCode.trim().toUpperCase()
     );
@@ -559,8 +739,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!reg) {
       return {
         success: false,
-        message: 'Invalid QR pass code. No active registration record found in database.',
+        message: 'Invalid sample QR pass code.',
       };
+    }
+
+    if (reg.status === 'cancelled') {
+      return { success: false, message: 'This sample registration was cancelled.' };
     }
 
     if (reg.status === 'checked_in') {
@@ -584,7 +768,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'CHECK_IN',
       entity_type: 'registration',
       entity_id: reg.id,
-      change_summary: `Admitted attendee ${reg.attendee_name} (${reg.ticket_type}) via QR Pass. Check-in registered into attendance table.`,
+      change_summary: `Sample check-in for ${reg.attendee_name} (${reg.ticket_type}).`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [checkInLog, ...prev]);
@@ -596,18 +780,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
-  // Venue booking with EXCLUDE constraint simulation
-  const bookVenue = (
+  // Venue booking with PostgreSQL EXCLUDE constraint handling
+  const bookVenue = async (
     venueId: string,
     eventId: string,
     startTime: string,
     endTime: string,
-    hallId?: string
-  ) => {
+    hallId?: string,
+    eventTitle?: string
+  ): Promise<{ success: boolean; message: string }> => {
     const venue = venues.find((v) => v.id === venueId);
     if (!venue) return { success: false, message: 'Venue does not exist' };
 
     const selectedHall = hallId ? venue.halls?.find((h) => h.id === hallId) : undefined;
+    const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
+    const event = events.find((e) => e.id === eventId) || selectedEvent;
+
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No booking was made.' };
+      const savedEvent = await api.events.getById(eventId);
+      if (!savedEvent.success || !savedEvent.data?.id) {
+        if (savedEvent.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'PostgreSQL is unavailable. No booking was made.' : 'Select a saved event before booking.' };
+      }
+      const apiRes = await api.venues.book(venueId, {
+        event_id: eventId,
+        event_title: savedEvent.data.title,
+        start_time: startTime,
+        end_time: endTime,
+        hall_id: hallId,
+        hall_name: selectedHall?.name,
+      });
+
+      if (!apiRes.success) {
+        if (apiRes.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return {
+          success: false,
+          message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
+        };
+      }
+      if (!apiRes.data?.id) return { success: false, message: 'Booking response did not confirm a saved reservation.' };
+      setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
+      setEvents((previous) => previous.map((item) => item.id === eventId
+        ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+        : item));
+      setSelectedEvent((previous) => previous?.id === eventId
+        ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+        : previous);
+      return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
+    }
 
     const overlap = venueBookings.some((b) => {
       if (b.venue_id !== venueId || b.status === 'cancelled') return false;
@@ -624,22 +845,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     if (overlap) {
-      const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
       return {
         success: false,
-        message: `Database EXCLUDE Constraint Violation: ${spaceName} already has a confirmed booking that overlaps with the requested time window.`,
+        message: `Sample booking conflict: ${spaceName} already has a reservation that overlaps with the requested time window.`,
       };
     }
 
-    const event = events.find((e) => e.id === eventId) || selectedEvent;
-
     const newBooking: VenueBooking = {
-      id: `vb-${Date.now()}`,
+      id: `demo-vb-${Date.now()}`,
       venue_id: venueId,
       hall_id: hallId,
       hall_name: selectedHall?.name,
       event_id: eventId,
-      event_title: event ? event.title : 'Custom Event',
+      event_title: eventTitle || event?.title || 'Sample Event',
       start_time: startTime,
       end_time: endTime,
       status: 'confirmed',
@@ -648,28 +866,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVenueBookings((prev) => [...prev, newBooking]);
     return {
       success: true,
-      message: `Venue booking confirmed for ${selectedHall ? `${venue.name} (${selectedHall.name})` : venue.name}!`,
+      message: `Venue booking confirmed for ${spaceName}!`,
     };
   };
 
-  // Register for event (Attendee flow with simulated Stripe checkout)
-  const registerForEvent = (
+  // Register for an event and retain the returned QR pass in this workspace.
+  const registerForEvent = async (
     eventId: string,
     ticketType: 'General Admission' | 'VIP Access',
     attendeeName: string,
     attendeeEmail: string
-  ) => {
+  ): Promise<{ success: boolean; message: string; registration?: Registration }> => {
     const event = events.find((e) => e.id === eventId) || selectedEvent;
     if (!event) {
-      throw new Error('Event not found');
+      return { success: false, message: 'Event not found.' };
     }
 
-    const price = ticketType === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No registration was saved.' };
+      const response = await api.attendees.register({
+        event_id: eventId,
+        attendee_name: attendeeName,
+        attendee_email: attendeeEmail,
+        ticket_type: ticketType,
+      });
+      if (!response.success || !response.data?.qr_pass_code) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: response.error || 'Registration was not saved.' };
+      }
+      const saved = adaptRegistration(response.data, event.title);
+      setRegistrations((previous) => [saved, ...previous]);
+      return { success: true, registration: saved, message: 'Registration saved. No payment was collected.' };
+    }
+
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const qrCode = `ZABAY-PASS-${randomSuffix}-${attendeeName.split(' ')[0].toUpperCase()}`;
 
     const newReg: Registration = {
-      id: `reg-${Date.now()}`,
+      id: `demo-reg-${Date.now()}`,
       event_id: event.id,
       event_title: event.title,
       attendee_id: currentUser.id,
@@ -679,8 +913,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ticket_type: ticketType,
       qr_pass_code: qrCode,
       registered_at: new Date().toISOString(),
-      amount_paid: price,
-      payment_id: `pay-${Date.now()}`,
+      amount_paid: 0,
     };
 
     setRegistrations((prev) => [newReg, ...prev]);
@@ -688,6 +921,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return {
       success: true,
       registration: newReg,
+      message: 'Sample registration created. No payment was collected.',
     };
   };
 
@@ -762,6 +996,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDemoMode,
       loadDemoData,
       clearToCleanSlate,
+      isLiveBackend,
+      backendHealth,
+      refreshBackendStatus,
+      notifications,
+      unreadNotificationCount,
+      dismissNotification,
+      broadcastEventChange,
       createEvent,
       events,
       selectedEvent,
@@ -788,12 +1029,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addPersonnel,
       updatePersonnel,
       removePersonnel,
+      activeStaffId,
+      setActiveStaffId,
+      previewStaffPortal,
+      exitStaffPreview,
     }),
     [
       currentUser,
       currentRole,
+      activeStaffId,
       theme,
       isDemoMode,
+      isLiveBackend,
+      backendHealth,
+      notifications,
+      unreadNotificationCount,
       events,
       selectedEvent,
       venues,

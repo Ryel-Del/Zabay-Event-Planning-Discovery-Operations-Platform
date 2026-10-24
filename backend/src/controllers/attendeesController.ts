@@ -1,92 +1,112 @@
+import { randomBytes, randomUUID } from 'node:crypto';
 import { Request, Response, NextFunction } from 'express';
-import { query } from '../config/db';
+import { PoolClient } from 'pg';
+import { pool, query } from '../config/db';
 
-export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
+export async function registerForEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const { qr_pass_code, verified_by_id } = req.body;
-
-    if (!qr_pass_code) {
-      return res.status(400).json({ success: false, error: 'qr_pass_code is required' });
-    }
-
-    const regResult = await query(
-      'SELECT * FROM registrations WHERE UPPER(qr_pass_code) = UPPER($1) OR UPPER(id) = UPPER($1)',
-      [qr_pass_code.trim()]
-    );
-
-    if (regResult.rows.length === 0) {
-      return res.status(404).json({
+    const { event_id, attendee_name, attendee_email, ticket_type } = req.body || {};
+    if (typeof event_id !== 'string' || !event_id.trim() ||
+        typeof attendee_name !== 'string' || !attendee_name.trim() || attendee_name.trim().length > 255 ||
+        typeof attendee_email !== 'string' || attendee_email.trim().length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(attendee_email.trim()) ||
+        typeof ticket_type !== 'string' || !ticket_type.trim() || ticket_type.trim().length > 64) {
+      return res.status(400).json({
         success: false,
-        error: 'Invalid QR pass code. No registration found in database.',
+        error: 'event_id, attendee_name, valid attendee_email, and ticket_type are required',
       });
     }
 
-    const registration = regResult.rows[0];
-
-    if (registration.status === 'checked_in') {
-      return res.status(409).json({
-        success: false,
-        isDuplicate: true,
-        registration,
-        error: `DUPLICATE CHECK-IN PREVENTED: ${registration.attendee_name} was already verified and admitted.`,
-      });
+    const event = await query('SELECT id FROM events WHERE id = $1', [event_id.trim()]);
+    if (event.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
     }
 
-    // Update status to checked_in
-    const updateResult = await query(
-      'UPDATE registrations SET status = $1 WHERE id = $2 RETURNING *',
-      ['checked_in', registration.id]
+    const result = await query(
+      `INSERT INTO registrations
+       (id, event_id, attendee_name, attendee_email, status, ticket_type, qr_pass_code, amount_paid)
+       VALUES ($1, $2, $3, $4, 'confirmed', $5, $6, 0)
+       RETURNING *`,
+      [
+        `reg-${randomUUID()}`,
+        event_id.trim(),
+        attendee_name.trim(),
+        attendee_email.trim().toLowerCase(),
+        ticket_type.trim(),
+        `ZABAY-${randomBytes(18).toString('hex').toUpperCase()}`,
+      ]
     );
-
-    // Record attendance log
-    const attendanceId = `att-log-${Date.now()}`;
-    await query(
-      `INSERT INTO attendance_records (id, event_id, registration_id, attendee_name, check_in_time, verified_by)
-       VALUES ($1, $2, $3, $4, NOW(), $5)`,
-      [attendanceId, registration.event_id, registration.id, registration.attendee_name, verified_by_id || 'gate-scanner-01']
-    );
-
-    res.json({
+    return res.status(201).json({
       success: true,
-      data: updateResult.rows[0],
-      message: `Verified! Welcome ${registration.attendee_name} (${registration.ticket_type}).`,
+      data: result.rows[0],
+      message: 'Registration saved. Digital QR pass generated. No payment was collected.',
     });
   } catch (err) {
     next(err);
   }
 }
 
-export async function registerForEvent(req: Request, res: Response, next: NextFunction) {
+export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
+  const { qr_pass_code, verified_by_id } = req.body || {};
+  if (typeof qr_pass_code !== 'string' || !qr_pass_code.trim() || qr_pass_code.trim().length > 64) {
+    return res.status(400).json({ success: false, error: 'qr_pass_code is required' });
+  }
+  if (verified_by_id !== undefined &&
+      (typeof verified_by_id !== 'string' || !verified_by_id.trim())) {
+    return res.status(400).json({ success: false, error: 'verified_by_id must be a non-empty string' });
+  }
+
+  let client: PoolClient | undefined;
   try {
-    const { event_id, attendee_name, attendee_email, ticket_type, amount_paid } = req.body;
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const regResult = await client.query(
+      'SELECT * FROM registrations WHERE UPPER(qr_pass_code) = UPPER($1) FOR UPDATE',
+      [qr_pass_code.trim()]
+    );
+    if (regResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: 'Invalid QR pass code.' });
+    }
 
-    const id = `reg-${Date.now()}`;
-    const qr_pass_code = `PASS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const registration = regResult.rows[0];
+    if (registration.status === 'cancelled') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, code: 'CANCELLED_REGISTRATION', error: 'This registration was cancelled.' });
+    }
+    const previousAttendance = await client.query(
+      'SELECT id FROM attendance_records WHERE registration_id = $1', [registration.id]
+    );
+    if (registration.status === 'checked_in' || previousAttendance.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ success: false, code: 'DUPLICATE_CHECK_IN', isDuplicate: true, error: 'This pass has already been checked in.' });
+    }
 
-    const sql = `
-      INSERT INTO registrations (
-        id, event_id, attendee_name, attendee_email,
-        status, ticket_type, qr_pass_code, amount_paid, registered_at
-      ) VALUES ($1, $2, $3, $4, 'confirmed', $5, $6, $7, NOW())
-      RETURNING *
-    `;
-
-    const result = await query(sql, [
-      id,
-      event_id,
-      attendee_name,
-      attendee_email,
-      ticket_type || 'General Admission',
-      qr_pass_code,
-      amount_paid || 0,
-    ]);
-
-    res.status(201).json({
+    const updateResult = await client.query(
+      "UPDATE registrations SET status = 'checked_in' WHERE id = $1 RETURNING *",
+      [registration.id]
+    );
+    await client.query(
+      `INSERT INTO attendance_records
+       (id, event_id, registration_id, attendee_name, check_in_time, verified_by)
+       VALUES ($1, $2, $3, $4, NOW(), $5)`,
+      [`att-log-${randomUUID()}`, registration.event_id, registration.id,
+        registration.attendee_name, verified_by_id?.trim() || 'gate-scanner-01']
+    );
+    await client.query('COMMIT');
+    return res.json({
       success: true,
-      data: result.rows[0],
-      message: 'Registration successful! Digital QR Pass generated.',
+      data: updateResult.rows[0],
+      message: `Checked in ${registration.attendee_name}.`,
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch { /* connection already failed */ }
+    }
+    if (err.code === '23505' && String(err.constraint || '').includes('attendance_records_registration')) {
+      return res.status(409).json({ success: false, code: 'DUPLICATE_CHECK_IN', isDuplicate: true, error: 'This pass has already been checked in.' });
+    }
     next(err);
+  } finally {
+    client?.release();
   }
 }

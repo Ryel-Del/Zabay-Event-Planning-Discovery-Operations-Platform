@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
-import { query } from '../config/db';
+import { pool, query } from '../config/db';
 
 export async function getVenues(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -105,16 +105,25 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
       ) RETURNING *
     `;
 
-    const result = await query(sql, [
-      id,
-      venue_id,
-      hall_id || null,
-      hall_name || null,
-      event_id,
-      event_title,
-      start_time,
-      end_time,
-    ]);
+    const client = await pool.connect();
+    let result;
+    try {
+      await client.query('BEGIN');
+      result = await client.query(sql, [
+        id, venue_id, hall_id || null, hall_name || null,
+        event_id, event_title, start_time, end_time,
+      ]);
+      await client.query(
+        'UPDATE events SET venue_id = $1, hall_id = $2, hall_name = $3 WHERE id = $4',
+        [venue_id, hall_id || null, hall_name || null, event_id]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
 
     res.status(201).json({
       success: true,

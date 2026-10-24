@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Clock,
   MapPin,
   ShieldAlert,
-  Lock,
   Phone,
   Mail,
   CheckCircle2,
@@ -14,29 +13,61 @@ import {
   Search,
   Layers,
   Radio,
+  QrCode,
+  ShieldCheck,
+  Eye,
+  ArrowLeft,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
 
 export const PersonnelPortal: React.FC = () => {
-  const { personnel, tasks, selectedEvent, venues } = useApp();
+  const {
+    currentUser,
+    personnel,
+    tasks,
+    selectedEvent,
+    venues,
+    updateTaskStatus,
+    notifications,
+    activeStaffId,
+    exitStaffPreview,
+  } = useApp();
 
-  // Selected personnel member viewing the portal (defaults to Carlos Ruiz or first personnel)
-  const defaultPersonnel = personnel.find((p) => p.name.includes('Carlos')) || personnel[0];
+  // Find staff member by activeStaffId or match by email/name; default to Carlos Mendoza (per-3)
+  const defaultPersonnel =
+    (activeStaffId ? personnel.find((p) => p.id === activeStaffId) : null) ||
+    personnel.find(
+      (p) =>
+        p.email === currentUser.email ||
+        p.name.toLowerCase() === currentUser.name.toLowerCase() ||
+        p.name.includes('Carlos')
+    ) || personnel[0];
+
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>(
     defaultPersonnel ? defaultPersonnel.id : 'all'
   );
   const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'venue_contacts'>('my_tasks');
   const [searchRunOfShow, setSearchRunOfShow] = useState('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  const currentPerson = personnel.find((p) => p.id === selectedPersonnelId);
+  // Sync when activeStaffId changes from external preview click
+  useEffect(() => {
+    if (activeStaffId) {
+      setSelectedPersonnelId(activeStaffId);
+    }
+  }, [activeStaffId]);
+
+  const currentPerson = personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel;
 
   // Active venue details
-  const activeVenue = venues.find(
-    (v) =>
-      v.id === selectedEvent?.venue_id ||
-      v.name.toLowerCase().includes('wisdom') ||
-      v.id === 'ven-3'
-  ) || venues[0];
+  const activeVenue =
+    venues.find(
+      (v) =>
+        v.id === selectedEvent?.venue_id ||
+        v.name.toLowerCase().includes('wisdom') ||
+        v.id === 'ven-3'
+    ) || venues[0];
 
   // Tasks assigned to this specific personnel member
   const myTasks = tasks.filter((t) =>
@@ -68,42 +99,98 @@ export const PersonnelPortal: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* 1. Explicit View-Only Banner Guard */}
-      <div className="bg-[#FAF7EE] dark:bg-[#252219] border border-[#ECD9A8] dark:border-[#5A4B27] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+      {/* Organizer Staff-Preview Mode Banner */}
+      <div className="bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#E8BA48]/20 text-[#8C6212] dark:text-[#E8BD68] flex items-center justify-center shrink-0">
-            <Lock className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-xl bg-[#3E6CB5] text-white flex items-center justify-center shrink-0">
+            <Eye className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#8C6212] dark:text-[#E8BD68]">
-                Read-Only Event Staff View
+              <span className="text-xs font-bold uppercase tracking-wider text-[#244A85] dark:text-[#8BB0E8]">
+                Staff Shift Preview Mode
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#1A1813] text-[#8C6212] dark:text-[#E8BD68] font-mono border border-[#ECD9A8] dark:border-[#5A4B27]">
-                View Only • Edits Locked
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
+                Active Persona: {currentPerson?.name || 'Field Crew'}
               </span>
             </div>
-            <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5">
-              You are viewing the event run-of-show and assigned duties. Task adjustments and ripple modifications are managed by Event Organizers.
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+              You are testing how staff members view assigned tasks, duty checklists, and camera gate check-in.
             </p>
           </div>
         </div>
 
-        {/* Staff Persona Selector */}
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-          <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Viewing as:</span>
-          <select
-            value={selectedPersonnelId}
-            onChange={(e) => setSelectedPersonnelId(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-[#171E2B] text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] cursor-pointer shadow-xs"
+        <button
+          onClick={exitStaffPreview}
+          className="px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors shrink-0"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Return to Organizer Studio</span>
+        </button>
+      </div>
+
+      {/* Real-Time Operational Change Alerts */}
+      {notifications.length > 0 && (
+        <div className="bg-amber-500 text-white p-4 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-in slide-in-from-top-1">
+          <div className="flex items-center gap-3">
+            <Radio className="w-5 h-5 shrink-0 animate-pulse text-white" />
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider block">Live Operational Dispatch Alert</span>
+              <p className="text-xs font-semibold opacity-95">{notifications[0].message}</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-black/20 shrink-0 font-bold">Priority Update</span>
+        </div>
+      )}
+
+      {/* 1. Active Shift Status Banner & Gate Scanner Button */}
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
+                Staff Shift Active • On Duty
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono">
+                {currentPerson ? `${currentPerson.name} (${currentPerson.role})` : 'Master Crew View'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Welcome to your personal shift portal. Mark assigned duties as you complete them and scan attendee tickets at the gate.
+            </p>
+          </div>
+        </div>
+
+        {/* Action Controls: Gate Scanner + Supervisor Switcher */}
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <button
+            onClick={() => setIsScannerOpen(true)}
+            className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
           >
-            <option value="all">👥 All Event Crew (Master View)</option>
-            {personnel.map((p) => (
-              <option key={p.id} value={p.id}>
-                👤 {p.name} ({p.role})
-              </option>
-            ))}
-          </select>
+            <QrCode className="w-4 h-4 text-[#D4E4F7]" />
+            <span>Open Gate Ticket Scanner</span>
+          </button>
+
+          {/* Supervisor / Testing Mode Switcher */}
+          <div className="flex items-center gap-1.5 bg-[#F8FAFD] dark:bg-[#111722] p-1 rounded-xl border border-slate-200 dark:border-slate-800">
+            <span className="text-[10px] text-slate-400 px-2 font-medium">Switch Crew:</span>
+            <select
+              value={selectedPersonnelId}
+              onChange={(e) => setSelectedPersonnelId(e.target.value)}
+              className="px-2 py-1.5 rounded-lg border-0 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+            >
+              <option value="all">👥 All Crew (Supervisor)</option>
+              {personnel.map((p) => (
+                <option key={p.id} value={p.id}>
+                  👤 {p.name} ({p.role})
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -158,7 +245,7 @@ export const PersonnelPortal: React.FC = () => {
                 </span>
                 <p className="font-bold text-emerald-600 dark:text-emerald-400 text-sm flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                  {currentPerson.is_available ? 'Active on Shift' : 'On Standby'}
+                  Active on Shift
                 </p>
               </div>
             </div>
@@ -173,7 +260,7 @@ export const PersonnelPortal: React.FC = () => {
               <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">
                 {earliestStart} – {latestEnd}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5">Today's Operating Call Time</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">Today's Call Time</p>
             </div>
 
             <div className="bg-[#F8FAFD] dark:bg-[#111722] p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
@@ -190,12 +277,12 @@ export const PersonnelPortal: React.FC = () => {
 
             <div className="bg-[#F8FAFD] dark:bg-[#111722] p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
               <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <MapPin className="w-3 h-3 text-[#3E6CB5]" /> Venue Post
+                <MapPin className="w-3 h-3 text-[#3E6CB5]" /> Venue Station
               </span>
               <p className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1 truncate">
                 {activeVenue.name}
               </p>
-              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{activeVenue.city}, Bohol</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 truncate">{activeVenue.city}</p>
             </div>
 
             <div className="bg-[#F8FAFD] dark:bg-[#111722] p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
@@ -222,7 +309,7 @@ export const PersonnelPortal: React.FC = () => {
           }`}
         >
           <Briefcase className="w-3.5 h-3.5" />
-          <span>My Assigned Tasks ({myTasks.length})</span>
+          <span>My Shift Duties ({myTasks.length})</span>
         </button>
 
         <button
@@ -250,25 +337,26 @@ export const PersonnelPortal: React.FC = () => {
         </button>
       </div>
 
-      {/* TAB 1: My Assigned Tasks */}
+      {/* TAB 1: My Shift Duties */}
       {activeTab === 'my_tasks' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>Chronological Duties & Action Items</span>
               <span className="text-[10px] text-slate-400 font-normal">
-                (Finish-to-Start Dependencies Enforced)
+                (Tap buttons to update status in real time)
               </span>
             </h3>
             <span className="text-xs text-slate-400">
-              {myTasks.length} {myTasks.length === 1 ? 'task' : 'tasks'} allocated
+              {myTasks.length} {myTasks.length === 1 ? 'duty' : 'duties'} assigned
             </span>
           </div>
 
           <div className="space-y-3">
             {myTasks.map((task, idx) => {
-              // Find upstream dependency tasks to show what must complete first
+              // Upstream dependency check
               const upstreamDependencies = tasks.filter((t) => task.dependencies?.includes(t.id));
+              const hasUnfinishedPrereq = upstreamDependencies.some((dep) => dep.status !== 'completed');
 
               return (
                 <div
@@ -314,19 +402,44 @@ export const PersonnelPortal: React.FC = () => {
                         <span className="text-xs font-bold font-mono text-slate-900 dark:text-slate-100">
                           {task.start_time || '08:00'} – {task.end_time || '10:00'}
                         </span>
-                        <p className="text-[10px] text-slate-400">Scheduled Time</p>
+                        <p className="text-[10px] text-slate-400">Scheduled Window</p>
                       </div>
 
-                      <div className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-500 flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
-                        <span>Read-Only</span>
-                      </div>
+                      {/* One-Tap Status Toggle for Crew */}
+                      {task.status === 'completed' ? (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 cursor-pointer transition-colors"
+                          title="Click to revert to In Progress"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Done ✓</span>
+                        </button>
+                      ) : task.status === 'in_progress' ? (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'completed')}
+                          className="px-3 py-1.5 rounded-lg bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer transition-colors"
+                          title="Click to mark duty complete"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Mark Done</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => updateTaskStatus(task.id, 'in_progress')}
+                          className="px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                          title="Click to start this duty"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>Start Duty</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Upstream Dependencies (What must finish before this task starts) */}
+                  {/* Upstream Dependencies */}
                   {upstreamDependencies.length > 0 && (
-                    <div className="p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800 text-xs flex items-center gap-2">
+                    <div className="p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800 text-xs flex flex-wrap items-center gap-2">
                       <GitBranch className="w-3.5 h-3.5 text-[#B87A44] shrink-0" />
                       <span className="text-slate-500 font-semibold text-[11px]">
                         Prerequisite Task:
@@ -335,16 +448,25 @@ export const PersonnelPortal: React.FC = () => {
                         {upstreamDependencies.map((dep) => (
                           <span
                             key={dep.id}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded-md border ${
+                              dep.status === 'completed'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            }`}
                           >
                             {dep.title} ({dep.status.replace('_', ' ')})
                           </span>
                         ))}
                       </div>
+                      {hasUnfinishedPrereq && (
+                        <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                          (Waiting for prerequisite to finish)
+                        </span>
+                      )}
                     </div>
                   )}
 
-                  {/* Allocated Resources */}
+                  {/* Required Equipment */}
                   {task.resource_assignments && task.resource_assignments.length > 0 && (
                     <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-1">
                       <Wrench className="w-3 h-3 text-[#3E6CB5]" />
@@ -372,7 +494,7 @@ export const PersonnelPortal: React.FC = () => {
                   No Active Shift Tasks Assigned
                 </h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  This crew member currently has zero tasks assigned for this event. Check with the lead organizer or select another staff member above.
+                  You currently have no tasks assigned for this event. Check with the lead organizer or select another staff member above.
                 </p>
               </div>
             )}
@@ -389,7 +511,7 @@ export const PersonnelPortal: React.FC = () => {
                 Master Event Run-of-Show
               </h3>
               <p className="text-xs text-slate-400">
-                Full chronological visibility of all departments (AV, Staging, Operations, Registration)
+                Full chronological overview of all tracks (AV, Staging, Operations, Registration)
               </p>
             </div>
 
@@ -459,7 +581,7 @@ export const PersonnelPortal: React.FC = () => {
             <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
               <MapPin className="w-4 h-4 text-[#3E6CB5]" />
               <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                Venue Location & Access Details
+                Venue Location & Station Access
               </h3>
             </div>
 
@@ -528,10 +650,10 @@ export const PersonnelPortal: React.FC = () => {
                 <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold text-rose-800 dark:text-rose-200">
-                    Bohol Emergency Hotline
+                    Emergency Dispatch Hotline
                   </p>
                   <p className="text-[11px] text-rose-700 dark:text-rose-300 mt-0.5">
-                    Dial <strong>911</strong> or Bohol PDRRMO: <strong>+63 (38) 411-2000</strong>
+                    Dial <strong>911</strong> or Operations Command Center: <strong>+63 (38) 411-2000</strong>
                   </p>
                 </div>
               </div>
@@ -540,7 +662,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Lead Event Organizer</p>
-                    <p className="text-[10px] text-slate-400">Marcus Vance • Zabay Operations</p>
+                    <p className="text-[10px] text-slate-400">Mark Bautista • Zabay Operations</p>
                   </div>
                   <a
                     href="tel:+639173891029"
@@ -553,7 +675,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Security & Medical Lead</p>
-                    <p className="text-[10px] text-slate-400">Aisha Robinson • First Aid Post</p>
+                    <p className="text-[10px] text-slate-400">Aileen Robles • First Aid Post</p>
                   </div>
                   <a
                     href="tel:+639205509921"
@@ -566,7 +688,7 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Technical & AV Lead</p>
-                    <p className="text-[10px] text-slate-400">Darius Thorne • Audio Console Desk</p>
+                    <p className="text-[10px] text-slate-400">Danilo Torralba • Audio Console Desk</p>
                   </div>
                   <a
                     href="tel:+639177721049"
@@ -580,6 +702,12 @@ export const PersonnelPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Embedded Live QR Scanner Modal */}
+      <QRCheckInScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 };
