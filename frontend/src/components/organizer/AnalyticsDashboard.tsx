@@ -16,7 +16,6 @@ import {
 } from 'recharts';
 import {
   BarChart3,
-  DollarSign,
   Users,
   CheckCircle,
   Clock,
@@ -137,7 +136,7 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
           <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
             <span>Gross Ticket Revenue</span>
-            <DollarSign className="w-4 h-4 text-[#5F7D5B] dark:text-[#97B394]" />
+            <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">₱</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-stone-900 dark:text-stone-100">₱{totalRevenue.toLocaleString()}</span>

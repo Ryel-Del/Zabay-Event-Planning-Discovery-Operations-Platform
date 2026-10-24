@@ -413,3 +413,45 @@ CREATE TABLE IF NOT EXISTS event_requirements (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT uq_event_requirements UNIQUE (event_id)
 );
+
+-- 17. ROLES & RBAC PERMISSIONS TABLE
+CREATE TABLE IF NOT EXISTS roles (
+    id VARCHAR(32) PRIMARY KEY,
+    name VARCHAR(64) NOT NULL,
+    description TEXT,
+    permissions TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 18. PERSONNEL AVAILABILITY CALENDAR TABLE
+CREATE TABLE IF NOT EXISTS personnel_availability (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('pavail-' || gen_random_uuid()::text),
+    personnel_id VARCHAR(64) NOT NULL REFERENCES personnel(id) ON DELETE CASCADE,
+    available_date DATE NOT NULL,
+    start_time VARCHAR(8) NOT NULL DEFAULT '08:00',
+    end_time VARCHAR(8) NOT NULL DEFAULT '18:00',
+    is_available BOOLEAN NOT NULL DEFAULT true,
+    notes VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_personnel_day UNIQUE (personnel_id, available_date)
+);
+
+-- 19. VENUE IN-HOUSE RESOURCES TABLE
+CREATE TABLE IF NOT EXISTS venue_resources (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('vres-' || gen_random_uuid()::text),
+    venue_id VARCHAR(64) NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+    resource_name VARCHAR(128) NOT NULL,
+    category VARCHAR(64) NOT NULL DEFAULT 'Audio/Visual',
+    quantity INT NOT NULL CHECK (quantity >= 0),
+    condition VARCHAR(32) NOT NULL DEFAULT 'operational' CHECK (condition IN ('operational', 'maintenance', 'reserved')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Seed System RBAC Roles
+INSERT INTO roles (id, name, description, permissions) VALUES
+    ('organizer', 'Event Organizer / Administrator', 'Manages event DAG, downstream ripples, requirements, and personnel assignments.', ARRAY['create_event', 'manage_tasks', 'assign_crew', 'view_analytics']),
+    ('venue_manager', 'Venue Partner Director', 'Manages venue availability, facilities, sub-halls, and collision-free bookings.', ARRAY['manage_venue', 'approve_bookings', 'manage_halls']),
+    ('staff', 'Event Operations & Security Staff', 'Floor operations, turnstile check-in scanning, and stage/referee duties.', ARRAY['view_shifts', 'scan_tickets', 'update_task_status']),
+    ('attendee', 'Event Delegate / Participant', 'Discovers public events, books ticket tiers, obtains QR passes, and checks in.', ARRAY['browse_events', 'register', 'view_pass'])
+ON CONFLICT (id) DO NOTHING;
+

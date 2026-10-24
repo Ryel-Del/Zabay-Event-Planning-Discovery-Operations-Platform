@@ -6,7 +6,6 @@ import {
   Filter,
   Phone,
   Mail,
-  DollarSign,
   Briefcase,
   CheckCircle2,
   Eye,
@@ -239,7 +238,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
             <span>Avg Hourly Rate</span>
-            <DollarSign className="w-4 h-4 text-[#3E6CB5]" />
+            <span className="font-bold text-xs text-[#3E6CB5]">₱</span>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
             ₱{avgHourlyRate.toLocaleString()}
