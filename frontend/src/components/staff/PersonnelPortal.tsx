@@ -745,6 +745,7 @@ export const PersonnelPortal: React.FC = () => {
       <QRCheckInScanner
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
+        eventId={selectedEvent?.id}
       />
     </div>
   );

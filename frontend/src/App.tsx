@@ -11,7 +11,7 @@ import { AuditLogViewer, QRCheckInScanner, ProfileView, DevCodeModal } from './c
 import { AuthModal } from './components/auth/AuthModal';
 
 const MainContent: React.FC = () => {
-  const { currentRole, setCurrentRole } = useApp();
+  const { currentRole, setCurrentRole, selectedEvent } = useApp();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('overview');
   const [venueView, setVenueView] = useState<'overview' | 'calendar' | 'inventory'>('overview');
@@ -103,6 +103,7 @@ const MainContent: React.FC = () => {
       <QRCheckInScanner
         isOpen={isScannerOpen}
         initialCode={activeScanCode}
+        eventId={selectedEvent?.id}
         onClose={() => {
           setIsScannerOpen(false);
           setActiveScanCode(undefined);

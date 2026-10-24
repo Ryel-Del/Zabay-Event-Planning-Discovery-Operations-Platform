@@ -16,10 +16,25 @@ interface QRCheckInScannerProps {
   isOpen: boolean;
   initialCode?: string;
   onClose: () => void;
+  eventId?: string;
 }
 
-export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose }) => {
-  const { checkInAttendee } = useApp();
+export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose, eventId }) => {
+  const { checkInAttendee, events, selectedEvent } = useApp();
+  const [activeEventId, setActiveEventId] = useState<string>(eventId || selectedEvent?.id || (events[0]?.id ?? ''));
+
+  useEffect(() => {
+    if (eventId) {
+      setActiveEventId(eventId);
+    } else if (selectedEvent?.id) {
+      setActiveEventId(selectedEvent.id);
+    } else if (events.length > 0 && !activeEventId) {
+      setActiveEventId(events[0].id);
+    }
+  }, [eventId, selectedEvent?.id, events]);
+
+  const currentGateEvent = events.find((e) => e.id === activeEventId) || selectedEvent || events[0];
+
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -32,6 +47,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     success: boolean;
     message: string;
     isDuplicate?: boolean;
+    isWrongEvent?: boolean;
     registration?: any;
   } | null>(null);
 
@@ -111,7 +127,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setResult(null);
     setVerifying(true);
     try {
-      const res = await checkInAttendee(code);
+      const res = await checkInAttendee(code, activeEventId);
       setResult(res);
       if (res.success) {
         playAudioFeedback('success');
@@ -226,10 +242,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   if (!isOpen) return null;
 
   const sampleCodes = [
-    { label: 'Sofia Ramos (Courtside Reserved - Valid First Scan)', code: 'ZABAY-PASS-9042-SOFIA' },
-    { label: 'Liam Mendoza (Already Admitted - Duplicate Alert Test)', code: 'ZABAY-PASS-3108-LIAM' },
-    { label: 'Amara Torres (General Bleachers - Valid First Scan)', code: 'ZABAY-PASS-5821-AMARA' },
-    { label: 'Kenji Tan (Courtside Reserved - Valid First Scan)', code: 'ZABAY-PASS-1029-KENJI' },
+    { label: 'Sofia Ramos (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-9042-SOFIA' },
+    { label: 'Liam Mendoza (Duplicate Pass - Already Admitted)', code: 'ZABAY-PASS-3108-LIAM' },
+    { label: 'Sandugo Festival Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-7731-SANDUGO-CULTURE' },
+    { label: 'Bohol DevCon Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-4412-DEVCON-YOUTH' },
+    { label: 'Kenji Tan (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-1029-KENJI' },
     { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
   ];
 
@@ -257,12 +274,44 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               Gate Admittance QR Scanner
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-mono">
-                Duplicate-Proof
+                Duplicate & Event-Verified
               </span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hold a QR pass up to your webcam or enter its code to check in.
+              Hold a QR pass up to your webcam or enter its code to verify admittance.
             </p>
+          </div>
+        </div>
+
+        {/* Active Gate Event Station & Event Selector */}
+        <div className="p-3 bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div>
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                Gate Station Configured For:
+              </div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs">
+                {currentGateEvent?.title || 'Active Event Gate'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+            <span className="text-[11px] text-slate-500 whitespace-nowrap">Gate Station:</span>
+            <select
+              value={activeEventId}
+              onChange={(e) => {
+                setActiveEventId(e.target.value);
+                setResult(null);
+              }}
+              className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+            >
+              {events.map((evt) => (
+                <option key={evt.id} value={evt.id}>
+                  {evt.title}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -385,13 +434,23 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                 className={`text-left p-2.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
                   item.code.includes('LIAM')
                     ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
+                    : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
+                    ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
                     : item.code.includes('FORGED')
                     ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
                     : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
                 }`}
               >
                 <div className="font-semibold text-xs truncate flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                  <span className="text-[10px]">{i === 1 ? '⚠️' : i === 4 ? '🚫' : '🎟️'}</span>
+                  <span className="text-[10px]">
+                    {item.code.includes('LIAM')
+                      ? '⚠️'
+                      : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
+                      ? '⛔'
+                      : item.code.includes('FORGED')
+                      ? '🚫'
+                      : '🎟️'}
+                  </span>
                   <span className="truncate">{item.label}</span>
                 </div>
                 <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
@@ -407,6 +466,8 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             className={`p-4 rounded-xl border text-xs space-y-2.5 transition-all animate-in fade-in duration-150 ${
               result.success
                 ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'
+                : result.isWrongEvent
+                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-900/60 text-rose-800 dark:text-rose-200'
                 : result.isDuplicate
                 ? 'bg-[#FEF8EC] dark:bg-[#2B2314] border-[#F6DEAC] dark:border-[#4D3D1F] text-[#8C6212] dark:text-[#E8BD68]'
                 : 'bg-[#FDF1EF] dark:bg-[#2E1A17] border-[#F5C2BC] dark:border-[#52251F] text-[#C45547] dark:text-[#E07D70]'
@@ -415,6 +476,8 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             <div className="flex items-center gap-2 font-bold text-sm">
               {result.success ? (
                 <ShieldCheck className="w-5 h-5 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
+              ) : result.isWrongEvent ? (
+                <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
               ) : result.isDuplicate ? (
                 <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0 animate-pulse" />
               ) : (
@@ -422,6 +485,34 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               )}
               <span>{result.message}</span>
             </div>
+
+            {/* Wrong Event Security Alert Card */}
+            {result.isWrongEvent && (
+              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 space-y-1.5 text-[11px] text-rose-900 dark:text-rose-200">
+                <div className="font-bold flex items-center gap-1.5">
+                  <span>⛔ WRONG EVENT ADMITTANCE REFUSED</span>
+                </div>
+                <p className="text-[11px] font-sans opacity-90 leading-relaxed">
+                  This attendee pass belongs to{' '}
+                  <strong className="underline font-semibold">
+                    {result.registration?.event_title || 'a different event'}
+                  </strong>
+                  . It cannot be admitted through this gate station set for{' '}
+                  <strong className="underline font-semibold">
+                    {currentGateEvent?.title}
+                  </strong>
+                  .
+                </p>
+                <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-1 font-mono">
+                  <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
+                    Action: Turnstile Locked
+                  </span>
+                  <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
+                    Cross-Event Admission Denied
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Iron-Clad Duplicate Security Incident Warning */}
             {result.isDuplicate && (
@@ -453,6 +544,12 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                   <span className="text-slate-500">Pass Serial:</span>
                   <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">{result.registration.qr_pass_code}</span>
                 </div>
+                {result.registration.event_title && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Registered Event:</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-200">{result.registration.event_title}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>

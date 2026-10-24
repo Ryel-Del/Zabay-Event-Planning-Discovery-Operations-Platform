@@ -102,6 +102,13 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.equal(duplicate.status, 409);
   assert.equal(duplicate.body.code, 'DUPLICATE_CHECK_IN');
 
+  const wrongEventScan = await operator.post('/api/attendees/checkin').send({
+    qr_pass_code: secondRegistration.body.data.qr_pass_code,
+    event_id: 'non-matching-event-id',
+  });
+  assert.equal(wrongEventScan.status, 400);
+  assert.equal(wrongEventScan.body.code, 'WRONG_EVENT');
+
   const concurrentPass = secondRegistration.body.data.qr_pass_code;
   const concurrentCheckIns = await Promise.all([checkIn(concurrentPass), checkIn(concurrentPass)]);
   assert.deepEqual(concurrentCheckIns.map((reply) => reply.status).sort(), [200, 409]);

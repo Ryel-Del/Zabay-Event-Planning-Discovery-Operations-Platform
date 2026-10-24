@@ -97,7 +97,16 @@ interface AppContextType {
   deleteTask: (taskId: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
-  checkInAttendee: (qrCode: string) => Promise<{ success: boolean; message: string; registration?: Registration; isDuplicate?: boolean }>;
+  checkInAttendee: (
+    qrCode: string,
+    targetEventId?: string
+  ) => Promise<{
+    success: boolean;
+    message: string;
+    registration?: Registration;
+    isDuplicate?: boolean;
+    isWrongEvent?: boolean;
+  }>;
   bookVenue: (
     venueId: string,
     eventId: string,
@@ -925,14 +934,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
-  // Check-In Attendee with Database Duplicate Prevention
-  const checkInAttendee = async (qrCode: string) => {
+  // Check-In Attendee with Database Duplicate Prevention & Wrong-Event Enforcement
+  const checkInAttendee = async (qrCode: string, targetEventId?: string) => {
+    const expectedEventId = targetEventId || selectedEvent?.id;
+
     if (!isDemoMode) {
       if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No attendee was checked in.' };
-      const response = await api.attendees.checkIn(qrCode);
+      const response = await api.attendees.checkIn(qrCode, expectedEventId);
       if (!response.success || !response.data) {
         if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN', message: response.error || 'Check-in failed.' };
+        return {
+          success: false,
+          isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN',
+          isWrongEvent: (response as any).isWrongEvent || response.code === 'WRONG_EVENT',
+          message: response.error || 'Check-in failed.',
+        };
       }
       const known = registrations.find((registration) => registration.id === response.data?.id);
       const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
@@ -942,6 +958,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : [checkedIn, ...previous]);
       return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
     }
+
     const reg = registrations.find(
       (r) => r.qr_pass_code.toUpperCase() === qrCode.trim().toUpperCase()
     );
@@ -949,12 +966,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!reg) {
       return {
         success: false,
-        message: 'Invalid sample QR pass code.',
+        message: 'Invalid QR pass code: No registration record found in database.',
+      };
+    }
+
+    // Wrong-Event Validation: Pass must belong to the active gate event
+    if (expectedEventId && reg.event_id !== expectedEventId) {
+      const ticketEvent = events.find((e) => e.id === reg.event_id);
+      const currentEvent = events.find((e) => e.id === expectedEventId) || selectedEvent;
+      const ticketTitle = reg.event_title || ticketEvent?.title || reg.event_id;
+      const currentTitle = currentEvent?.title || expectedEventId;
+      return {
+        success: false,
+        isWrongEvent: true,
+        registration: reg,
+        message: `WRONG EVENT PASS: This ticket was issued for "${ticketTitle}", NOT for "${currentTitle}". Turnstile admission rejected!`,
       };
     }
 
     if (reg.status === 'cancelled') {
-      return { success: false, message: 'This sample registration was cancelled.' };
+      return { success: false, message: 'This registration was cancelled.' };
     }
 
     if (reg.status === 'checked_in') {
@@ -978,7 +1009,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'CHECK_IN',
       entity_type: 'registration',
       entity_id: reg.id,
-      change_summary: `Sample check-in for ${reg.attendee_name} (${reg.ticket_type}).`,
+      change_summary: `Gate turnstile checked in ${reg.attendee_name} (${reg.ticket_type}) for ${reg.event_title}.`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [checkInLog, ...prev]);

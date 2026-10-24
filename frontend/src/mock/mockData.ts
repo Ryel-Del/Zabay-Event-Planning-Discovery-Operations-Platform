@@ -2089,6 +2089,32 @@ export const mockRegistrations: Registration[] = [
     registered_at: '2026-10-05T16:04:12Z',
     amount_paid: 150,
   },
+  {
+    id: 'reg-05',
+    event_id: 'evt-2',
+    event_title: 'Sandugo Cultural Heritage & Arts Showcase 2026',
+    attendee_id: 'usr-att-5',
+    attendee_name: 'Datu Reynaldo',
+    attendee_email: 'reynaldo.bohol@gmail.com',
+    status: 'confirmed',
+    ticket_type: 'VIP Access',
+    qr_pass_code: 'ZABAY-PASS-7731-SANDUGO-CULTURE',
+    registered_at: '2026-10-06T10:00:00Z',
+    amount_paid: 250,
+  },
+  {
+    id: 'reg-06',
+    event_id: 'evt-3',
+    event_title: 'Bohol Youth Leadership & DevCon 2026',
+    attendee_id: 'usr-att-6',
+    attendee_name: 'Clarisse Yap',
+    attendee_email: 'clarisse.yap@hnu.edu.ph',
+    status: 'confirmed',
+    ticket_type: 'General Admission',
+    qr_pass_code: 'ZABAY-PASS-4412-DEVCON-YOUTH',
+    registered_at: '2026-10-07T11:30:00Z',
+    amount_paid: 100,
+  },
 ];
 
 export const mockAuditLogs: AuditLog[] = [

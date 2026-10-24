@@ -257,12 +257,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    checkIn: (qrPassCode: string) =>
+    checkIn: (qrPassCode: string, eventId?: string) =>
       request<DbRegistration>(
         '/api/attendees/checkin',
         {
           method: 'POST',
-          body: JSON.stringify({ qr_pass_code: qrPassCode }),
+          body: JSON.stringify({ qr_pass_code: qrPassCode, event_id: eventId }),
         }
       ),
   },
