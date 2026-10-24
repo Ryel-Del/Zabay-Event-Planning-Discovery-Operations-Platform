@@ -37,6 +37,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f ../db/schema.sql
+      - run: npm run test:fresh
       - run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f ../db/seeds/bohol_venues_seed.sql
       - run: npm run build
       - run: npm test

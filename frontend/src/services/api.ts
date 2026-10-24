@@ -136,7 +136,10 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      if (response.status === 401) csrfToken = undefined;
+      if (response.status === 401) {
+        csrfToken = undefined;
+        window.dispatchEvent(new Event('zabay:operator-session-ended'));
+      }
       if (!data) {
         return { success: false, error: 'Backend API is unavailable. No database change was confirmed.', code: 'NETWORK_ERROR' };
       }
@@ -161,17 +164,35 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 
 export const api = {
   auth: {
-    session: async () => { const r = await fetch('/api/auth/session'); return r.json() as Promise<{ authenticated: boolean; csrfToken?: string }>; },
+    session: async () => {
+      const response = await fetch('/api/auth/session');
+      if (!response.ok) throw new Error('Could not check operator session');
+      const data = await response.json() as { authenticated: boolean; csrfToken?: string };
+      csrfToken = data.authenticated ? data.csrfToken : undefined;
+      return data;
+    },
     login: async (username: string, password: string) => {
-      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
-      const data = await response.json();
-      if (response.ok) csrfToken = data.csrfToken;
-      return { success: response.ok, error: data.error };
+      try {
+        const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+        const data = await response.json();
+        if (response.ok) csrfToken = data.csrfToken;
+        return { success: response.ok, error: data.error };
+      } catch {
+        return { success: false, error: 'Operator login is unavailable.' };
+      }
     },
     logout: async () => {
-      const token = await csrf();
-      await fetch('/api/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': token || '' } });
-      csrfToken = undefined;
+      try {
+        const token = await csrf();
+        const response = await fetch('/api/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': token || '' } });
+        if (response.ok || response.status === 401) {
+          csrfToken = undefined;
+          return { success: true };
+        }
+        return { success: false, error: 'Operator logout failed. Please retry.' };
+      } catch {
+        return { success: false, error: 'Operator logout failed. Please retry.' };
+      }
     },
   },
   // System Health

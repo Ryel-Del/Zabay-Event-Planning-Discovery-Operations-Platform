@@ -92,6 +92,7 @@ if [[ "$database_ready" != 1 ]]; then
 fi
 
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT_DIR/db/schema.sql"
+TEST_DATABASE_URL="$DATABASE_URL" DATABASE_URL="$DATABASE_URL" npm run test:fresh --prefix "$ROOT_DIR/backend"
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$ROOT_DIR/db/seeds/bohol_venues_seed.sql"
 TEST_DATABASE_URL="$DATABASE_URL" DATABASE_URL="$DATABASE_URL" npm test --prefix "$ROOT_DIR/backend"
 

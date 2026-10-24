@@ -90,3 +90,8 @@ data.
 `schema.sql` also adds the `tasks.updated_at` column required by the task status
 API. The previously proposed 20-table model and advanced functions are not
 implemented.
+
+Schema initialization creates one `zabay-operator` user for event ownership.
+Operator login uses the server's `OPERATOR_USERNAME` and `OPERATOR_PASSWORD`, not
+this row or the synthetic demonstration users. The API assigns all new events to
+`zabay-operator` regardless of any organizer ID supplied by a browser.

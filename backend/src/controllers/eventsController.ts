@@ -51,7 +51,6 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
       is_private,
       start_date,
       end_date,
-      organizer_id,
       venue_id,
       hall_id,
       hall_name,
@@ -63,7 +62,7 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
     } = req.body || {};
 
     if (typeof title !== 'string' || !title.trim() || title.length > 255 || typeof category !== 'string' || !category.trim() || category.length > 64 ||
-        typeof organizer_id !== 'string' || !organizer_id.trim() || organizer_id.length > 64 || typeof start_date !== 'string' || typeof end_date !== 'string' ||
+        typeof start_date !== 'string' || typeof end_date !== 'string' ||
         !Number.isFinite(Date.parse(start_date)) || !Number.isFinite(Date.parse(end_date)) || Date.parse(end_date) <= Date.parse(start_date) ||
         (description !== undefined && (typeof description !== 'string' || description.length > 10000)) ||
         (is_private !== undefined && typeof is_private !== 'boolean') ||
@@ -102,7 +101,7 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
       Boolean(is_private),
       start_date,
       end_date,
-      organizer_id,
+      'zabay-operator',
       venue_id,
       hall_id || null,
       hall_name || null,
