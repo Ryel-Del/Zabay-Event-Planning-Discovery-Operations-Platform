@@ -1,33 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   CheckSquare,
   Plus,
-  Clock,
-  AlertTriangle,
-  GitBranch,
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  GraduationCap,
-  Trophy,
-  Briefcase,
   Check,
-  Filter,
-  Heart,
-  FileText,
-  ChevronDown,
-  ChevronUp,
   Edit3,
   Trash2,
-  X,
+  Users,
+  Calendar,
+  AlertCircle,
+  LayoutGrid,
+  List,
+  UserCheck,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { Task, TaskStatus, TaskPriority, TaskTrack } from '../../types';
+import type { Task, TaskStatus, TaskPriority, TaskTrack, TaskCommittee } from '../../types';
+import { WorkflowKitCatalogModal } from './WorkflowKitCatalogModal';
 
-export const TaskKanbanBoard: React.FC = () => {
+interface TaskKanbanBoardProps {
+  onNavigateToPeople?: () => void;
+}
+
+type BoardViewMode = 'board' | 'list' | 'my_tasks' | 'unassigned';
+
+export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPeople }) => {
   const {
     tasks,
     workflowKits,
+    currentUser,
     updateTaskStatus,
     updateTask,
     deleteTask,
@@ -37,58 +39,108 @@ export const TaskKanbanBoard: React.FC = () => {
     personnel,
   } = useApp();
 
-  const [activeTrackFilter, setActiveTrackFilter] = useState<string>('all');
+  // View mode and filters
+  const [viewMode, setViewMode] = useState<BoardViewMode>('board');
+  const [committeeFilter, setCommitteeFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [milestoneFilter, setMilestoneFilter] = useState<string>('all');
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [activeTemplateFeedback, setActiveTemplateFeedback] = useState<string | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Expandable card and edit modal state
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Edit task form state
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPriority, setEditPriority] = useState<TaskPriority>('medium');
   const [editTrack, setEditTrack] = useState<TaskTrack>('venue_logistics');
+  const [editCommittee, setEditCommittee] = useState<TaskCommittee>('general');
+  const [editMilestone, setEditMilestone] = useState('');
   const [editStatus, setEditStatus] = useState<TaskStatus>('todo');
   const [editStartTime, setEditStartTime] = useState('09:00');
   const [editEndTime, setEditEndTime] = useState('11:00');
   const [editDueDate, setEditDueDate] = useState('2026-11-12');
-  const [editAssigneeId, setEditAssigneeId] = useState('');
+  const [editAssigneeName, setEditAssigneeName] = useState('');
 
   // New task form state
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
-  const [newTrack, setNewTrack] = useState<TaskTrack>('venue_logistics');
+  const [newTrack] = useState<TaskTrack>('venue_logistics');
+  const [newCommittee, setNewCommittee] = useState<TaskCommittee>('general');
+  const [newMilestone, setNewMilestone] = useState('');
   const [newStartTime, setNewStartTime] = useState('09:00');
   const [newEndTime, setNewEndTime] = useState('11:00');
   const [newDueDate, setNewDueDate] = useState('2026-11-12');
-  const [newAssigneeId, setNewAssigneeId] = useState(personnel[0]?.id || '');
+  const [newAssigneeName, setNewAssigneeName] = useState('');
 
   const columns: { id: TaskStatus; title: string; color: string; dotColor: string }[] = [
     { id: 'todo', title: 'To Do', color: 'border-slate-200 dark:border-slate-800', dotColor: 'bg-slate-400' },
     { id: 'in_progress', title: 'In Progress', color: 'border-[#C8DCF7] dark:border-[#2D4160]', dotColor: 'bg-[#3E6CB5]' },
-    { id: 'blocked', title: 'Blocked / In Review', color: 'border-[#F7D8D3] dark:border-[#52251F]', dotColor: 'bg-[#C45547]' },
+    { id: 'for_review', title: 'For Review', color: 'border-amber-200 dark:border-amber-800/80', dotColor: 'bg-amber-500' },
     { id: 'completed', title: 'Completed', color: 'border-[#C1E6D3] dark:border-[#234232]', dotColor: 'bg-[#2B6149]' },
+    { id: 'blocked', title: 'Blocked', color: 'border-[#F7D8D3] dark:border-[#52251F]', dotColor: 'bg-[#C45547]' },
   ];
 
-  const filteredTasks = tasks.filter((t) => {
-    if (activeTrackFilter === 'all') return true;
-    return t.track === activeTrackFilter;
-  });
+  // Distinct milestones from current task set
+  const distinctMilestones = useMemo(() => {
+    const list = tasks.map((t) => t.milestone).filter(Boolean) as string[];
+    return Array.from(new Set(list));
+  }, [tasks]);
+
+  // Unique names from personnel & currentUser
+  const candidateAssignees = useMemo(() => {
+    return Array.from(new Set([currentUser.name, ...personnel.map((p) => p.name)]));
+  }, [currentUser, personnel]);
+
+  // Filter tasks based on view mode and filters
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      // View Mode constraints
+      if (viewMode === 'my_tasks') {
+        const hasMe = t.personnel_assignments?.some(
+          (a) => a.personnel_name.toLowerCase() === currentUser.name.toLowerCase()
+        );
+        if (!hasMe) return false;
+      }
+
+      if (viewMode === 'unassigned') {
+        const isUnassigned = !t.personnel_assignments || t.personnel_assignments.length === 0;
+        if (!isUnassigned) return false;
+      }
+
+      // Committee filter
+      if (committeeFilter !== 'all') {
+        const comm = t.committee ? String(t.committee).toLowerCase() : '';
+        if (comm !== committeeFilter.toLowerCase()) return false;
+      }
+
+      // Priority filter
+      if (priorityFilter !== 'all') {
+        if (t.priority !== priorityFilter) return false;
+      }
+
+      // Milestone filter
+      if (milestoneFilter !== 'all') {
+        if (t.milestone !== milestoneFilter) return false;
+      }
+
+      return true;
+    });
+  }, [tasks, viewMode, committeeFilter, priorityFilter, milestoneFilter, currentUser]);
 
   const handleApplyKit = (kitId: string, kitName: string) => {
     loadTaskTemplate(kitId);
-    setActiveTemplateFeedback(`Loaded "${kitName}"! Tasks, dependencies, and schedules have been configured.`);
+    setActiveTemplateFeedback(`Loaded "${kitName}"! All tasks initialized in To Do state.`);
     setTimeout(() => setActiveTemplateFeedback(null), 4500);
   };
 
   const handleCreateTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-
-    const assignedPerson = personnel.find((p) => p.id === newAssigneeId);
 
     addTask({
       event_id: 'evt-1',
@@ -97,12 +149,20 @@ export const TaskKanbanBoard: React.FC = () => {
       status: 'todo',
       priority: newPriority,
       track: newTrack,
+      committee: newCommittee,
+      milestone: newMilestone.trim() || undefined,
       start_time: newStartTime,
       end_time: newEndTime,
       due_date: newDueDate,
       dependencies: [],
-      personnel_assignments: assignedPerson
-        ? [{ personnel_id: assignedPerson.id, personnel_name: assignedPerson.name, role: assignedPerson.role }]
+      personnel_assignments: newAssigneeName.trim()
+        ? [
+            {
+              personnel_id: `per-${newAssigneeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              personnel_name: newAssigneeName.trim(),
+              role: 'Assigned Member',
+            },
+          ]
         : [],
       resource_assignments: [],
       downstream_impact_count: 0,
@@ -110,6 +170,8 @@ export const TaskKanbanBoard: React.FC = () => {
 
     setNewTitle('');
     setNewDescription('');
+    setNewMilestone('');
+    setNewAssigneeName('');
     setIsAddModalOpen(false);
   };
 
@@ -119,30 +181,38 @@ export const TaskKanbanBoard: React.FC = () => {
     setEditDescription(task.description);
     setEditPriority(task.priority);
     setEditTrack(task.track || 'venue_logistics');
+    setEditCommittee((task.committee as TaskCommittee) || 'general');
+    setEditMilestone(task.milestone || '');
     setEditStatus(task.status);
     setEditStartTime(task.start_time);
     setEditEndTime(task.end_time);
     setEditDueDate(task.due_date || '2026-11-12');
-    setEditAssigneeId(task.personnel_assignments[0]?.personnel_id || '');
+    setEditAssigneeName(task.personnel_assignments[0]?.personnel_name || '');
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTask || !editTitle.trim()) return;
 
-    const assignedPerson = personnel.find((p) => p.id === editAssigneeId);
-
     updateTask(editingTask.id, {
       title: editTitle.trim(),
       description: editDescription.trim(),
       priority: editPriority,
       track: editTrack,
+      committee: editCommittee,
+      milestone: editMilestone.trim() || undefined,
       status: editStatus,
       start_time: editStartTime,
       end_time: editEndTime,
       due_date: editDueDate,
-      personnel_assignments: assignedPerson
-        ? [{ personnel_id: assignedPerson.id, personnel_name: assignedPerson.name, role: assignedPerson.role }]
+      personnel_assignments: editAssigneeName.trim()
+        ? [
+            {
+              personnel_id: `per-${editAssigneeName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              personnel_name: editAssigneeName.trim(),
+              role: 'Assigned Member',
+            },
+          ]
         : [],
     });
 
@@ -168,23 +238,29 @@ export const TaskKanbanBoard: React.FC = () => {
     }
   };
 
-  const getTrackBadge = (track?: TaskTrack) => {
-    switch (track) {
-      case 'venue_logistics':
-        return { label: 'Venue & Facilities', bg: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]' };
-      case 'technical_av':
-        return { label: 'Lights, Sound & Stage', bg: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]' };
-      case 'marketing_tickets':
-        return { label: 'Registration & Promotion', bg: 'bg-[#F5F0FA] text-[#5C3B87] dark:bg-[#231A2E] dark:text-[#B393DB]' };
-      case 'day_of_ops':
-        return { label: 'Day-of Coordination', bg: 'bg-[#FFF9EB] text-[#7A5B14] dark:bg-[#2A2312] dark:text-[#E2C37A]' };
+  const getCommitteeBadge = (comm?: string) => {
+    switch (comm) {
+      case 'letters':
+        return { label: 'Letters & Permits', bg: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' };
+      case 'finance':
+        return { label: 'Finance', bg: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' };
+      case 'logistics':
+        return { label: 'Logistics', bg: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' };
+      case 'documentation':
+        return { label: 'Documentation', bg: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800' };
+      case 'publicity':
+        return { label: 'Publicity', bg: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800' };
+      case 'program':
+        return { label: 'Program', bg: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800' };
+      case 'security':
+        return { label: 'Security & Safety', bg: 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border-red-200 dark:border-red-800' };
       default:
-        return { label: 'General', bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' };
+        return { label: 'General', bg: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700' };
     }
   };
 
   const moveTask = (taskId: string, currentStatus: TaskStatus, direction: 'prev' | 'next') => {
-    const order: TaskStatus[] = ['todo', 'in_progress', 'blocked', 'completed'];
+    const order: TaskStatus[] = ['todo', 'in_progress', 'for_review', 'completed', 'blocked'];
     const currentIndex = order.indexOf(currentStatus);
     const targetIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     if (targetIndex >= 0 && targetIndex < order.length) {
@@ -192,85 +268,74 @@ export const TaskKanbanBoard: React.FC = () => {
     }
   };
 
-  const getKitIcon = (iconName: string) => {
-    switch (iconName) {
-      case 'GraduationCap':
-        return <GraduationCap className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />;
-      case 'Trophy':
-        return <Trophy className="w-4 h-4 text-[#C2611D] dark:text-[#E89255]" />;
-      case 'Briefcase':
-        return <Briefcase className="w-4 h-4 text-[#2B6149] dark:text-[#81B89B]" />;
-      case 'Heart':
-        return <Heart className="w-4 h-4 text-rose-500 dark:text-rose-400" />;
-      case 'FileText':
-        return <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
-      default:
-        return <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />;
-    }
-  };
+  const popularKits = workflowKits.slice(0, 6);
 
   return (
     <div className="space-y-6">
-      {/* 1-Click Workflow Kits Banner */}
-      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 transition-colors">
+      {/* 1-Click Workflow Kits Top Bar */}
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0]">
                 <Sparkles className="w-4 h-4" />
               </span>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                1-Click Event Workflow Kits
+                Event Workflow Kits & Planning Templates
               </h3>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]">
-                Zero-Hassle Setup
+                To Do Initialized
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Organizing doesn't have to be tedious. Pick a pre-engineered workflow kit tailored for Tagbilaran student orgs, sports, or corporate summits:
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Apply standard event workflows. Tasks always start in <strong>To Do</strong> and propagate automatically to assigned committee heads.
             </p>
           </div>
 
-          <button
-            onClick={resetTasksToDefault}
-            className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors self-start sm:self-auto cursor-pointer"
-          >
-            Reset to Baseline
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setIsCatalogOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Browse All {workflowKits.length} Kits</span>
+            </button>
+
+            {onNavigateToPeople && (
+              <button
+                onClick={onNavigateToPeople}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                title="Open Committee & People Assignments"
+              >
+                <Users className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                <span className="hidden md:inline">Assign People</span>
+              </button>
+            )}
+
+            <button
+              onClick={resetTasksToDefault}
+              className="text-xs px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Reset tasks to initial state"
+            >
+              Reset
+            </button>
+          </div>
         </div>
 
-        {/* Workflow Kit Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-          {workflowKits.map((kit) => (
-            <div
+        {/* Quick Pick Kits Carousel / Badges */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
+          <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap">
+            Popular Kits:
+          </span>
+          {popularKits.map((kit) => (
+            <button
               key={kit.id}
-              className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-[#F8FAFD] dark:bg-[#111722] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] transition-all flex flex-col justify-between space-y-3 group"
+              onClick={() => handleApplyKit(kit.id, kit.name)}
+              className="text-xs px-3 py-1 rounded-xl font-medium bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-300 hover:text-[#244A85] dark:hover:text-[#8BB0E8] border border-slate-200/80 dark:border-slate-800 hover:border-[#C8DCF7] dark:hover:border-[#2D4160] whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5"
             >
-              <div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {getKitIcon(kit.icon)}
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      {kit.name}
-                    </span>
-                  </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 text-slate-500 font-mono">
-                    {kit.task_count} tasks
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2">
-                  {kit.tagline}
-                </p>
-              </div>
-
-              <button
-                onClick={() => handleApplyKit(kit.id, kit.name)}
-                className="w-full text-xs font-semibold py-1.5 px-3 rounded-lg bg-white dark:bg-[#171E2B] group-hover:bg-[#3E6CB5] group-hover:text-white dark:group-hover:bg-[#4E80CD] dark:group-hover:text-white border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                Apply Workflow Kit
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
+              <span>{kit.name.split(' Kit')[0]}</span>
+              <ArrowRight className="w-3 h-3 opacity-60" />
+            </button>
           ))}
         </div>
 
@@ -282,130 +347,184 @@ export const TaskKanbanBoard: React.FC = () => {
         )}
       </div>
 
-      {/* Kanban Header & Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mr-1">
-            <Filter className="w-3.5 h-3.5" />
-            Track:
-          </span>
-          {[
-            { id: 'all', label: 'All Tasks' },
-            { id: 'venue_logistics', label: 'Venue & Facilities' },
-            { id: 'technical_av', label: 'Lights, Sound & Stage' },
-            { id: 'marketing_tickets', label: 'Registration & Promotion' },
-            { id: 'day_of_ops', label: 'Day-of Coordination' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTrackFilter(tab.id)}
-              className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-all whitespace-nowrap cursor-pointer ${
-                activeTrackFilter === tab.id
-                  ? 'bg-[#3E6CB5] text-white shadow-xs'
-                  : 'bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* Practical Views Toolbar & Filters */}
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 transition-colors">
+        {/* Left: View Tabs */}
+        <div className="flex items-center gap-1 bg-[#FAF9F5] dark:bg-[#111722] p-1 rounded-xl border border-slate-100 dark:border-slate-800/80">
+          <button
+            onClick={() => setViewMode('board')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'board'
+                ? 'bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>Kanban Board</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <List className="w-3.5 h-3.5" />
+            <span>List View</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('my_tasks')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'my_tasks'
+                ? 'bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>My Tasks</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('unassigned')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'unassigned'
+                ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-200 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-amber-700'
+            }`}
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>Unassigned ({tasks.filter((t) => !t.personnel_assignments || t.personnel_assignments.length === 0).length})</span>
+          </button>
         </div>
 
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          Add To-Do / Task
-        </button>
+        {/* Right: Practical Dropdown Filters & Add Button */}
+        <div className="flex items-center flex-wrap gap-2 w-full lg:w-auto">
+          {/* Committee Filter */}
+          <select
+            value={committeeFilter}
+            onChange={(e) => setCommitteeFilter(e.target.value)}
+            className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
+          >
+            <option value="all">All Committees</option>
+            <option value="letters">Letters & Permits</option>
+            <option value="finance">Finance</option>
+            <option value="logistics">Logistics & Venue</option>
+            <option value="documentation">Documentation</option>
+            <option value="publicity">Publicity</option>
+            <option value="program">Program Flow</option>
+            <option value="security">Security & Safety</option>
+            <option value="general">General</option>
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer"
+          >
+            <option value="all">All Priorities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          {/* Milestone Filter */}
+          {distinctMilestones.length > 0 && (
+            <select
+              value={milestoneFilter}
+              onChange={(e) => setMilestoneFilter(e.target.value)}
+              className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none cursor-pointer max-w-[160px] truncate"
+            >
+              <option value="all">All Milestones</option>
+              {distinctMilestones.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer ml-auto lg:ml-0"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add Task</span>
+          </button>
+        </div>
       </div>
 
-      {/* Kanban Board Columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {columns.map((col) => {
-          const colTasks = filteredTasks.filter((t) => t.status === col.id);
+      {/* VIEW 1: 5-COLUMN KANBAN BOARD */}
+      {viewMode === 'board' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5">
+          {columns.map((col) => {
+            const colTasks = filteredTasks.filter((t) => t.status === col.id);
 
-          return (
-            <div
-              key={col.id}
-              className={`bg-white dark:bg-[#171E2B] border rounded-2xl p-4 shadow-xs flex flex-col min-h-[540px] transition-colors ${col.color}`}
-            >
-              {/* Column Title */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200/80 dark:border-slate-800">
-                <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    {col.title}
-                  </h4>
-                </div>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
-                  {colTasks.length}
-                </span>
-              </div>
-
-              {/* Task Cards */}
-              <div className="space-y-3 flex-1 overflow-y-auto pr-0.5">
-                {colTasks.length === 0 ? (
-                  <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center text-xs text-slate-400">
-                    No tasks in this lane
+            return (
+              <div
+                key={col.id}
+                className={`bg-white dark:bg-[#171E2B] border rounded-2xl p-3.5 shadow-xs flex flex-col min-h-[500px] transition-colors ${col.color}`}
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      {col.title}
+                    </h4>
                   </div>
-                ) : (
-                  colTasks.map((task) => {
-                    const trackBadge = getTrackBadge(task.track);
-                    const isExpanded = expandedTaskId === task.id;
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                    {colTasks.length}
+                  </span>
+                </div>
 
-                    return (
-                      <div
-                        key={task.id}
-                        onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
-                        className={`p-3.5 rounded-xl border bg-[#F8FAFD] dark:bg-[#111722] transition-all space-y-2.5 shadow-xs cursor-pointer ${
-                          isExpanded
-                            ? 'ring-2 ring-[#3E6CB5]/60 border-[#3E6CB5] bg-white dark:bg-[#141B27]'
-                            : task.has_conflict
-                            ? 'border-[#F5C2BC] dark:border-[#52251F] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5]'
-                            : 'border-slate-200/90 dark:border-slate-800 hover:border-[#86ABDF] dark:hover:border-[#3E6CB5]'
-                        }`}
-                      >
-                        {/* Top Badges & Quick Checkbox */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateTaskStatus(
-                                  task.id,
-                                  task.status === 'completed' ? 'todo' : 'completed'
-                                );
-                              }}
-                              className={`w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
-                                task.status === 'completed'
-                                  ? 'bg-[#2B6149] border-[#2B6149] text-white'
-                                  : 'border-slate-300 dark:border-slate-600 hover:border-[#3E6CB5]'
-                              }`}
-                              title="Toggle completion"
-                            >
-                              {task.status === 'completed' && <Check className="w-3 h-3 stroke-[3]" />}
-                            </button>
+                {/* Cards List */}
+                <div className="space-y-2.5 flex-1 overflow-y-auto pr-0.5">
+                  {colTasks.length === 0 ? (
+                    <div className="h-28 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center text-xs text-slate-400 text-center p-3">
+                      No tasks in this lane
+                    </div>
+                  ) : (
+                    colTasks.map((task) => {
+                      const commBadge = getCommitteeBadge(task.committee);
+                      const isExpanded = expandedTaskId === task.id;
+                      const hasAssignee =
+                        task.personnel_assignments && task.personnel_assignments.length > 0;
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                          className={`p-3 rounded-xl border bg-[#F8FAFD] dark:bg-[#111722] transition-all space-y-2 shadow-xs cursor-pointer ${
+                            isExpanded
+                              ? 'ring-2 ring-[#3E6CB5]/60 border-[#3E6CB5] bg-white dark:bg-[#141B27]'
+                              : task.has_conflict
+                              ? 'border-[#F5C2BC] dark:border-[#52251F]'
+                              : 'border-slate-200/90 dark:border-slate-800 hover:border-[#86ABDF] dark:hover:border-[#3E6CB5]'
+                          }`}
+                        >
+                          {/* Badges Row */}
+                          <div className="flex items-center justify-between gap-1 flex-wrap">
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${getPriorityBadge(
+                              className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${getPriorityBadge(
                                 task.priority
                               )}`}
                             >
-                              {task.priority.toUpperCase()}
+                              {task.priority}
+                            </span>
+
+                            <span
+                              className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${commBadge.bg}`}
+                            >
+                              {commBadge.label}
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${trackBadge.bg}`}>
-                              {trackBadge.label}
-                            </span>
-                            <span className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Title & Description */}
-                        <div>
+                          {/* Title */}
                           <h5
                             className={`text-xs font-bold leading-snug ${
                               task.status === 'completed'
@@ -415,157 +534,248 @@ export const TaskKanbanBoard: React.FC = () => {
                           >
                             {task.title}
                           </h5>
-                          <p
-                            className={`text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed ${
-                              isExpanded ? '' : 'line-clamp-2'
-                            }`}
-                          >
-                            {task.description}
-                          </p>
-                        </div>
 
-                        {/* Conflict Alert */}
-                        {task.has_conflict && (
-                          <div className="p-2 rounded-lg bg-[#FDF1EF] dark:bg-[#2E1A17] border border-[#F5C2BC] dark:border-[#52251F] text-[10px] text-[#C45547] dark:text-[#E07D70] flex items-center gap-1.5 font-semibold">
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            <span>{task.conflict_reason || 'Schedule dependency conflict!'}</span>
-                          </div>
-                        )}
-
-                        {/* Expanded Full Details Section */}
-                        {isExpanded && (
-                          <div className="pt-2.5 border-t border-slate-200/80 dark:border-slate-800 space-y-2 text-xs animate-in fade-in duration-150">
-                            <div className="grid grid-cols-2 gap-2 text-[11px]">
-                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-0.5">
-                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Due Date</span>
-                                <span className="font-mono text-slate-800 dark:text-slate-200">
-                                  {task.due_date || '2026-11-12'}
-                                </span>
-                              </div>
-                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-0.5">
-                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Time Slot</span>
-                                <span className="font-mono text-slate-800 dark:text-slate-200">
-                                  {task.start_time} - {task.end_time}
-                                </span>
-                              </div>
+                          {/* Milestone Tag */}
+                          {task.milestone && (
+                            <div className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                              <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{task.milestone}</span>
                             </div>
-
-                            {task.personnel_assignments && task.personnel_assignments.length > 0 && (
-                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-1">
-                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Assigned Staff</span>
-                                {task.personnel_assignments.map((pa, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-[11px]">
-                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{pa.personnel_name}</span>
-                                    <span className="text-slate-500 font-mono text-[10px]">{pa.role}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {task.resource_assignments && task.resource_assignments.length > 0 && (
-                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-1">
-                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Allocated Resources</span>
-                                {task.resource_assignments.map((ra, idx) => (
-                                  <div key={idx} className="flex items-center justify-between text-[11px]">
-                                    <span className="text-slate-700 dark:text-slate-300">{ra.resource_name}</span>
-                                    <span className="text-slate-500 font-mono text-[10px]">Qty: {ra.quantity}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Action Buttons Toolbar */}
-                            <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-800">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteTask(task.id);
-                                }}
-                                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
-                                title="Delete task"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                                <span>Delete</span>
-                              </button>
-
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  openEditModal(task);
-                                }}
-                                className="flex items-center gap-1 px-3 py-1 text-[11px] font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] rounded-lg shadow-xs transition-colors cursor-pointer"
-                                title="Edit full task details"
-                              >
-                                <Edit3 className="w-3.5 h-3.5" />
-                                <span>Edit Details</span>
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Collapsed Schedule & Quick Controls Footer */}
-                        {!isExpanded && (
-                          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>
-                                {task.start_time} - {task.end_time}
-                              </span>
-                            </div>
-
-                            {task.personnel_assignments && task.personnel_assignments.length > 0 && (
-                              <span className="font-medium text-slate-700 dark:text-slate-300">
-                                {task.personnel_assignments[0].personnel_name.split(' ')[0]}
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Bottom Lane Move Controls */}
-                        <div className="flex items-center justify-between pt-1">
-                          {task.downstream_impact_count && task.downstream_impact_count > 0 ? (
-                            <span className="text-[10px] font-mono text-[#3E6CB5] dark:text-[#8BB0E8] flex items-center gap-1">
-                              <GitBranch className="w-3 h-3" />
-                              Blocks {task.downstream_impact_count}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">
-                              {isExpanded ? 'Full details expanded' : 'Click to expand'}
-                            </span>
                           )}
 
-                          <div className="flex items-center gap-1">
+                          {/* Assignee Indicator */}
+                          <div className="pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
+                            {hasAssignee ? (
+                              <div className="flex items-center gap-1 text-slate-700 dark:text-slate-300 font-semibold truncate">
+                                <span className="w-4 h-4 rounded-full bg-[#EBF3FC] text-[#244A85] text-[9px] flex items-center justify-center font-bold shrink-0">
+                                  {task.personnel_assignments[0].personnel_name.charAt(0)}
+                                </span>
+                                <span className="truncate">
+                                  {task.personnel_assignments[0].personnel_name}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                Unassigned
+                              </span>
+                            )}
+
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {task.due_date ? task.due_date.slice(5) : ''}
+                            </span>
+                          </div>
+
+                          {/* Expanded View */}
+                          {isExpanded && (
+                            <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 space-y-2 text-xs animate-in fade-in">
+                              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                {task.description}
+                              </p>
+
+                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTask(task.id);
+                                  }}
+                                  className="text-[11px] text-rose-600 hover:text-rose-700 font-semibold flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditModal(task);
+                                  }}
+                                  className="text-[11px] text-[#3E6CB5] hover:underline font-bold flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Edit3 className="w-3 h-3" /> Edit Task
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Quick Stage Mover Controls */}
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 moveTask(task.id, task.status, 'prev');
                               }}
-                              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
-                              title="Move to previous lane"
+                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                              title="Move back"
                             >
                               <ArrowLeft className="w-3 h-3" />
                             </button>
+
+                            <select
+                              value={task.status}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                updateTaskStatus(task.id, e.target.value as TaskStatus)
+                              }
+                              className="text-[10px] bg-transparent text-slate-500 font-semibold focus:outline-none cursor-pointer"
+                            >
+                              <option value="todo">To Do</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="for_review">For Review</option>
+                              <option value="completed">Completed</option>
+                              <option value="blocked">Blocked</option>
+                            </select>
+
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 moveTask(task.id, task.status, 'next');
                               }}
-                              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
-                              title="Move to next lane"
+                              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                              title="Move forward"
                             >
                               <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
                         </div>
-                      </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* VIEW 2 / 3 / 4: LINEAR LIST VIEW */}
+      {viewMode !== 'board' && (
+        <div className="bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs transition-colors">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#FAF9F5] dark:bg-[#12161F] text-slate-500 border-b border-slate-200/80 dark:border-slate-800 uppercase font-mono text-[10px]">
+                <tr>
+                  <th className="p-3.5 pl-4">Status</th>
+                  <th className="p-3.5">Task Title & Details</th>
+                  <th className="p-3.5">Committee</th>
+                  <th className="p-3.5">Milestone</th>
+                  <th className="p-3.5">Assigned Person</th>
+                  <th className="p-3.5">Priority</th>
+                  <th className="p-3.5">Due Date</th>
+                  <th className="p-3.5 pr-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                {filteredTasks.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-8 text-center text-xs text-slate-400">
+                      No tasks found matching the selected view and filter criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTasks.map((task) => {
+                    const commBadge = getCommitteeBadge(task.committee);
+                    const hasAssignee =
+                      task.personnel_assignments && task.personnel_assignments.length > 0;
+
+                    return (
+                      <tr
+                        key={task.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors"
+                      >
+                        <td className="p-3.5 pl-4">
+                          <select
+                            value={task.status}
+                            onChange={(e) =>
+                              updateTaskStatus(task.id, e.target.value as TaskStatus)
+                            }
+                            className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[11px] font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+                          >
+                            <option value="todo">To Do</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="for_review">For Review</option>
+                            <option value="completed">Completed</option>
+                            <option value="blocked">Blocked</option>
+                          </select>
+                        </td>
+
+                        <td className="p-3.5 max-w-xs">
+                          <div className="font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                            {task.title}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">
+                            {task.description}
+                          </div>
+                        </td>
+
+                        <td className="p-3.5">
+                          <span
+                            className={`text-[10px] font-medium px-2 py-0.5 rounded border ${commBadge.bg}`}
+                          >
+                            {commBadge.label}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5 text-slate-600 dark:text-slate-300">
+                          {task.milestone || '—'}
+                        </td>
+
+                        <td className="p-3.5">
+                          {hasAssignee ? (
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                              {task.personnel_assignments[0].personnel_name}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              Unassigned
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="p-3.5">
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${getPriorityBadge(
+                              task.priority
+                            )}`}
+                          >
+                            {task.priority}
+                          </span>
+                        </td>
+
+                        <td className="p-3.5 font-mono text-slate-500 text-[11px]">
+                          {task.due_date || '2026-11-12'}
+                        </td>
+
+                        <td className="p-3.5 pr-4 text-right space-x-2">
+                          <button
+                            onClick={() => openEditModal(task)}
+                            className="text-[#3E6CB5] hover:underline font-semibold cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="text-rose-600 hover:underline font-semibold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Workflow Kit Catalog Modal */}
+      <WorkflowKitCatalogModal
+        isOpen={isCatalogOpen}
+        onClose={() => setIsCatalogOpen(false)}
+        onKitApplied={(name) => {
+          setActiveTemplateFeedback(`Loaded "${name}"! All tasks configured in To Do state.`);
+          setTimeout(() => setActiveTemplateFeedback(null), 4500);
+        }}
+      />
 
       {/* Add Task Modal */}
       {isAddModalOpen && (
@@ -574,17 +784,17 @@ export const TaskKanbanBoard: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <CheckSquare className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                Add New Event To-Do / Task
+                Add New Event Task
               </h3>
               <button
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateTask} className="space-y-4 text-xs">
+            <form onSubmit={handleCreateTask} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Task Title *
@@ -592,7 +802,7 @@ export const TaskKanbanBoard: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Bohol Wisdom Gym Sound Rehearsal & Mics"
+                  placeholder="e.g. Draft Letter of Request to City Mayor"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
@@ -601,11 +811,11 @@ export const TaskKanbanBoard: React.FC = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Description / Operational Details
+                  Description / Operational Scope
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Brief breakdown of responsibilities and delivery items..."
+                  placeholder="Detailed breakdown of duties..."
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
@@ -613,6 +823,26 @@ export const TaskKanbanBoard: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Responsible Committee
+                  </label>
+                  <select
+                    value={newCommittee}
+                    onChange={(e) => setNewCommittee(e.target.value as TaskCommittee)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="letters">Letters & Permits</option>
+                    <option value="finance">Finance</option>
+                    <option value="logistics">Logistics & Venue</option>
+                    <option value="documentation">Documentation</option>
+                    <option value="publicity">Publicity</option>
+                    <option value="program">Program Flow</option>
+                    <option value="security">Security & Safety</option>
+                    <option value="general">General</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Priority
@@ -628,49 +858,42 @@ export const TaskKanbanBoard: React.FC = () => {
                     <option value="low">Low</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Related Milestone (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Venue Confirmed"
+                    value={newMilestone}
+                    onChange={(e) => setNewMilestone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Operational Track
+                    Assigned Person (Optional)
                   </label>
                   <select
-                    value={newTrack}
-                    onChange={(e) => setNewTrack(e.target.value as TaskTrack)}
+                    value={newAssigneeName}
+                    onChange={(e) => setNewAssigneeName(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   >
-                    <option value="venue_logistics">Venue & Facilities</option>
-                    <option value="technical_av">Lights, Sound & Stage</option>
-                    <option value="marketing_tickets">Registration & Promotion</option>
-                    <option value="day_of_ops">Day-of Coordination</option>
+                    <option value="">— Unassigned —</option>
+                    {candidateAssignees.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newStartTime}
-                    onChange={(e) => setNewStartTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={newEndTime}
-                    onChange={(e) => setNewEndTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Due Date
@@ -682,38 +905,43 @@ export const TaskKanbanBoard: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   />
                 </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={newStartTime}
+                    onChange={(e) => setNewStartTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={newEndTime}
+                    onChange={(e) => setNewEndTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assign Lead Personnel / Volunteer
-                </label>
-                <select
-                  value={newAssigneeId}
-                  onChange={(e) => setNewAssigneeId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                >
-                  {personnel.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.role}) - ₱{p.hourly_rate}/hr
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-semibold transition-all cursor-pointer shadow-xs"
+                  className="px-5 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl font-bold transition-colors cursor-pointer"
                 >
-                  Save Task
+                  Create Task
                 </button>
               </div>
             </form>
@@ -723,34 +951,25 @@ export const TaskKanbanBoard: React.FC = () => {
 
       {/* Edit Task Modal */}
       {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] rounded-xl">
-                  <Edit3 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Edit Task Details
-                  </h3>
-                  <p className="text-[10px] text-slate-500 font-mono">
-                    ID: {editingTask.id}
-                  </p>
-                </div>
-              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-[#3E6CB5]" />
+                Edit Task Details
+              </h3>
               <button
                 onClick={() => setEditingTask(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Task Title
+                  Task Title *
                 </label>
                 <input
                   type="text"
@@ -758,37 +977,36 @@ export const TaskKanbanBoard: React.FC = () => {
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
-                  placeholder="e.g. Venue Ingress & Power Check"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Full Description & Procedures
+                  Description
                 </label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
-                  placeholder="Operational instructions for event team..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Lane Status
+                    Status
                   </label>
                   <select
                     value={editStatus}
                     onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   >
                     <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>
-                    <option value="blocked">Blocked / In Review</option>
+                    <option value="for_review">For Review</option>
                     <option value="completed">Completed</option>
+                    <option value="blocked">Blocked</option>
                   </select>
                 </div>
 
@@ -799,113 +1017,70 @@ export const TaskKanbanBoard: React.FC = () => {
                   <select
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value as TaskPriority)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
                     <option value="critical">Critical</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Track
+                    Committee
                   </label>
                   <select
-                    value={editTrack}
-                    onChange={(e) => setEditTrack(e.target.value as TaskTrack)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                    value={editCommittee}
+                    onChange={(e) => setEditCommittee(e.target.value as TaskCommittee)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
                   >
-                    <option value="venue_logistics">Venue & Facilities</option>
-                    <option value="technical_av">Lights, Sound & Stage</option>
-                    <option value="marketing_tickets">Registration & Promotion</option>
-                    <option value="day_of_ops">Day-of Coordination</option>
+                    <option value="letters">Letters & Permits</option>
+                    <option value="finance">Finance</option>
+                    <option value="logistics">Logistics & Venue</option>
+                    <option value="documentation">Documentation</option>
+                    <option value="publicity">Publicity</option>
+                    <option value="program">Program Flow</option>
+                    <option value="security">Security & Safety</option>
+                    <option value="general">General</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Assigned Person
+                  </label>
+                  <select
+                    value={editAssigneeName}
+                    onChange={(e) => setEditAssigneeName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  >
+                    <option value="">— Unassigned —</option>
+                    {candidateAssignees.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    value={editStartTime}
-                    onChange={(e) => setEditStartTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    value={editEndTime}
-                    onChange={(e) => setEditEndTime(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={editDueDate}
-                    onChange={(e) => setEditDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Assign Lead Personnel / Volunteer
-                </label>
-                <select
-                  value={editAssigneeId}
-                  onChange={(e) => setEditAssigneeId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
-                >
-                  <option value="">Unassigned</option>
-                  {personnel.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.role}) - ₱{p.hourly_rate}/hr
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+              <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => handleDeleteTask(editingTask.id)}
-                  className="px-3.5 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                  onClick={() => setEditingTask(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Task</span>
+                  Cancel
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingTask(null)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-semibold transition-all cursor-pointer shadow-xs"
-                  >
-                    Save Changes
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl font-bold transition-colors cursor-pointer"
+                >
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>

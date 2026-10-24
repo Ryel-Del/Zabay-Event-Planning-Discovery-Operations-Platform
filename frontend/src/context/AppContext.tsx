@@ -14,6 +14,7 @@ import type {
   VenueMatchResult,
   WorkflowTemplateKit,
   AppNotification,
+  EventCommitteeRoleMap,
 } from '../types';
 import {
   mockCurrentUser,
@@ -97,6 +98,9 @@ interface AppContextType {
   deleteTask: (taskId: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
+  committeeRoles: EventCommitteeRoleMap;
+  setCommitteeRoles: React.Dispatch<React.SetStateAction<EventCommitteeRoleMap>>;
+  propagateCommitteeRoles: (newRoles: EventCommitteeRoleMap, preserveOverrides?: boolean) => { updatedCount: number };
   checkInAttendee: (
     qrCode: string,
     targetEventId?: string
@@ -268,6 +272,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return [];
   });
+
+  const [committeeRoles, setCommitteeRoles] = useState<EventCommitteeRoleMap>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay_committee_roles');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return {
+      event_head: mockCurrentUser.name,
+      secretary: '',
+      letters_head: '',
+      finance_head: '',
+      logistics_head: '',
+      documentation_head: '',
+      publicity_head: '',
+      program_head: '',
+    };
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay_committee_roles', JSON.stringify(committeeRoles));
+    }
+  }, [committeeRoles]);
 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
@@ -908,16 +941,105 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const propagateCommitteeRoles = (newRoles: EventCommitteeRoleMap, preserveOverrides: boolean = true) => {
+    setCommitteeRoles(newRoles);
+
+    const roleMapping: Record<string, { name: string; title: string }> = {
+      letters: { name: newRoles.letters_head || '', title: 'Letters Committee Head' },
+      finance: { name: newRoles.finance_head || '', title: 'Finance Head' },
+      logistics: { name: newRoles.logistics_head || '', title: 'Logistics Head' },
+      documentation: { name: newRoles.documentation_head || '', title: 'Documentation Head' },
+      publicity: { name: newRoles.publicity_head || '', title: 'Publicity Head' },
+      program: { name: newRoles.program_head || '', title: 'Program Head' },
+      secretary: { name: newRoles.secretary || '', title: 'Secretary' },
+    };
+
+    let updatedCount = 0;
+
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        const comm = task.committee ? String(task.committee).toLowerCase() : '';
+        const mapped = roleMapping[comm];
+
+        // If preserving manual overrides and this task already has an assigned owner, keep it
+        if (preserveOverrides && task.personnel_assignments && task.personnel_assignments.length > 0) {
+          return task;
+        }
+
+        if (mapped && mapped.name.trim()) {
+          updatedCount++;
+          return {
+            ...task,
+            personnel_assignments: [
+              {
+                personnel_id: `per-${mapped.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                personnel_name: mapped.name.trim(),
+                role: mapped.title,
+              },
+            ],
+          };
+        } else if (mapped && !mapped.name.trim()) {
+          return {
+            ...task,
+            personnel_assignments: [],
+          };
+        }
+
+        return task;
+      })
+    );
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'ROLE_PROPAGATED' as any,
+      entity_type: 'task',
+      entity_id: 'all',
+      change_summary: `Propagated committee role assignments across relevant event tasks.`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+
+    return { updatedCount };
+  };
+
   const loadTaskTemplate = (kitId: string) => {
     const kit = mockWorkflowKits.find((k) => k.id === kitId);
     if (!kit) return;
 
-    const newTasks: Task[] = kit.tasks.map((t, idx) => ({
-      ...t,
-      id: `task-${Date.now()}-${idx + 1}`,
-      event_id: selectedEvent ? selectedEvent.id : 'evt-draft',
-      downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
-    }));
+    const roleMapping: Record<string, { name: string; title: string }> = {
+      letters: { name: committeeRoles.letters_head || '', title: 'Letters Committee Head' },
+      finance: { name: committeeRoles.finance_head || '', title: 'Finance Head' },
+      logistics: { name: committeeRoles.logistics_head || '', title: 'Logistics Head' },
+      documentation: { name: committeeRoles.documentation_head || '', title: 'Documentation Head' },
+      publicity: { name: committeeRoles.publicity_head || '', title: 'Publicity Head' },
+      program: { name: committeeRoles.program_head || '', title: 'Program Head' },
+      secretary: { name: committeeRoles.secretary || '', title: 'Secretary' },
+    };
+
+    const newTasks: Task[] = kit.tasks.map((t, idx) => {
+      const comm = t.committee ? String(t.committee).toLowerCase() : '';
+      const mapped = roleMapping[comm];
+      const initialAssignments = (mapped && mapped.name.trim())
+        ? [
+            {
+              personnel_id: `per-${mapped.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              personnel_name: mapped.name.trim(),
+              role: mapped.title,
+            },
+          ]
+        : [];
+
+      return {
+        ...t,
+        id: `task-${Date.now()}-${idx + 1}`,
+        event_id: selectedEvent ? selectedEvent.id : 'evt-draft',
+        status: 'todo' as TaskStatus, // ALL generated tasks strictly in To Do state!
+        personnel_assignments: initialAssignments,
+        downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
+      };
+    });
 
     setTasks(newTasks);
 
@@ -928,7 +1050,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'SCHEDULE_REBALANCED',
       entity_type: 'task',
       entity_id: 'all',
-      change_summary: `Loaded 1-Click Workflow Kit: "${kit.name}" with ${newTasks.length} pre-configured tasks & dependencies.`,
+      change_summary: `Loaded 1-Click Workflow Kit: "${kit.name}" with ${newTasks.length} tasks initialized in To Do state.`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [newLog, ...prev]);
@@ -1320,6 +1442,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteTask,
       updateTaskStatus,
       loadTaskTemplate,
+      committeeRoles,
+      setCommitteeRoles,
+      propagateCommitteeRoles,
       checkInAttendee,
       bookVenue,
       registerForEvent,
@@ -1335,6 +1460,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser,
       currentRole,
       activeStaffId,
+      committeeRoles,
       theme,
       isDemoMode,
       isDevModeUnlocked,

@@ -153,9 +153,33 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
   const [contactEmail, setContactEmail] = useState('sports@bohol.gov.ph');
   const [contactPhone, setContactPhone] = useState('+63 (38) 411-2800');
   const [imageUrl, setImageUrl] = useState(PRESET_SPORTS_CATEGORIES[0].image);
+  const [lat, setLat] = useState<number>(9.6496);
+  const [lng, setLng] = useState<number>(123.8624);
+  const [selectedLocationPreset, setSelectedLocationPreset] = useState<string>('tagbilaran');
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>(
     PRESET_SPORTS_CATEGORIES[0].defaultFacilities
   );
+
+  const BOHOL_LOCATION_PRESETS = [
+    { id: 'tagbilaran', name: 'Tagbilaran City Center (CPG Ave)', city: 'Tagbilaran City', address: 'CPG Avenue, Tagbilaran City, Bohol', lat: 9.6496, lng: 123.8624 },
+    { id: 'cultural_center', name: 'Bohol Cultural Center', city: 'Tagbilaran City', address: 'J.A. Clarin St, Cogon District, Tagbilaran City, Bohol', lat: 9.6482, lng: 123.8558 },
+    { id: 'cpg_sports', name: 'CPG Sports Complex & Oval', city: 'Tagbilaran City', address: 'CPG Sports Complex, Dampas, Tagbilaran City, Bohol', lat: 9.6445, lng: 123.8580 },
+    { id: 'hnu_gym', name: 'HNU Barder Gymnasium', city: 'Tagbilaran City', address: 'Janssen Heights, Dampas District, Tagbilaran City, Bohol', lat: 9.6504, lng: 123.8679 },
+    { id: 'bws_gym', name: 'Bohol Wisdom School Gymnasium', city: 'Tagbilaran City', address: 'CPG North Avenue, Cogon District, Tagbilaran City, Bohol', lat: 9.6606, lng: 123.8561 },
+    { id: 'panglao', name: 'Panglao Convention Pavilion', city: 'Panglao', address: 'Tawala, Panglao, Bohol', lat: 9.5785, lng: 123.7745 },
+    { id: 'tubigon', name: 'Tubigon Sports Complex', city: 'Tubigon', address: 'Centro, Tubigon, Bohol', lat: 9.9515, lng: 123.9620 },
+  ];
+
+  const handleApplyLocationPreset = (presetId: string) => {
+    setSelectedLocationPreset(presetId);
+    const preset = BOHOL_LOCATION_PRESETS.find((p) => p.id === presetId);
+    if (preset) {
+      setCity(preset.city);
+      setAddress(preset.address);
+      setLat(preset.lat);
+      setLng(preset.lng);
+    }
+  };
 
   // Sub-Halls / Sub-Courts Builder
   const [halls, setHalls] = useState<
@@ -260,8 +284,8 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
         name: name.trim(),
         city,
         address: address.trim() || `${city}, Bohol`,
-        lat: 9.6496,
-        lng: 123.8624,
+        lat: Number(lat) || 9.6496,
+        lng: Number(lng) || 123.8624,
         capacity: Number(capacity) || 1000,
         hourly_rate: Number(hourlyRate) || 1500,
         facilities: selectedFacilities,
@@ -387,6 +411,68 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
               />
+            </div>
+
+            {/* Exact GPS Coordinates & Bohol Location Presets */}
+            <div className="md:col-span-2 p-3.5 rounded-2xl bg-[#FAF9F5] dark:bg-[#12161F] border border-slate-200/80 dark:border-slate-800 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                  <span className="text-emerald-600 dark:text-emerald-400">📍</span>
+                  Exact GPS Coordinates & Location Presets
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Used for interactive public map positioning
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Quick-Fill Bohol Location Preset:
+                </label>
+                <select
+                  value={selectedLocationPreset}
+                  onChange={(e) => handleApplyLocationPreset(e.target.value)}
+                  className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-200 font-medium focus:outline-none cursor-pointer"
+                >
+                  {BOHOL_LOCATION_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.lat.toFixed(4)}, {p.lng.toFixed(4)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    Latitude (°N) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.00001"
+                    placeholder="9.6496"
+                    value={lat}
+                    onChange={(e) => setLat(Number(e.target.value))}
+                    required
+                    className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                    Longitude (°E) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.00001"
+                    placeholder="123.8624"
+                    value={lng}
+                    onChange={(e) => setLng(Number(e.target.value))}
+                    required
+                    className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
