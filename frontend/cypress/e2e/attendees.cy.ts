@@ -76,7 +76,7 @@ describe('attendee registration and check-in', () => {
         expect(state).to.have.property('attendance_count', 0);
       });
     });
-    cy.contains('Close & View My Passes').click();
+    cy.get('[data-cy="registration-success-close"]').click();
     cy.get('[data-cy="digital-pass"]').should('have.length', 1);
 
     cy.get('[data-cy="browse-events"]').click();
@@ -95,7 +95,7 @@ describe('attendee registration and check-in', () => {
         expect(state).to.include({ id: secondRegistration.id, status: 'confirmed' });
       });
     });
-    cy.contains('Close & View My Passes').click();
+    cy.get('[data-cy="registration-success-close"]').click();
     cy.get('[data-cy="my-digital-passes"]').click();
     cy.get('[data-cy="digital-pass"]').should('have.length', 2);
     cy.get('[data-cy="digital-pass-code"]').then(($codes) => {

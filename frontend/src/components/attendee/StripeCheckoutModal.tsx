@@ -219,6 +219,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 
             <button
               onClick={onClose}
+              data-cy="registration-success-close"
               className="w-full py-2.5 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               Close & View My Passes
