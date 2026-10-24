@@ -29,3 +29,10 @@ lerna-debug.log*
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Documents & Guide Notes
+*.docx
+*.doc
+ZABAY_ROLE_2_CONTEXT_GUIDE.docx
+db/ROLE_2_DEFENSE_GUIDE.md
+
