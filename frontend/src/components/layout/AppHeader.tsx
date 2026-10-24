@@ -591,7 +591,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <Layers className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
                     <div className="text-left">
                       <p className="font-semibold">Organizer Studio</p>
-                      <p className="text-[10px] text-slate-500">Event operations, DAG & Gantt</p>
+                      <p className="text-[10px] text-slate-500">Event operations, schedule & planning</p>
                     </div>
                   </div>
                   {currentRole === 'organizer' && <Check className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />}

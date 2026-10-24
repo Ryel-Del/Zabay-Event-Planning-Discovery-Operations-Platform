@@ -481,11 +481,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {
         id: `aud-r2-init-${Date.now()}`,
         user_id: 'usr-org-1',
-        user_name: 'Engr. David Soriano (Role 2 Lead)',
+        user_name: 'Engr. David Soriano (Operations Lead)',
         action: 'RESOURCE_ASSIGNMENT',
         entity_type: 'resource',
         entity_id: 'pg-triggers-v16',
-        change_summary: 'Role 2 Database testbed loaded: GiST exclusion on venue_bookings, trigger on registrations, and audit logging active.',
+        change_summary: 'Verification testbed loaded: schedule collision prevention, verified gate check-in, and audit logging active.',
         created_at: new Date().toISOString(),
       },
       ...mockAuditLogs,
@@ -504,8 +504,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const testbedNotice: AppNotification = {
       id: `notif-r2-${Date.now()}`,
-      title: 'Role 2 Database Testbed Active',
-      message: 'Constraints and triggers loaded: test duplicate check-in with Liam Mendoza (ZABAY-PASS-3108-LIAM) or GiST venue overlap.',
+      title: 'Verification Testbed Active',
+      message: 'Collision checks and single-admission rules loaded: test duplicate check-in with Liam Mendoza (ZABAY-PASS-3108-LIAM) or schedule overlap.',
       type: 'info',
       timestamp: new Date().toISOString(),
       targetRole: 'all',
@@ -535,7 +535,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadRole2DemoData();
       return {
         success: true,
-        message: 'DevCode "ROLE2-SEED" verified! Database trigger and GiST collision testbed loaded.',
+        message: 'DevCode "ROLE2-SEED" verified! Collision check and single-admission testbed loaded.',
         devCode: 'ROLE2-SEED',
       };
     }
@@ -590,7 +590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
     if (!isDemoMode) {
-      if (!isLiveBackend) throw new Error('PostgreSQL is unavailable. Connect the database or choose Sample Data mode.');
+      if (!isLiveBackend) throw new Error('Live server is unavailable. Please check your connection or continue in local mode.');
       const response = await api.events.create({
         ...data,
         organizer_id: undefined,
@@ -1066,7 +1066,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const expectedEventId = targetEventId || selectedEvent?.id;
 
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No attendee was checked in.' };
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No attendee was checked in.' };
       const response = await api.attendees.checkIn(qrCode, expectedEventId);
       if (!response.success || !response.data) {
         if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
@@ -1165,11 +1165,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const event = events.find((e) => e.id === eventId) || selectedEvent;
 
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No booking was made.' };
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No booking was made.' };
       const savedEvent = await api.events.getById(eventId);
       if (!savedEvent.success || !savedEvent.data?.id) {
         if (savedEvent.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'PostgreSQL is unavailable. No booking was made.' : 'Select a saved event before booking.' };
+        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'Server is currently offline. No booking was made.' : 'Select a saved event before booking.' };
       }
       const apiRes = await api.venues.book(venueId, {
         event_id: eventId,
@@ -1299,7 +1299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No registration was saved.' };
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No registration was saved.' };
       const response = await api.attendees.register({
         event_id: eventId,
         attendee_name: attendeeName,

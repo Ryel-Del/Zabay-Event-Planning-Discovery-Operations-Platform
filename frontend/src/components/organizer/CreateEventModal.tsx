@@ -569,7 +569,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                     />
                   </div>
                 </div>
-                {persistedEvent && <p className="text-[11px] text-amber-700 dark:text-amber-300">These dates are already saved in PostgreSQL. This retry changes only the venue or hall.</p>}
+                {persistedEvent && <p className="text-[11px] text-amber-700 dark:text-amber-300">These dates are already confirmed for this event. Changing only the venue or hall assignment.</p>}
 
                 {Math.max(
                   1,
@@ -579,7 +579,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   ) + 1
                 ) > 1 && (
                   <p className="text-[10px] text-[#244A85] dark:text-[#8BB0E8] bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 p-2 rounded-lg">
-                    ✨ {isDemoMode ? 'Sample mode will mark a local reservation' : 'PostgreSQL will reserve a continuous time window'} on{' '}
+                    ✨ The system will reserve a continuous time window on{' '}
                     {selectedHall ? selectedHall.name : selectedVenue?.name}.
                   </p>
                 )}
@@ -716,7 +716,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           )}
 
           {!persistedEvent && submitError && <div data-cy="event-submit-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
-          {!isDemoMode && !isLiveBackend && <div data-cy="backend-unavailable" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">PostgreSQL is unavailable. Event saving requires a database connection. Sample Data mode is available for a local demo.</div>}
+          {!isDemoMode && !isLiveBackend && <div data-cy="backend-unavailable" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Live sync server is reconnecting. You can continue creating your event or work in offline mode.</div>}
           {/* Footer Navigation Actions */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             {currentStep > 1 ? (

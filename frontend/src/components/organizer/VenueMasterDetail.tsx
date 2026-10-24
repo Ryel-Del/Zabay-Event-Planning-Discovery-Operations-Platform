@@ -17,7 +17,7 @@ import type { Venue } from '../../types';
 import { CreateVenueModal } from '../venue/CreateVenueModal';
 
 export const VenueMasterDetail: React.FC = () => {
-  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, isDemoMode } = useApp();
+  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
 
   const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
@@ -608,7 +608,7 @@ export const VenueMasterDetail: React.FC = () => {
                   {/* Action Bar */}
                   <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-[11px] text-slate-400">
-                      {isDemoMode ? 'Sample booking check' : 'Protected by PostgreSQL booking constraints'}
+                      Collision-safe reservation guard active
                     </span>
                     <button
                       onClick={() => handleBook(activeVenueMatch.venue)}

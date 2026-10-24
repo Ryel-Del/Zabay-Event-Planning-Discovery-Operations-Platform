@@ -46,7 +46,7 @@ const DEMO_PERSONAS = [
     title: 'Venue Manager',
     org: 'Bohol Cultural Center Facilities',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    badge: 'GiST Overlap & Halls Guard',
+    badge: 'Facility & Multi-Hall Operations',
     color: 'from-emerald-600 to-teal-600',
   },
   {
@@ -400,11 +400,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Quick Privileged Operator Credential Hint */}
+          {/* Quick Demo Credential Hint */}
           <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
               <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-              <span>Operator: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
+              <span>Demo Access: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
             </div>
             <button
               type="button"
@@ -415,13 +415,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               }}
               className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
             >
-              Fill Operator Dev Secret
+              Fill Demo Account
             </button>
           </div>
 
           <div className="pt-1 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-slate-400" />
-            <span>Protected by PostgreSQL RBAC & bcrypt password verification</span>
+            <span>Protected by industry-standard encrypted authentication</span>
           </div>
         </form>
       </div>

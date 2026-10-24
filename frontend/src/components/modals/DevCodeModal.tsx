@@ -137,7 +137,7 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
                 )}
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Evaluation shortcuts, seed harnesses, and PostgreSQL trigger testbeds
+                Administrative shortcuts, test data harnesses, and gate testbeds
               </p>
             </div>
           </div>
@@ -234,7 +234,7 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
                     <Database className="w-3.5 h-3.5 text-emerald-500 opacity-60 group-hover:opacity-100" />
                   </div>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Role 2 Testbed: Prepares duplicate QR check-in & GiST collisions
+                    Testbed: Prepares duplicate QR check-in & booking collisions
                   </p>
                 </button>
 
@@ -325,10 +325,10 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
                           ZABAY-PASS-3108-LIAM
                         </span>
                         <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                          Already Checked-In (Trigger Test)
+                          Already Checked-In (Duplicate Entry)
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400">Liam Mendoza • Bleachers • Triggers SQLSTATE 23505</p>
+                      <p className="text-[10px] text-slate-400">Liam Mendoza • Bleachers • Tests Single-Admission Enforcement</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -450,9 +450,9 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
               {/* System State Snapshot */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
                 <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-                  <div className="text-[10px] text-slate-400">Database Engine</div>
+                  <div className="text-[10px] text-slate-400">Sync Status</div>
                   <div className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 truncate">
-                    {isDemoMode ? 'Sample Simulation' : isLiveBackend ? 'Postgres 16 Live' : 'API Offline'}
+                    {isDemoMode ? 'Local Workspace' : isLiveBackend ? 'Live Sync Active' : 'Offline Mode'}
                   </div>
                 </div>
                 <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">

@@ -44,7 +44,7 @@ export const mockUsers: User[] = [
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     organization: 'Bohol Cultural Center Facilities',
     location: 'CPG North Avenue, Tagbilaran City',
-    bio: 'Venue manager ensuring PostgreSQL GiST overlap safety, facility readiness, and convention space allocations.',
+    bio: 'Venue manager managing facility readiness, bookings, and convention space allocations.',
   },
   {
     id: 'usr-stf-1',

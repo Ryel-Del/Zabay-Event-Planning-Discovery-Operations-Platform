@@ -237,16 +237,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {!isCollapsed ? (
           <div className="bg-[#FAF9F5] dark:bg-[#171513] p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 text-[11px] space-y-1">
             <div className="flex items-center justify-between font-medium">
-              <span className="text-stone-500">Database Engine</span>
+              <span className="text-stone-500">System Status</span>
               <span className="text-[#5F7D5B] dark:text-[#97B394] font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5F7D5B] dark:bg-[#97B394] animate-pulse" />
-                Active
+                Live Sync
               </span>
             </div>
-            <p className="text-[10px] text-stone-400 font-mono">PostgreSQL 16 • 20 Tables</p>
+            <p className="text-[10px] text-stone-400">All services operational</p>
           </div>
         ) : (
-          <div className="flex justify-center" title="PostgreSQL Database Connected">
+          <div className="flex justify-center" title="System Online & Synchronized">
             <span className="w-2.5 h-2.5 rounded-full bg-[#5F7D5B] dark:bg-[#97B394]" />
           </div>
         )}

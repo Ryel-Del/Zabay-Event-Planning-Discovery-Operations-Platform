@@ -102,8 +102,8 @@ export const AnalyticsDashboard: React.FC = () => {
           <div>
             <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
               Business & Operational Analytics
-              <span className="text-[11px] px-2 py-0.5 rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 font-mono">
-                PostgreSQL Views
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-emerald-200 dark:border-emerald-900 font-semibold">
+                Live Operational Metrics
               </span>
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
@@ -183,8 +183,8 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* Chart 1: Arrival Flow */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Attendee Arrival Flow (v_attendance_hourly)</span>
-            <span className="text-[10px] text-stone-400 font-mono">Area Curve</span>
+            <span>Attendee Arrival Flow</span>
+            <span className="text-[10px] text-stone-400">Peak Check-in Timeline</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -210,8 +210,8 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* Chart 2: Resource Utilization */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Equipment Allocation (v_resource_utilization)</span>
-            <span className="text-[10px] text-stone-400 font-mono">Allocated vs Free</span>
+            <span>Equipment Allocation</span>
+            <span className="text-[10px] text-stone-400">Allocated vs Free</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -233,8 +233,8 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* Chart 3: Personnel Workload */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Personnel Shift Allocation (v_personnel_workload)</span>
-            <span className="text-[10px] text-stone-400 font-mono">Hours Scheduled</span>
+            <span>Personnel Shift Allocation</span>
+            <span className="text-[10px] text-stone-400">Hours Scheduled</span>
           </h3>
           <div className="h-60 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -254,8 +254,8 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* Chart 4: Revenue Distribution */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Gross Revenue Stream (v_event_revenue)</span>
-            <span className="text-[10px] text-stone-400 font-mono">Tiers & Sponsors</span>
+            <span>Gross Revenue Stream</span>
+            <span className="text-[10px] text-stone-400">Tiers & Sponsors</span>
           </h3>
           <div className="h-60 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">

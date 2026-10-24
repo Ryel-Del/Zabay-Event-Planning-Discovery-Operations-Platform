@@ -90,7 +90,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 <h3 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
                   Event Registration
                   <span className="text-[10px] px-2 py-0.5 rounded-md bg-stone-200/80 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-300 dark:border-stone-700 font-mono">
-                    {isDemoMode ? 'Sample Pass' : 'PostgreSQL Pass'}
+                    Official Pass
                   </span>
                 </h3>
                 <p className="text-xs text-stone-500 dark:text-stone-400 truncate max-w-sm">

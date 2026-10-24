@@ -124,7 +124,7 @@ export async function downloadPassAsImage({ registration, event, venue }: PassDe
   ctx.font = '11px monospace';
   ctx.fillStyle = '#94A3B8';
   ctx.fillText(`Pass Serial: ${registration.id}  •  Registered: ${new Date(registration.registered_at).toLocaleDateString()}`, 36, 520);
-  ctx.fillText(`Security Invariant: Single-Admission Turnstile Policy (Code 23505)`, 36, 538);
+  ctx.fillText(`Security Policy: Single-Admission Verified Ticket`, 36, 538);
 
   // Perforated Stub Divider (Dashed Line & Notches)
   ctx.strokeStyle = '#CBD5E1';

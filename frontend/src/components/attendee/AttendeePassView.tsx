@@ -38,7 +38,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
             My Digital QR Event Passes ({registrations.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            {isDemoMode ? 'Sample passes for local demonstration. High-resolution print & PNG save enabled.' : 'QR passes returned by PostgreSQL during this session.'}
+            Your confirmed event tickets. Present your QR pass at gate check-in or download for offline access.
           </p>
         </div>
 

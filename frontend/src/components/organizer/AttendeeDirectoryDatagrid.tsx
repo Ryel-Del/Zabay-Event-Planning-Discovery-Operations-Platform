@@ -15,7 +15,7 @@ interface AttendeeDirectoryDatagridProps {
 export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({
   onScanPassModal,
 }) => {
-  const { registrations, checkInAttendee, selectedEvent, loadDemoData, isDemoMode } = useApp();
+  const { registrations, checkInAttendee, selectedEvent, loadDemoData } = useApp();
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState<string>('all');
   const [feedback, setFeedback] = useState<{ success: boolean; message: string } | null>(null);
@@ -44,7 +44,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
             Attendee Registration & Gate Admittance Directory
           </h2>
           <p className="text-xs text-stone-500">
-            {isDemoMode ? 'Sample registrations and local check-in.' : 'Registrations issued in this workspace; check-in is verified by PostgreSQL.'}
+            Registrations issued for this event. Ticket verification and gate check-in status updated in real time.
           </p>
         </div>
 

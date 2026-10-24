@@ -502,18 +502,18 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                 </div>
               )}
 
-              {/* Iron-Clad Duplicate Security Incident Warning */}
+              {/* Admission Policy / Duplicate Pass Warning */}
               {result.isDuplicate && (
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-1 text-[11px] font-mono text-amber-900 dark:text-amber-200">
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-1 text-[11px] text-amber-900 dark:text-amber-200">
                   <div className="font-bold flex items-center gap-1.5">
-                    <span>🔒 DATABASE INTEGRITY POLICY ENFORCED</span>
+                    <span>🔒 ADMISSION POLICY ENFORCED</span>
                   </div>
-                  <p className="text-[10px] font-sans opacity-90">
-                    PostgreSQL unique constraint <code>attendance_records_registration_unique</code> blocked this transaction. Each ticket allows exactly one admission.
+                  <p className="text-[10px] opacity-90">
+                    Security verification: Each ticket allows exactly one admission. This pass has already been used for gate entry.
                   </p>
                   <div className="flex gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
-                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Action: Turnstile Locked</span>
-                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Rejected</span>
+                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Pass Already Admitted</span>
+                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Denied</span>
                   </div>
                 </div>
               )}

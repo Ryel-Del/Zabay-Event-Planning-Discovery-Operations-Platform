@@ -30,7 +30,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   currentView = 'overview',
   onSelectView,
 }) => {
-  const { venues, venueBookings, bookVenue, selectedEvent, isDemoMode } = useApp();
+  const { venues, venueBookings, bookVenue, selectedEvent } = useApp();
   const [internalView, setInternalView] = useState<VenueView>('overview');
   const activeView = currentView || internalView;
 
@@ -90,8 +90,8 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-semibold">
                   {selectedVenue.is_indoor ? 'Indoor Facility' : 'Outdoor Complex'}
                 </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono">
-                  EXCLUDE GiST Guard
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                  Collision-Safe Booking
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
@@ -223,10 +223,10 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                 <Lock className="w-3.5 h-3.5 text-emerald-500" /> Overlap Protection
               </span>
               <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">
-                {isDemoMode ? 'Sample Guards' : 'PostgreSQL GiST'}
+                Active Guard
               </p>
-              <p className="text-[11px] text-slate-500 font-mono text-[10px]">
-                {isDemoMode ? 'Local non-overlapping checks' : 'EXCLUDE USING gist(tstzrange)'}
+              <p className="text-[11px] text-slate-500">
+                Double-booking prevention active
               </p>
             </div>
           </div>
@@ -350,10 +350,10 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
               <div className="bg-[#FAF9F5] dark:bg-[#121924] border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-2">
                 <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Exclusion Integrity Guard
+                  Reservation Integrity Guard
                 </span>
                 <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                  PostgreSQL strictly enforces <code className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">EXCLUDE USING gist</code> over booking intervals. If two organizers book overlapping times, the database automatically rejects the collision with code <code className="font-mono text-rose-500">23P01</code>.
+                  ZABAY automatically enforces double-booking prevention over all venue halls. If two organizers request overlapping times, the system flags the conflict to guarantee schedule integrity.
                 </p>
               </div>
             </div>
@@ -375,7 +375,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                   Scheduled Venue Bookings ({bookingsForVenue.length} Confirmed)
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Database automatically blocks overlapping time intervals via PostgreSQL GiST EXCLUDE constraint.
+                  Collision prevention automatically blocks overlapping booking requests across halls.
                 </p>
               </div>
             </div>
@@ -417,17 +417,15 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
               )}
             </div>
 
-            {/* EXCLUDE Constraint Interactive Test Suite */}
+            {/* Collision Prevention Interactive Test Suite */}
             <div className="p-5 rounded-xl bg-[#FAF9F5] dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 space-y-4">
               <div>
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Interactive Double-Booking Collision Prevention Test
+                  Interactive Double-Booking Collision Test
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {isDemoMode
-                    ? 'Attempt an overlapping booking interval to see the local collision validation in action.'
-                    : 'Book the selected event in an overlapping time window to observe PostgreSQL reject the transaction.'}
+                  Attempt an overlapping booking interval to see the collision guard flag the schedule conflict.
                 </p>
               </div>
 
@@ -465,7 +463,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                   onClick={handleTestBooking}
                   className="px-4 py-2 bg-[#244A85] hover:bg-[#1E3C6D] text-white rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer"
                 >
-                  Verify DB Conflict Check
+                  Test Reservation Availability
                 </button>
               </div>
 
@@ -502,8 +500,8 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                 <Layers className="w-4 h-4 text-[#3E6CB5]" />
                 Halls & Sub-Venues Inventory ({selectedVenue.halls?.length || 0} Individual Spaces)
               </h3>
-              <span className="text-[11px] text-slate-500 font-mono">
-                Independent EXCLUDE Booking Partitions
+              <span className="text-[11px] text-slate-500">
+                Independently Bookable Spaces
               </span>
             </div>
 
@@ -561,8 +559,8 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 Certified Facilities & Equipment Inventory ({selectedVenue.facilities.length} Verified Items)
               </h3>
-              <span className="text-[11px] text-slate-500 font-mono">
-                Matching Stored Procedure: fn_match_venue_to_event
+              <span className="text-[11px] text-slate-500 font-medium">
+                Automated Matcher Verification
               </span>
             </div>
 
