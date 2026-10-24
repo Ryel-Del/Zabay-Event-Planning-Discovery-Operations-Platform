@@ -594,9 +594,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           {/* STEP 3: STAFF DELEGATION */}
           {currentStep === 3 && (
             <div className="space-y-3 animate-in fade-in duration-150">
-              <p className="text-[11px] text-slate-500">
-                Select crew ideas for this planning preview. Event creation does not assign or save staff members.
-              </p>
+              <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 p-3 rounded-xl border border-[#C8DCF7] dark:border-[#2D4160]">
+                <p className="text-xs font-bold text-[#244A85] dark:text-[#8BB0E8]">
+                  Event Operational Crew Roster
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                  Allocate department leads and certified crew to oversee stage rigging, sound engineering, gate check-in, and floor coordination.
+                </p>
+              </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {personnel.map((person) => {

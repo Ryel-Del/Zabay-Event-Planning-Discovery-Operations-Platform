@@ -168,7 +168,35 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Real-World Operational Workflow Explainer */}
+      <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider">
+                💡 Real-World Event Personnel Workflow
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
+                Roster → Tasks → Shift Portal
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              <strong>1. Directory Roster:</strong> Manage certified crew rates and contact information. 
+              <strong> 2. Task Allocation:</strong> Assign crew leads to run-of-show duties on the Kanban board. 
+              <strong> 3. Staff Portal Execution:</strong> Crew members switch to Staff View to access mobile duty checklists and gate ticket scanners.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => handlePreviewStaff('per-3')}
+              className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#171E2B] hover:bg-slate-50 dark:hover:bg-slate-800 border border-[#C8DCF7] dark:border-[#2D4160] text-xs font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Simulate Shift Portal</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">

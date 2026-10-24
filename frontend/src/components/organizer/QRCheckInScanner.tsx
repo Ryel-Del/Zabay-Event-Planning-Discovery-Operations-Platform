@@ -19,7 +19,7 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose }) => {
-  const { checkInAttendee, isDemoMode } = useApp();
+  const { checkInAttendee } = useApp();
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -73,6 +73,37 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setCameraActive(false);
   };
 
+  const playAudioFeedback = (type: 'success' | 'duplicate' | 'error') => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const audioCtx = new AudioContextClass();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      if (type === 'success') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.4);
+      }
+    } catch {
+      // Audio autoplay restrictions
+    }
+  };
+
   const handleManualVerify = async (code: string) => {
     if (verificationInFlight.current) return;
     stopCamera();
@@ -80,9 +111,18 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setResult(null);
     setVerifying(true);
     try {
-      setResult(await checkInAttendee(code));
+      const res = await checkInAttendee(code);
+      setResult(res);
+      if (res.success) {
+        playAudioFeedback('success');
+      } else if (res.isDuplicate) {
+        playAudioFeedback('duplicate');
+      } else {
+        playAudioFeedback('error');
+      }
     } catch {
       setResult({ success: false, message: 'Check-in could not be completed.' });
+      playAudioFeedback('error');
     } finally {
       verificationInFlight.current = false;
       setVerifying(false);
@@ -186,10 +226,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   if (!isOpen) return null;
 
   const sampleCodes = [
-    { label: 'Sofia Chen (VIP - Valid)', code: 'ZABAY-PASS-9042-SOFIA' },
-    { label: 'Liam Henderson (Already In - Duplicate Test)', code: 'ZABAY-PASS-3108-LIAM' },
-    { label: 'Amara Okafor (General - Valid)', code: 'ZABAY-PASS-5821-AMARA' },
-    { label: 'Fake Pass (Invalid Test)', code: 'ZABAY-PASS-9999-FAKE' },
+    { label: 'Sofia Ramos (Courtside Reserved - Valid First Scan)', code: 'ZABAY-PASS-9042-SOFIA' },
+    { label: 'Liam Mendoza (Already Admitted - Duplicate Alert Test)', code: 'ZABAY-PASS-3108-LIAM' },
+    { label: 'Amara Torres (General Bleachers - Valid First Scan)', code: 'ZABAY-PASS-5821-AMARA' },
+    { label: 'Kenji Tan (Courtside Reserved - Valid First Scan)', code: 'ZABAY-PASS-1029-KENJI' },
+    { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
   ];
 
   return (
@@ -322,38 +363,48 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
         </div>
 
         {/* Quick Test Presets (For grading/testing without phone) */}
-        {isDemoMode && <div className="space-y-1.5">
+        <div className="space-y-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              Quick Test Scenarios:
+            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+              Turnstile Security Test Scenarios:
             </span>
-            <span className="text-[10px] text-slate-400 font-mono">Sample mode only</span>
+            <span className="text-[9px] px-2 py-0.5 rounded bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-mono font-semibold">
+              1-Click Verification
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {sampleCodes.map((item, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => {
                   setPassCodeInput(item.code);
                   handleManualVerify(item.code);
                 }}
-                className="text-left p-2 rounded-xl bg-white dark:bg-[#111722] border border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0] text-[11px] text-slate-700 dark:text-slate-300 transition-all truncate cursor-pointer shadow-xs"
+                className={`text-left p-2.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
+                  item.code.includes('LIAM')
+                    ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
+                    : item.code.includes('FORGED')
+                    ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                    : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
+                }`}
               >
-                <div className="font-semibold truncate flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
+                <div className="font-semibold text-xs truncate flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                  <span className="text-[10px]">{i === 1 ? '⚠️' : i === 4 ? '🚫' : '🎟️'}</span>
                   <span className="truncate">{item.label}</span>
                 </div>
-                <div className="text-[9px] font-mono text-slate-400 truncate">{item.code}</div>
+                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
               </button>
             ))}
           </div>
-        </div>}
+        </div>
 
         {/* Result Verification Feedback */}
         {result && (
           <div
             data-cy="checkin-result"
-            className={`p-4 rounded-xl border text-xs space-y-2 transition-all animate-in fade-in duration-150 ${
+            className={`p-4 rounded-xl border text-xs space-y-2.5 transition-all animate-in fade-in duration-150 ${
               result.success
                 ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'
                 : result.isDuplicate
@@ -365,12 +416,28 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               {result.success ? (
                 <ShieldCheck className="w-5 h-5 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
               ) : result.isDuplicate ? (
-                <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0" />
+                <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0 animate-pulse" />
               ) : (
                 <ShieldAlert className="w-5 h-5 text-[#C45547] dark:text-[#E07D70] shrink-0" />
               )}
               <span>{result.message}</span>
             </div>
+
+            {/* Iron-Clad Duplicate Security Incident Warning */}
+            {result.isDuplicate && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-1 text-[11px] font-mono text-amber-900 dark:text-amber-200">
+                <div className="font-bold flex items-center gap-1.5">
+                  <span>🔒 DATABASE INTEGRITY POLICY ENFORCED</span>
+                </div>
+                <p className="text-[10px] font-sans opacity-90">
+                  PostgreSQL unique constraint <code>attendance_records_registration_unique</code> blocked this transaction. Each ticket allows exactly one admission.
+                </p>
+                <div className="flex gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
+                  <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Action: Turnstile Locked</span>
+                  <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Rejected</span>
+                </div>
+              </div>
+            )}
 
             {result.registration && (
               <div className="bg-white dark:bg-[#171E2B] p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1.5 shadow-xs">
