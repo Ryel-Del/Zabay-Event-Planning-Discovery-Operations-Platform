@@ -27,6 +27,7 @@ import {
   Database,
   X,
   Terminal,
+  Menu,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
@@ -42,6 +43,7 @@ interface AppHeaderProps {
   onOpenProfile?: () => void;
   onOpenDevConsole?: () => void;
   onOpenAuth?: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -50,6 +52,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onOpenProfile,
   onOpenDevConsole,
   onOpenAuth,
+  onToggleMobileMenu,
 }) => {
   const {
     currentRole,
@@ -114,24 +117,36 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   };
 
   return (
-    <header className="h-16 bg-white dark:bg-[#171E2B] border-b border-slate-200/80 dark:border-slate-800 px-6 flex items-center justify-between z-30 shrink-0 select-none transition-colors">
+    <header className="h-16 bg-white dark:bg-[#171E2B] border-b border-slate-200/80 dark:border-slate-800 px-3 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none transition-colors">
       {/* Left: Brand Identity & Context Navigation */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
+        {/* Mobile Hamburger Drawer Trigger (For Organizer & Venue Manager on < md) */}
+        {onToggleMobileMenu && (currentRole === 'organizer' || currentRole === 'venue_manager') && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="md:hidden p-1.5 -ml-1 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Open Navigation Menu"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+
         {/* Brand Logo & Site Name */}
         <div
           onClick={() => setCurrentRole('attendee')}
-          className="flex items-center gap-2.5 cursor-pointer group"
+          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group"
           title="Zabay - Go to Public Explore Feed"
         >
           <img
             src={zabayWordmark}
             alt="Zabay"
-            className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
+            className="h-7 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
           />
           <img
             src={zabayWordmarkWhite}
             alt="Zabay"
-            className="h-8 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
+            className="h-7 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
           />
           {currentRole === 'organizer' && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
@@ -169,20 +184,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       {/* Center: Contextual Tools (Custom Popover Event Selector - NO NATIVE SELECT!) */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {currentRole === 'organizer' && (
           <div className="relative" ref={eventPickerRef}>
             <button
               onClick={() => setIsEventPickerOpen(!isEventPickerOpen)}
               data-cy="event-picker"
-              className="flex items-center gap-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1A2536] px-3.5 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all cursor-pointer text-left"
+              className="flex items-center gap-1.5 sm:gap-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1A2536] px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all cursor-pointer text-left"
             >
               <Calendar className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-400 font-semibold leading-tight hidden lg:block">
                   Active Workspace
                 </span>
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[210px] sm:max-w-[280px]">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[110px] xs:max-w-[160px] sm:max-w-[260px]">
                   {selectedEvent ? selectedEvent.title : 'No Event Selected'}
                 </span>
               </div>

@@ -20,6 +20,7 @@ const MainContent: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDevModalOpen, setIsDevModalOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [activeScanCode, setActiveScanCode] = useState<string | undefined>();
 
   // Global keyboard shortcut to open DevCode modal anywhere (Ctrl+Shift+D or Cmd+Shift+D)
@@ -48,25 +49,54 @@ const MainContent: React.FC = () => {
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenDevConsole={() => setIsDevModalOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
+        onToggleMobileMenu={() => setIsMobileNavOpen((prev) => !prev)}
       />
 
       {/* Main Dual-Layout Shell */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar (Active for Organizer & Venue Manager) */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar (Desktop: md:flex) */}
         {currentRole !== 'attendee' && currentRole !== 'staff' && (
-          <AppSidebar
-            currentView={currentRole === 'venue_manager' ? venueView : organizerView}
-            onSelectView={(v) => {
-              if (currentRole === 'venue_manager') setVenueView(v);
-              else setOrganizerView(v);
-            }}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
+          <div className="hidden md:flex shrink-0">
+            <AppSidebar
+              currentView={currentRole === 'venue_manager' ? venueView : organizerView}
+              onSelectView={(v) => {
+                if (currentRole === 'venue_manager') setVenueView(v);
+                else setOrganizerView(v);
+              }}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </div>
+        )}
+
+        {/* Mobile Slide-Over Navigation Drawer (< md screens) */}
+        {isMobileNavOpen && currentRole !== 'attendee' && currentRole !== 'staff' && (
+          <div className="fixed inset-0 z-50 md:hidden flex">
+            {/* Backdrop Overlay */}
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
+              onClick={() => setIsMobileNavOpen(false)}
+            />
+            {/* Slide-in Drawer */}
+            <div className="relative w-72 max-w-[85vw] h-full bg-white dark:bg-[#1E1C19] shadow-2xl z-10 flex flex-col animate-in slide-in-from-left duration-200">
+              <AppSidebar
+                currentView={currentRole === 'venue_manager' ? venueView : organizerView}
+                onSelectView={(v) => {
+                  if (currentRole === 'venue_manager') setVenueView(v);
+                  else setOrganizerView(v);
+                  setIsMobileNavOpen(false);
+                }}
+                isCollapsed={false}
+                onToggleCollapse={() => {}}
+                isMobileDrawer={true}
+                onCloseMobile={() => setIsMobileNavOpen(false)}
+              />
+            </div>
+          </div>
         )}
 
         {/* Dynamic Center Work Area with Page-Level Architecture */}
-        <main className="flex-1 overflow-y-auto px-6 lg:px-10 py-6 space-y-6">
+        <main className="flex-1 overflow-y-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-6 space-y-6">
           {/* 1. Organizer Mode: Operations Studio */}
           {currentRole === 'organizer' && (
             <OrganizerPage

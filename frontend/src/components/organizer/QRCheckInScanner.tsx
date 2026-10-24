@@ -57,6 +57,13 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   const animFrameRef = useRef<number | null>(null);
   const cameraRequestRef = useRef(0);
   const cameraStartingRef = useRef(false);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (result && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [result]);
 
   // Handle initial code pre-fill
   useEffect(() => {
@@ -251,309 +258,292 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   ];
 
   return (
-    <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#F8FAFD] dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl p-6 shadow-2xl relative space-y-5 transition-colors max-h-[90vh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          onClick={() => {
-            isOpenRef.current = false;
-            stopCamera();
-            onClose();
-          }}
-          className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Modal Header */}
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl">
-            <QrCode className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              Gate Admittance QR Scanner
-              <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-mono">
-                Duplicate & Event-Verified
-              </span>
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Hold a QR pass up to your webcam or enter its code to verify admittance.
-            </p>
-          </div>
-        </div>
-
-        {/* Active Gate Event Station & Event Selector */}
-        <div className="p-3 bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                Gate Station Configured For:
-              </div>
-              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs">
-                {currentGateEvent?.title || 'Active Event Gate'}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <span className="text-[11px] text-slate-500 whitespace-nowrap">Gate Station:</span>
-            <select
-              value={activeEventId}
-              onChange={(e) => {
-                setActiveEventId(e.target.value);
-                setResult(null);
-              }}
-              className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-            >
-              {events.map((evt) => (
-                <option key={evt.id} value={evt.id}>
-                  {evt.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Live Webcam Video Viewfinder */}
-        <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center shadow-inner">
-          {/* Video Stream Element */}
-          <video
-            ref={videoRef}
-            className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
-          />
-          {/* Hidden Canvas for QR Extraction */}
-          <canvas ref={canvasRef} className="hidden" />
-
-          {/* Camera Inactive / Placeholder View */}
-          {!cameraActive && (
-            <div className="text-center p-6 space-y-3 z-10">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-white/10 flex items-center justify-center text-slate-300 border border-white/20">
-                <Camera className="w-8 h-8 text-[#86ABDF]" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-white">Live Camera Scanner</p>
-                <p className="text-[11px] text-slate-400 max-w-xs">
-                  Uses your laptop or smartphone camera to read digital attendee passes in real time.
-                </p>
-              </div>
-              <button
-                onClick={startCamera}
-                disabled={verifying}
-                className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <Camera className="w-3.5 h-3.5" />
-                <span>{result ? 'Scan Next Pass' : 'Start Webcam Scanner'}</span>
-              </button>
-            </div>
-          )}
-
-          {/* Camera Active Viewfinder Overlay */}
-          {cameraActive && (
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-4 z-10">
-              <div className="w-full flex justify-between items-center text-[10px] text-white font-mono bg-black/40 backdrop-blur-xs px-2.5 py-1 rounded-lg">
-                <span className="flex items-center gap-1.5 text-emerald-400">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                  OPTICAL SENSOR ACTIVE
-                </span>
-                <span>Align QR inside frame</span>
-              </div>
-
-              {/* Target Aim Box */}
-              <div className="w-48 h-48 border-2 border-dashed border-[#86ABDF] rounded-2xl flex items-center justify-center relative bg-white/5 shadow-2xl">
-                <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-white rounded-tl-lg" />
-                <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-white rounded-tr-lg" />
-                <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-white rounded-bl-lg" />
-                <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-white rounded-br-lg" />
-              </div>
-
-              {/* Stop Camera Control */}
-              <button
-                onClick={stopCamera}
-                className="pointer-events-auto px-3 py-1 bg-black/60 hover:bg-black/80 text-white rounded-lg text-[11px] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer backdrop-blur-xs"
-              >
-                <CameraOff className="w-3.5 h-3.5" />
-                <span>Turn Off Camera</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {cameraError && (
-          <div className="p-3 bg-[#FDF1EF] dark:bg-[#2E1A17] border border-[#F5C2BC] dark:border-[#52251F] rounded-xl text-xs text-[#C45547] dark:text-[#E07D70] flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>{cameraError}</span>
-          </div>
-        )}
-
-        {/* Input Bar for Manual Entry or Barcode Scanner */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            Pass Serial or Barcode Scan:
-          </label>
-          <div className="flex gap-2">
-            <input
-              data-cy="manual-pass-code"
-              type="text"
-              value={passCodeInput}
-              onChange={(e) => setPassCodeInput(e.target.value)}
-              placeholder="e.g. ZABAY-PASS-9042-SOFIA"
-              className="flex-1 bg-white dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-            />
-            <button
-              onClick={() => handleManualVerify(passCodeInput)}
-              data-cy="verify-pass"
-              disabled={verifying}
-              className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
-            >
-              {verifying ? 'Checking...' : 'Verify Pass'}
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Test Presets (For grading/testing without phone) */}
-        <div className="space-y-2 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-              Turnstile Security Test Scenarios:
-            </span>
-            <span className="text-[9px] px-2 py-0.5 rounded bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-mono font-semibold">
-              1-Click Verification
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {sampleCodes.map((item, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  setPassCodeInput(item.code);
-                  handleManualVerify(item.code);
-                }}
-                className={`text-left p-2.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
-                  item.code.includes('LIAM')
-                    ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
-                    : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                    ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                    : item.code.includes('FORGED')
-                    ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                    : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
-                }`}
-              >
-                <div className="font-semibold text-xs truncate flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                  <span className="text-[10px]">
-                    {item.code.includes('LIAM')
-                      ? '⚠️'
-                      : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                      ? '⛔'
-                      : item.code.includes('FORGED')
-                      ? '🚫'
-                      : '🎟️'}
-                  </span>
-                  <span className="truncate">{item.label}</span>
-                </div>
-                <div className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Result Verification Feedback */}
-        {result && (
-          <div
-            data-cy="checkin-result"
-            className={`p-4 rounded-xl border text-xs space-y-2.5 transition-all animate-in fade-in duration-150 ${
-              result.success
-                ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'
-                : result.isWrongEvent
-                ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-900/60 text-rose-800 dark:text-rose-200'
-                : result.isDuplicate
-                ? 'bg-[#FEF8EC] dark:bg-[#2B2314] border-[#F6DEAC] dark:border-[#4D3D1F] text-[#8C6212] dark:text-[#E8BD68]'
-                : 'bg-[#FDF1EF] dark:bg-[#2E1A17] border-[#F5C2BC] dark:border-[#52251F] text-[#C45547] dark:text-[#E07D70]'
-            }`}
+    <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-[#F8FAFD] dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl relative transition-colors max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
+        {/* Header Section (Fixed at top of modal) */}
+        <div className="p-4 sm:p-5 pb-3 border-b border-slate-200/80 dark:border-slate-800 shrink-0 space-y-3 relative">
+          {/* Close Button */}
+          <button
+            onClick={() => {
+              isOpenRef.current = false;
+              stopCamera();
+              onClose();
+            }}
+            className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-2 font-bold text-sm">
-              {result.success ? (
-                <ShieldCheck className="w-5 h-5 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
-              ) : result.isWrongEvent ? (
-                <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
-              ) : result.isDuplicate ? (
-                <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0 animate-pulse" />
-              ) : (
-                <ShieldAlert className="w-5 h-5 text-[#C45547] dark:text-[#E07D70] shrink-0" />
-              )}
-              <span>{result.message}</span>
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Modal Title */}
+          <div className="flex items-center gap-3 pr-8">
+            <div className="p-2 bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl shrink-0">
+              <QrCode className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
             </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span>Gate Admittance QR Scanner</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-mono">
+                  Duplicate & Event-Verified
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Hold a QR pass to camera or enter pass code.
+              </p>
+            </div>
+          </div>
 
-            {/* Wrong Event Security Alert Card */}
-            {result.isWrongEvent && (
-              <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 space-y-1.5 text-[11px] text-rose-900 dark:text-rose-200">
-                <div className="font-bold flex items-center gap-1.5">
-                  <span>⛔ WRONG EVENT ADMITTANCE REFUSED</span>
+          {/* Active Gate Event Station & Event Selector */}
+          <div className="p-2.5 bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[9px] uppercase font-bold tracking-wider text-slate-400">
+                  Gate Station Configured For:
                 </div>
-                <p className="text-[11px] font-sans opacity-90 leading-relaxed">
-                  This attendee pass belongs to{' '}
-                  <strong className="underline font-semibold">
-                    {result.registration?.event_title || 'a different event'}
-                  </strong>
-                  . It cannot be admitted through this gate station set for{' '}
-                  <strong className="underline font-semibold">
-                    {currentGateEvent?.title}
-                  </strong>
-                  .
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs sm:max-w-sm">
+                  {currentGateEvent?.title || 'Active Event Gate'}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+              <span className="text-[10px] text-slate-500 whitespace-nowrap">Gate:</span>
+              <select
+                value={activeEventId}
+                onChange={(e) => {
+                  setActiveEventId(e.target.value);
+                  setResult(null);
+                }}
+                className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] max-w-[170px] truncate"
+              >
+                {events.map((evt) => (
+                  <option key={evt.id} value={evt.id}>
+                    {evt.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable Modal Body (Never clips, scrolls smoothly) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+          {/* Live Webcam Video Viewfinder */}
+          <div className={`relative rounded-xl overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center shadow-inner transition-all ${
+            cameraActive ? 'aspect-video max-h-56 sm:max-h-60' : 'h-28 sm:h-32'
+          }`}>
+            <video
+              ref={videoRef}
+              className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+            />
+            <canvas ref={canvasRef} className="hidden" />
+
+            {!cameraActive && (
+              <div className="text-center p-3 space-y-2 z-10">
+                <p className="text-xs font-semibold text-slate-200">
+                  Camera Optical Scanner
                 </p>
-                <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-1 font-mono">
-                  <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
-                    Action: Turnstile Locked
-                  </span>
-                  <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
-                    Cross-Event Admission Denied
-                  </span>
-                </div>
+                <button
+                  onClick={startCamera}
+                  disabled={verifying}
+                  className="px-3.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>{result ? 'Scan Next Pass' : 'Start Camera Scanner'}</span>
+                </button>
               </div>
             )}
 
-            {/* Iron-Clad Duplicate Security Incident Warning */}
-            {result.isDuplicate && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-1 text-[11px] font-mono text-amber-900 dark:text-amber-200">
-                <div className="font-bold flex items-center gap-1.5">
-                  <span>🔒 DATABASE INTEGRITY POLICY ENFORCED</span>
+            {cameraActive && (
+              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-3 z-10">
+                <div className="w-full flex justify-between items-center text-[10px] text-white font-mono bg-black/40 backdrop-blur-xs px-2 py-0.5 rounded-lg">
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    SENSOR ON
+                  </span>
+                  <span>Align QR inside frame</span>
                 </div>
-                <p className="text-[10px] font-sans opacity-90">
-                  PostgreSQL unique constraint <code>attendance_records_registration_unique</code> blocked this transaction. Each ticket allows exactly one admission.
-                </p>
-                <div className="flex gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
-                  <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Action: Turnstile Locked</span>
-                  <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Rejected</span>
-                </div>
-              </div>
-            )}
-
-            {result.registration && (
-              <div className="bg-white dark:bg-[#171E2B] p-3 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1.5 shadow-xs">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Attendee Name:</span>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{result.registration.attendee_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Ticket Tier:</span>
-                  <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">{result.registration.ticket_type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Pass Serial:</span>
-                  <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">{result.registration.qr_pass_code}</span>
-                </div>
-                {result.registration.event_title && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Registered Event:</span>
-                    <span className="font-medium text-slate-800 dark:text-slate-200">{result.registration.event_title}</span>
-                  </div>
-                )}
+                <div className="w-36 h-36 border-2 border-dashed border-[#86ABDF] rounded-xl flex items-center justify-center relative bg-white/5 shadow-2xl" />
+                <button
+                  onClick={stopCamera}
+                  className="pointer-events-auto px-2.5 py-1 bg-black/70 hover:bg-black/90 text-white rounded-lg text-[10px] font-semibold transition-colors flex items-center gap-1 cursor-pointer backdrop-blur-xs"
+                >
+                  <CameraOff className="w-3 h-3" />
+                  <span>Stop Camera</span>
+                </button>
               </div>
             )}
           </div>
-        )}
+
+          {cameraError && (
+            <div className="p-2.5 bg-[#FDF1EF] dark:bg-[#2E1A17] border border-[#F5C2BC] dark:border-[#52251F] rounded-xl text-xs text-[#C45547] dark:text-[#E07D70] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{cameraError}</span>
+            </div>
+          )}
+
+          {/* Input Bar for Manual Entry or Barcode Scanner */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+              Pass Serial or Barcode Scan:
+            </label>
+            <div className="flex gap-2">
+              <input
+                data-cy="manual-pass-code"
+                type="text"
+                value={passCodeInput}
+                onChange={(e) => setPassCodeInput(e.target.value)}
+                placeholder="e.g. ZABAY-PASS-9042-SOFIA"
+                className="flex-1 bg-white dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+              />
+              <button
+                onClick={() => handleManualVerify(passCodeInput)}
+                data-cy="verify-pass"
+                disabled={verifying}
+                className="px-3.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0"
+              >
+                {verifying ? 'Checking...' : 'Verify Pass'}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Test Presets (For grading/testing without phone) */}
+          <div className="space-y-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                Turnstile Test Presets:
+              </span>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-mono font-semibold">
+                1-Click Tests
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {sampleCodes.map((item, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    setPassCodeInput(item.code);
+                    handleManualVerify(item.code);
+                  }}
+                  className={`text-left px-2.5 py-1.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
+                    item.code.includes('LIAM')
+                      ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
+                      : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
+                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                      : item.code.includes('FORGED')
+                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                      : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
+                  }`}
+                >
+                  <div className="font-semibold text-[11px] truncate flex items-center gap-1 text-slate-800 dark:text-slate-200">
+                    <span className="text-[10px]">
+                      {item.code.includes('LIAM')
+                        ? '⚠️'
+                        : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
+                        ? '⛔'
+                        : item.code.includes('FORGED')
+                        ? '🚫'
+                        : '🎟️'}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Result Verification Feedback */}
+          {result && (
+            <div
+              ref={resultRef}
+              data-cy="checkin-result"
+              className={`p-3.5 rounded-xl border text-xs space-y-2 transition-all animate-in fade-in duration-150 ${
+                result.success
+                  ? 'bg-[#EDF7F2] dark:bg-[#17271F] border-[#BDE3CF] dark:border-[#234232] text-[#2B6149] dark:text-[#81B89B]'
+                  : result.isWrongEvent
+                  ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-900/60 text-rose-800 dark:text-rose-200'
+                  : result.isDuplicate
+                  ? 'bg-[#FEF8EC] dark:bg-[#2B2314] border-[#F6DEAC] dark:border-[#4D3D1F] text-[#8C6212] dark:text-[#E8BD68]'
+                  : 'bg-[#FDF1EF] dark:bg-[#2E1A17] border-[#F5C2BC] dark:border-[#52251F] text-[#C45547] dark:text-[#E07D70]'
+              }`}
+            >
+              <div className="flex items-center gap-2 font-bold text-xs sm:text-sm">
+                {result.success ? (
+                  <ShieldCheck className="w-5 h-5 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
+                ) : result.isWrongEvent ? (
+                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
+                ) : result.isDuplicate ? (
+                  <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0 animate-pulse" />
+                ) : (
+                  <ShieldAlert className="w-5 h-5 text-[#C45547] dark:text-[#E07D70] shrink-0" />
+                )}
+                <span>{result.message}</span>
+              </div>
+
+              {/* Wrong Event: Simple and direct statement, no full details display */}
+              {result.isWrongEvent && (
+                <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-2.5 space-y-1 text-[11px] text-rose-900 dark:text-rose-200">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>⛔ WRONG EVENT ADMITTANCE REFUSED</span>
+                  </div>
+                  <p className="text-[11px] font-sans opacity-95 leading-relaxed">
+                    This ticket was issued for <strong className="underline font-semibold">{result.registration?.event_title || 'a different event'}</strong>. Not valid for admission at this gate station.
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5 font-mono">
+                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
+                      Action: Turnstile Locked
+                    </span>
+                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
+                      Wrong Event Refused
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Iron-Clad Duplicate Security Incident Warning */}
+              {result.isDuplicate && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 space-y-1 text-[11px] font-mono text-amber-900 dark:text-amber-200">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>🔒 DATABASE INTEGRITY POLICY ENFORCED</span>
+                  </div>
+                  <p className="text-[10px] font-sans opacity-90">
+                    PostgreSQL unique constraint <code>attendance_records_registration_unique</code> blocked this transaction. Each ticket allows exactly one admission.
+                  </p>
+                  <div className="flex gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
+                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Action: Turnstile Locked</span>
+                    <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Rejected</span>
+                  </div>
+                </div>
+              )}
+
+              {/* ONLY render ticket details for valid check-in or duplicate, NEVER for wrong event */}
+              {result.registration && !result.isWrongEvent && (
+                <div className="bg-white dark:bg-[#171E2B] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1 shadow-xs">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Attendee Name:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{result.registration.attendee_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Ticket Tier:</span>
+                    <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">{result.registration.ticket_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Pass Serial:</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">{result.registration.qr_pass_code}</span>
+                  </div>
+                  {result.registration.event_title && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Registered Event:</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200">{result.registration.event_title}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
