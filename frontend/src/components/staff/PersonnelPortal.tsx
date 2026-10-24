@@ -75,7 +75,7 @@ export const PersonnelPortal: React.FC = () => {
         v.id === 'ven-3'
     ) || venues[0] || {
       id: 'ven-default',
-      name: selectedEvent?.location || 'Designated Event Venue',
+      name: selectedEvent?.hall_name || 'Designated Event Venue',
       address: 'Tagbilaran City, Bohol',
       city: 'Tagbilaran City',
       operating_hours: { open: '08:00', close: '22:00' },

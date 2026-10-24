@@ -219,26 +219,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [events, setEvents] = useState<ZabayEvent[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockEvents;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockEvents;
   });
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockEvents[0] || null;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return null;
     }
-    return null;
+    return mockEvents[0] || null;
   });
 
-  const [venues, setVenues] = useState<Venue[]>(() =>
-    typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true' ? mockVenues : []
-  );
-  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockVenueBookings;
+  const [venues, setVenues] = useState<Venue[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockVenues;
+  });
+  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
+    }
+    return mockVenueBookings;
   });
   const [resources] = useState<Resource[]>(mockResources);
   const [personnel, setPersonnel] = useState<Personnel[]>(() => {
@@ -255,22 +258,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mockPersonnel;
   });
   const [tasks, setTasks] = useState<Task[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockTasks;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockTasks;
   });
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockRegistrations;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockRegistrations;
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockAuditLogs;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockAuditLogs;
   });
 
   const [committeeRoles, setCommitteeRoles] = useState<EventCommitteeRoleMap>(() => {
@@ -398,6 +401,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsDevModeUnlocked(true);
     setUnlockedDevCode((prev) => prev || 'ZABAY2026');
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('zabay-clean-slate');
       localStorage.setItem('zabay-demo-mode', 'true');
       localStorage.setItem('zabay-dev-unlocked', 'true');
       if (!localStorage.getItem('zabay-dev-code')) {
@@ -577,6 +581,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs([]);
     setIsDemoMode(false);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-clean-slate', 'true');
       localStorage.setItem('zabay-demo-mode', 'false');
       localStorage.removeItem('zabay_custom_personnel');
     }
