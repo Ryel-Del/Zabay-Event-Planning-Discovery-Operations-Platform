@@ -12,7 +12,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  Terminal,
 } from 'lucide-react';
+import api from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { User, UserRole } from '../../types';
@@ -28,9 +30,10 @@ const DEMO_PERSONAS = [
     name: 'Mark Bautista',
     email: 'mark.bautista@zabay.ph',
     role: 'organizer' as UserRole,
+    roles: ['organizer', 'venue_manager', 'staff', 'attendee'] as UserRole[],
     title: 'Event Organizer',
     org: 'Tagbilaran Youth & Sports Council',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
     badge: 'Planner & Studio Access',
     color: 'from-blue-600 to-indigo-600',
   },
@@ -39,9 +42,10 @@ const DEMO_PERSONAS = [
     name: 'Maria Elena Santos',
     email: 'elena.santos@boholculturalcenter.ph',
     role: 'venue_manager' as UserRole,
+    roles: ['venue_manager', 'attendee'] as UserRole[],
     title: 'Venue Manager',
     org: 'Bohol Cultural Center Facilities',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
     badge: 'GiST Overlap & Halls Guard',
     color: 'from-emerald-600 to-teal-600',
   },
@@ -50,6 +54,7 @@ const DEMO_PERSONAS = [
     name: 'Sofia Ramos',
     email: 'sofia.ramos@bisu.edu.ph',
     role: 'attendee' as UserRole,
+    roles: ['attendee'] as UserRole[],
     title: 'Student Attendee',
     org: 'Bohol Island State University (BISU)',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
@@ -61,9 +66,10 @@ const DEMO_PERSONAS = [
     name: 'Rico Tan',
     email: 'rico.tan@securesentry.ph',
     role: 'staff' as UserRole,
+    roles: ['staff', 'attendee'] as UserRole[],
     title: 'Security Lead (Turnstile)',
     org: 'SecureSentry Bohol Operations',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
     badge: 'Gate Scanner Clearance',
     color: 'from-purple-600 to-pink-600',
   },
@@ -108,6 +114,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           name: personaOverride.name,
           email: personaOverride.email,
           role: personaOverride.role,
+          roles: personaOverride.roles || ['organizer', 'venue_manager', 'staff', 'attendee'],
           avatar: personaOverride.avatar,
           organization: personaOverride.org,
           location: 'Tagbilaran City, Bohol',
@@ -116,19 +123,32 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       } else {
         const matched = mockUsers.find((u) => u.email.toLowerCase() === targetEmail.toLowerCase());
         if (matched) {
-          userToSet = matched;
+          userToSet = {
+            ...matched,
+            roles: matched.roles || ['organizer', 'venue_manager', 'staff', 'attendee'],
+          };
         } else {
           userToSet = {
             id: `usr-${Date.now().toString(36)}`,
             name: name.trim() || targetEmail.split('@')[0],
             email: targetEmail.trim(),
             role: targetRole,
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
             organization: organization.trim() || 'Zabay Platform User',
             location: 'Tagbilaran City, Bohol',
             bio: 'Registered participant on Zabay Event Platform.',
           };
         }
+      }
+
+      // If user typed 'operator' or operator password, authenticate operator session
+      if (targetEmail.toLowerCase().includes('operator') || password === 'zabay-operator-secret-2026') {
+        void api.auth.login('operator', 'zabay-operator-secret-2026').then((res) => {
+          if (res.success) {
+            window.dispatchEvent(new CustomEvent('zabay:operator-session-started'));
+          }
+        });
       }
 
       setCurrentUser(userToSet);
@@ -168,7 +188,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-150">
       <div className="relative w-full max-w-lg bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden text-slate-800 dark:text-slate-100 transition-colors">
         {/* Top Header */}
         <div className="p-6 pb-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/40">
@@ -380,7 +400,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          <div className="pt-2 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+          {/* Quick Privileged Operator Credential Hint */}
+          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>Operator: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('operator');
+                setPassword('zabay-operator-secret-2026');
+                setSelectedRole('organizer');
+              }}
+              className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+            >
+              Fill Operator Dev Secret
+            </button>
+          </div>
+
+          <div className="pt-1 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-slate-400" />
             <span>Protected by PostgreSQL RBAC & bcrypt password verification</span>
           </div>

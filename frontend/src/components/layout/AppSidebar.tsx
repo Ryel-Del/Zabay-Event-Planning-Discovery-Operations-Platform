@@ -123,7 +123,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <aside
-      className={`bg-white dark:bg-[#1E1C19] border-r border-stone-200/80 dark:border-stone-800/80 flex flex-col justify-between shrink-0 transition-all duration-200 z-30 ${
+      className={`bg-white dark:bg-[#1E1C19] border-r border-stone-200/80 dark:border-stone-800/80 flex flex-col justify-between shrink-0 transition-all duration-200 z-20 ${
         isCollapsed ? 'w-16' : 'w-64'
       }`}
     >

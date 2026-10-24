@@ -17,7 +17,6 @@ import type {
 } from '../types';
 import {
   mockCurrentUser,
-  mockUsers,
   mockEvents,
   mockVenues,
   mockVenueBookings,
@@ -143,37 +142,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const previewStaffPortal = (staffId?: string) => {
     const targetStaffId = staffId || activeStaffId || 'per-3';
     setActiveStaffId(targetStaffId);
-    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0] || mockPersonnel[0];
-    if (targetPerson) {
-      setCurrentUser({
-        id: `usr-stf-${targetPerson.id}`,
-        name: targetPerson.name,
-        email: targetPerson.email,
-        role: 'staff',
-        phone: targetPerson.phone,
-        organization: 'Zabay Stage Crew & Operations',
-        location: 'Downtown District, Tagbilaran City',
-        bio: `${targetPerson.role} active on shift in event run-of-show.`,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      });
-    }
-    setCurrentRole('staff');
+    setRoleWithUser('staff');
   };
 
   const exitStaffPreview = () => {
-    setCurrentRole('organizer');
-    const orgUser = mockUsers.find((u) => u.role === 'organizer') || mockCurrentUser;
-    setCurrentUser(orgUser);
+    setRoleWithUser('organizer');
   };
 
   const setRoleWithUser = (role: UserRole) => {
     setCurrentRole(role);
-    if (role === 'staff') {
-      previewStaffPortal();
-      return;
-    }
-    const user = mockUsers.find((u) => u.role === role);
-    if (user) setCurrentUser(user);
+    // Multi-role capability in one account:
+    // Update the active session role while preserving user account identity & profile (Mark Bautista stays Mark Bautista!)
+    setCurrentUser((prevUser) => {
+      const existingRoles = prevUser.roles || ['organizer', 'venue_manager', 'staff', 'attendee'];
+      const updatedRoles = existingRoles.includes(role) ? existingRoles : [...existingRoles, role];
+      return {
+        ...prevUser,
+        role,
+        roles: updatedRoles,
+      };
+    });
   };
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
