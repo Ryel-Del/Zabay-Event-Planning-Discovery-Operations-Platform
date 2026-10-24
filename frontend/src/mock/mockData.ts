@@ -905,6 +905,7 @@ export const mockPersonnel: Personnel[] = [
     email: 'danilo.torralba@boholaudio.ph',
     hourly_rate: 550,
     is_available: true,
+    can_scan_tickets: false,
   },
   {
     id: 'per-2',
@@ -915,6 +916,7 @@ export const mockPersonnel: Personnel[] = [
     email: 'bea.lim@luminaevents.ph',
     hourly_rate: 500,
     is_available: true,
+    can_scan_tickets: false,
   },
   {
     id: 'per-3',
@@ -925,16 +927,18 @@ export const mockPersonnel: Personnel[] = [
     email: 'carlos.mendoza@stagemaster.ph',
     hourly_rate: 650,
     is_available: true,
+    can_scan_tickets: false,
   },
   {
     id: 'per-4',
     name: 'Aileen Robles',
     role: 'Security Lead',
-    skills: ['Crowd Safety', 'Emergency Dispatch', 'CPR / First Aid'],
+    skills: ['Crowd Safety', 'Emergency Dispatch', 'CPR / First Aid', 'Turnstile Gate Control'],
     phone: '+63 (920) 550-9921',
     email: 'aileen.robles@safeguard.ph',
     hourly_rate: 400,
     is_available: true,
+    can_scan_tickets: true,
   },
   {
     id: 'per-5',
@@ -945,6 +949,7 @@ export const mockPersonnel: Personnel[] = [
     email: 'mark.tan@boholreferees.ph',
     hourly_rate: 500,
     is_available: true,
+    can_scan_tickets: false,
   },
   {
     id: 'per-6',
@@ -955,6 +960,7 @@ export const mockPersonnel: Personnel[] = [
     email: 'elena.santos@zabay.ph',
     hourly_rate: 600,
     is_available: true,
+    can_scan_tickets: true,
   },
 ];
 

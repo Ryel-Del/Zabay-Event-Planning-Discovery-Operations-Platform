@@ -43,6 +43,13 @@ interface AppContextType {
   loadDemoData: () => void;
   clearToCleanSlate: () => void;
 
+  // Developer & Evaluation DevCode System
+  isDevModeUnlocked: boolean;
+  unlockedDevCode: string | null;
+  unlockDevMode: (code: string) => { success: boolean; message: string; devCode?: string };
+  lockDevMode: () => void;
+  loadRole2DemoData: () => void;
+
   // Live Database & API Status (Member 3 Connector)
   isLiveBackend: boolean;
   backendHealth: HealthStatus | null;
@@ -195,6 +202,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   });
 
+  const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zabay-dev-unlocked') === 'true';
+    }
+    return false;
+  });
+
+  const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zabay-dev-code');
+    }
+    return null;
+  });
+
   const [events, setEvents] = useState<ZabayEvent[]>(() => {
     if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
       return mockEvents;
@@ -343,9 +364,174 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRegistrations(mockRegistrations);
     setAuditLogs(mockAuditLogs);
     setIsDemoMode(true);
+    setIsDevModeUnlocked(true);
+    setUnlockedDevCode((prev) => prev || 'ZABAY2026');
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-demo-mode', 'true');
+      localStorage.setItem('zabay-dev-unlocked', 'true');
+      if (!localStorage.getItem('zabay-dev-code')) {
+        localStorage.setItem('zabay-dev-code', 'ZABAY2026');
+      }
       localStorage.removeItem('zabay_custom_personnel');
+    }
+  };
+
+  const loadRole2DemoData = () => {
+    setIsLiveBackend(false);
+    setVenues(mockVenues);
+    setEvents(mockEvents);
+    setSelectedEvent(mockEvents[0]);
+    setVenueBookings(mockVenueBookings);
+    setTasks(mockTasks);
+    setPersonnel(mockPersonnel);
+
+    // Seed specialized Role 2 registrations with tested duplicate check-in target
+    const role2Registrations: Registration[] = [
+      {
+        id: 'reg-r2-01',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-1',
+        attendee_name: 'Sofia Ramos',
+        attendee_email: 'sofia.ramos@bisu.edu.ph',
+        status: 'confirmed',
+        ticket_type: 'Courtside Reserved',
+        qr_pass_code: 'ZABAY-PASS-9042-SOFIA',
+        registered_at: '2026-10-01T14:22:10Z',
+        amount_paid: 150,
+      },
+      {
+        id: 'reg-r2-02',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-2',
+        attendee_name: 'Liam Mendoza',
+        attendee_email: 'liam.mendoza@hnu.edu.ph',
+        status: 'checked_in', // Already checked in -> duplicate check-in test target
+        ticket_type: 'General Bleachers',
+        qr_pass_code: 'ZABAY-PASS-3108-LIAM',
+        registered_at: '2026-10-02T11:15:00Z',
+        amount_paid: 50,
+      },
+      {
+        id: 'reg-r2-03',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-3',
+        attendee_name: 'Amara Torres',
+        attendee_email: 'amara.torres@gmail.com',
+        status: 'confirmed',
+        ticket_type: 'General Bleachers',
+        qr_pass_code: 'ZABAY-PASS-5821-AMARA',
+        registered_at: '2026-10-04T09:40:00Z',
+        amount_paid: 50,
+      },
+      {
+        id: 'reg-r2-04',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-4',
+        attendee_name: 'Kenji Tan',
+        attendee_email: 'kenji.tan@outlook.ph',
+        status: 'confirmed',
+        ticket_type: 'Courtside Reserved',
+        qr_pass_code: 'ZABAY-PASS-1029-KENJI',
+        registered_at: '2026-10-05T16:04:12Z',
+        amount_paid: 150,
+      },
+    ];
+    setRegistrations(role2Registrations);
+
+    const role2AuditLogs: AuditLog[] = [
+      {
+        id: `aud-r2-init-${Date.now()}`,
+        user_id: 'usr-org-1',
+        user_name: 'Engr. David Soriano (Role 2 Lead)',
+        action: 'RESOURCE_ASSIGNMENT',
+        entity_type: 'resource',
+        entity_id: 'pg-triggers-v16',
+        change_summary: 'Role 2 Database testbed loaded: GiST exclusion on venue_bookings, trigger on registrations, and audit logging active.',
+        created_at: new Date().toISOString(),
+      },
+      ...mockAuditLogs,
+    ];
+    setAuditLogs(role2AuditLogs);
+
+    setIsDemoMode(true);
+    setIsDevModeUnlocked(true);
+    setUnlockedDevCode('ROLE2-SEED');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-demo-mode', 'true');
+      localStorage.setItem('zabay-dev-unlocked', 'true');
+      localStorage.setItem('zabay-dev-code', 'ROLE2-SEED');
+      localStorage.removeItem('zabay_custom_personnel');
+    }
+
+    const testbedNotice: AppNotification = {
+      id: `notif-r2-${Date.now()}`,
+      title: 'Role 2 Database Testbed Active',
+      message: 'Constraints and triggers loaded: test duplicate check-in with Liam Mendoza (ZABAY-PASS-3108-LIAM) or GiST venue overlap.',
+      type: 'info',
+      timestamp: new Date().toISOString(),
+      targetRole: 'all',
+      read: false,
+    };
+    setNotifications((prev) => [testbedNotice, ...prev]);
+  };
+
+  const unlockDevMode = (code: string): { success: boolean; message: string; devCode?: string } => {
+    const normalized = (code || '').trim().toUpperCase();
+    if (normalized === 'ZABAY2026' || normalized === 'DEV-BOHOL') {
+      loadDemoData();
+      setIsDevModeUnlocked(true);
+      setUnlockedDevCode(normalized);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-dev-unlocked', 'true');
+        localStorage.setItem('zabay-dev-code', normalized);
+      }
+      return {
+        success: true,
+        message: `DevCode "${normalized}" verified! Bohol Master dataset loaded.`,
+        devCode: normalized,
+      };
+    }
+
+    if (normalized === 'ROLE2-SEED') {
+      loadRole2DemoData();
+      return {
+        success: true,
+        message: 'DevCode "ROLE2-SEED" verified! Database trigger and GiST collision testbed loaded.',
+        devCode: 'ROLE2-SEED',
+      };
+    }
+
+    if (normalized === 'CLEAN-SLATE') {
+      clearToCleanSlate();
+      setIsDevModeUnlocked(true);
+      setUnlockedDevCode('CLEAN-SLATE');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-dev-unlocked', 'true');
+        localStorage.setItem('zabay-dev-code', 'CLEAN-SLATE');
+      }
+      return {
+        success: true,
+        message: 'DevCode "CLEAN-SLATE" executed. Workspace wiped to clean slate.',
+        devCode: 'CLEAN-SLATE',
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid devcode. Try "ZABAY2026" or "ROLE2-SEED".',
+    };
+  };
+
+  const lockDevMode = () => {
+    setIsDevModeUnlocked(false);
+    setUnlockedDevCode(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('zabay-dev-unlocked');
+      localStorage.removeItem('zabay-dev-code');
     }
   };
 
@@ -1031,6 +1217,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDemoMode,
       loadDemoData,
       clearToCleanSlate,
+      isDevModeUnlocked,
+      unlockedDevCode,
+      unlockDevMode,
+      lockDevMode,
+      loadRole2DemoData,
       isLiveBackend,
       backendHealth,
       refreshBackendStatus,
@@ -1077,6 +1268,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       activeStaffId,
       theme,
       isDemoMode,
+      isDevModeUnlocked,
+      unlockedDevCode,
       isLiveBackend,
       backendHealth,
       notifications,

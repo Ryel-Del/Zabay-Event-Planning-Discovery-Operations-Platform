@@ -17,9 +17,11 @@ import {
   ShieldCheck,
   Eye,
   ArrowLeft,
+  Lock,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
+import { canPersonnelScanTickets } from '../../types';
 
 export const PersonnelPortal: React.FC = () => {
   const {
@@ -58,7 +60,11 @@ export const PersonnelPortal: React.FC = () => {
     }
   }, [activeStaffId]);
 
-  const currentPerson = personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel;
+  const isSupervisorMode = selectedPersonnelId === 'all';
+  const currentPerson = isSupervisorMode
+    ? null
+    : (personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel);
+  const hasScannerPermission = isSupervisorMode || canPersonnelScanTickets(currentPerson);
 
   // Active venue details
   const activeVenue =
@@ -106,16 +112,27 @@ export const PersonnelPortal: React.FC = () => {
             <Eye className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-[#244A85] dark:text-[#8BB0E8]">
                 Staff Shift Preview Mode
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
-                Active Persona: {currentPerson?.name || 'Field Crew'}
+                Active Persona: {currentPerson ? `${currentPerson.name} (${currentPerson.role})` : 'Master Crew View'}
               </span>
+              {hasScannerPermission ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-mono font-bold flex items-center gap-1">
+                  <QrCode className="w-3 h-3" /> Gate Scanner Clearance
+                </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 font-mono flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-400" /> Scanner Restricted (Run-of-Show Only)
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-              You are testing how staff members view assigned tasks, duty checklists, and camera gate check-in.
+              {hasScannerPermission
+                ? 'Testing staff view: This persona is an authorized Gate Operator with ticket scanner clearance.'
+                : 'Testing staff view: Ticket scanner is restricted for this role. Technical and floor crew focus on duty run-of-show.'}
             </p>
           </div>
         </div>
@@ -160,20 +177,41 @@ export const PersonnelPortal: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Welcome to your personal shift portal. Mark assigned duties as you complete them and scan attendee tickets at the gate.
+              {hasScannerPermission
+                ? 'Welcome to your personal shift portal. Mark assigned duties as you complete them and scan attendee tickets at the gate.'
+                : 'Welcome to your personal shift portal. Review your assigned run-of-show duties, stage timings, and equipment checklist below.'}
             </p>
           </div>
         </div>
 
         {/* Action Controls: Gate Scanner + Supervisor Switcher */}
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <button
-            onClick={() => setIsScannerOpen(true)}
-            className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <QrCode className="w-4 h-4 text-[#D4E4F7]" />
-            <span>Open Gate Ticket Scanner</span>
-          </button>
+          {hasScannerPermission ? (
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              title="Authorized Gate Check-in Operator"
+            >
+              <QrCode className="w-4 h-4 text-[#D4E4F7]" />
+              <span>Open Gate Ticket Scanner</span>
+              {currentPerson && (
+                <span className="hidden sm:inline text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/20 text-white font-mono font-bold">
+                  Clearance
+                </span>
+              )}
+            </button>
+          ) : (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 text-xs select-none"
+              title="Ticket scanner access is restricted to Gate Security and Registration personnel"
+            >
+              <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
+              <div>
+                <span className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">Scanner Restricted</span>
+                <span className="text-[10px] block text-slate-400">Security & Registration Only</span>
+              </div>
+            </div>
+          )}
 
           {/* Supervisor / Testing Mode Switcher */}
           <div className="flex items-center gap-1.5 bg-[#F8FAFD] dark:bg-[#111722] p-1 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -186,7 +224,7 @@ export const PersonnelPortal: React.FC = () => {
               <option value="all">👥 All Crew (Supervisor)</option>
               {personnel.map((p) => (
                 <option key={p.id} value={p.id}>
-                  👤 {p.name} ({p.role})
+                  👤 {p.name} ({p.role}) {canPersonnelScanTickets(p) ? '• 🎟️ Gate Scanner' : ''}
                 </option>
               ))}
             </select>

@@ -144,7 +144,22 @@ export interface Personnel {
   email: string;
   hourly_rate: number;
   is_available: boolean;
+  can_scan_tickets?: boolean;
 }
+
+/**
+ * Determines whether an event staff member has gate turnstile scanner clearance.
+ * In real-world event operations, ticket scanning is restricted to Security,
+ * Registration desk, and Event Coordinator staff, while AV technicians and referees
+ * only receive task and run-of-show access.
+ */
+export const canPersonnelScanTickets = (person?: Personnel | null): boolean => {
+  if (!person) return true; // Supervisor / All Crew view
+  if (typeof person.can_scan_tickets === 'boolean') {
+    return person.can_scan_tickets;
+  }
+  return ['Security Lead', 'Registration Staff', 'Event Coordinator'].includes(person.role);
+};
 
 export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'completed' | 'blocked';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';

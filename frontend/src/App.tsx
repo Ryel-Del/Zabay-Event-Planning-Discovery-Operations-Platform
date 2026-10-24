@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Lock, KeyRound, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Lock, KeyRound, AlertCircle, Terminal } from 'lucide-react';
 import api from './services/api';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppHeader } from './components/layout/AppHeader';
@@ -9,7 +9,7 @@ import { OrganizerPage } from './pages/organizer/OrganizerPage';
 import { VenuePage } from './pages/venue/VenuePage';
 import { StaffPage } from './pages/staff/StaffPage';
 import { AttendeePage } from './pages/attendee/AttendeePage';
-import { AuditLogViewer, QRCheckInScanner, ProfileView } from './components/modals';
+import { AuditLogViewer, QRCheckInScanner, ProfileView, DevCodeModal } from './components/modals';
 
 const MainContent: React.FC = () => {
   const { currentRole, setCurrentRole, refreshBackendStatus } = useApp();
@@ -35,7 +35,20 @@ const MainContent: React.FC = () => {
   const [isAuditOpen, setIsAuditOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isDevModalOpen, setIsDevModalOpen] = useState(false);
   const [activeScanCode, setActiveScanCode] = useState<string | undefined>();
+
+  // Global keyboard shortcut to open DevCode modal anywhere (Ctrl+Shift+D or Cmd+Shift+D)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        setIsDevModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleOpenScannerWithCode = (code?: string) => {
     setActiveScanCode(code);
@@ -44,8 +57,20 @@ const MainContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] dark:bg-[#0E131C] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
-      {/* Operator Session Badge & Auth Trigger */}
+      {/* Operator Session Badge, Dev Console & Auth Trigger */}
       <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2">
+        <button
+          onClick={() => setIsDevModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-400 hover:border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer group"
+          title="Open Developer & Evaluation Console (Ctrl+Shift+D)"
+        >
+          <Terminal className="w-3.5 h-3.5 text-indigo-500 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Dev Console</span>
+          <kbd className="hidden md:inline px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-500">
+            Ctrl+Shift+D
+          </kbd>
+        </button>
+
         {authenticated ? (
           <div className="flex items-center gap-2 p-1.5 pl-3 pr-2 rounded-xl bg-white dark:bg-[#171E2B] border border-emerald-300 dark:border-emerald-800/80 shadow-lg text-xs">
             <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold">
@@ -188,6 +213,7 @@ const MainContent: React.FC = () => {
         onOpenAudit={() => setIsAuditOpen(true)}
         onOpenScanner={() => handleOpenScannerWithCode()}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenDevConsole={() => setIsDevModalOpen(true)}
       />
 
       {/* Main Dual-Layout Shell */}
@@ -251,6 +277,11 @@ const MainContent: React.FC = () => {
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
         onViewPass={(code) => handleOpenScannerWithCode(code)}
+      />
+      <DevCodeModal
+        isOpen={isDevModalOpen}
+        onClose={() => setIsDevModalOpen(false)}
+        onOpenScannerWithCode={(code) => handleOpenScannerWithCode(code)}
       />
     </div>
   );

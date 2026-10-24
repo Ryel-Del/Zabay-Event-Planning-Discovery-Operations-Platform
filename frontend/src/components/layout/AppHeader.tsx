@@ -26,6 +26,7 @@ import {
   Bell,
   Database,
   X,
+  Terminal,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
@@ -38,9 +39,10 @@ interface AppHeaderProps {
   onOpenAudit: () => void;
   onOpenScanner: () => void;
   onOpenProfile?: () => void;
+  onOpenDevConsole?: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner, onOpenProfile }) => {
+export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner, onOpenProfile, onOpenDevConsole }) => {
   const {
     currentRole,
     setCurrentRole,
@@ -54,6 +56,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
     theme,
     toggleTheme,
     isDemoMode,
+    isDevModeUnlocked,
+    unlockedDevCode,
     loadDemoData,
     clearToCleanSlate,
     isLiveBackend,
@@ -335,8 +339,29 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ onOpenAudit, onOpenScanner
 
       {/* Right: Actions, Studio CTA & Account Menu */}
       <div className="flex items-center gap-2.5">
-        {/* Workspace Mode Indicator / Quick Toggle */}
-        <div className="hidden lg:flex items-center">
+        {/* Workspace Mode Indicator & Developer Console Trigger */}
+        <div className="hidden lg:flex items-center gap-1.5">
+          {isDevModeUnlocked ? (
+            <button
+              onClick={onOpenDevConsole}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 rounded-xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer shadow-xs"
+              title="Dev Mode Active. Click to open Developer Console & Testbeds (Ctrl+Shift+D)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <Terminal className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              <span>DEV: {unlockedDevCode || 'ACTIVE'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={onOpenDevConsole}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/30 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 rounded-xl transition-all cursor-pointer"
+              title="Enter Developer Passcode to unlock simulation & testbeds (Ctrl+Shift+D)"
+            >
+              <Terminal className="w-3 h-3 text-indigo-500" />
+              <span>Dev Console</span>
+            </button>
+          )}
+
           {isDemoMode ? (
             <button
               onClick={clearToCleanSlate}
