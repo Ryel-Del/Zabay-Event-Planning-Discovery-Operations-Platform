@@ -275,7 +275,7 @@ export const AnalyticsDashboard: React.FC = () => {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(val: any) => [`$${Number(val).toLocaleString()}`, 'Revenue']}
+                  formatter={(val: any) => [`₱${Number(val).toLocaleString()}`, 'Revenue']}
                   contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-strong)', borderRadius: '12px', fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px' }} />

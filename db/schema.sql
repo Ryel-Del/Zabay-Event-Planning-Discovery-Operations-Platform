@@ -341,3 +341,75 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     change_summary TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- 11. RESOURCES & INVENTORY TABLE
+CREATE TABLE IF NOT EXISTS resources (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(64) NOT NULL CHECK (category IN ('audio_visual', 'power_electrical', 'staging_rigging', 'sports_hardware', 'crowd_safety')),
+    total_quantity INT NOT NULL CHECK (total_quantity >= 0),
+    available_quantity INT NOT NULL CHECK (available_quantity >= 0),
+    hourly_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    unit VARCHAR(32) NOT NULL DEFAULT 'units',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 12. TASK DEPENDENCIES JUNCTION TABLE (N:M Task Predecessors/Successors)
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('tdep-' || gen_random_uuid()::text),
+    predecessor_task_id VARCHAR(64) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    successor_task_id VARCHAR(64) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    dependency_type VARCHAR(16) NOT NULL DEFAULT 'FS' CHECK (dependency_type IN ('FS', 'SS', 'FF', 'SF')),
+    lag_minutes INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT chk_no_self_dependency CHECK (predecessor_task_id <> successor_task_id),
+    CONSTRAINT uq_task_dependency UNIQUE (predecessor_task_id, successor_task_id)
+);
+
+-- 13. PERSONNEL ASSIGNMENTS JUNCTION TABLE (N:M Task x Personnel with Intersection Attributes)
+CREATE TABLE IF NOT EXISTS personnel_assignments (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('passign-' || gen_random_uuid()::text),
+    task_id VARCHAR(64) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    personnel_id VARCHAR(64) NOT NULL REFERENCES personnel(id) ON DELETE CASCADE,
+    assigned_role VARCHAR(100) NOT NULL,
+    assignment_start VARCHAR(8),
+    assignment_end VARCHAR(8),
+    progress_status VARCHAR(32) NOT NULL DEFAULT 'assigned' CHECK (progress_status IN ('assigned', 'active', 'completed')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_task_personnel UNIQUE (task_id, personnel_id)
+);
+
+-- 14. RESOURCE ASSIGNMENTS JUNCTION TABLE (N:M Task x Resource with Intersection Attributes)
+CREATE TABLE IF NOT EXISTS resource_assignments (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('rassign-' || gen_random_uuid()::text),
+    task_id VARCHAR(64) NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    resource_id VARCHAR(64) NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+    quantity_allocated INT NOT NULL CHECK (quantity_allocated > 0),
+    hourly_cost NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_task_resource UNIQUE (task_id, resource_id)
+);
+
+-- 15. PAYMENTS & TRANSACTIONS TABLE
+CREATE TABLE IF NOT EXISTS payments (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('pay-' || gen_random_uuid()::text),
+    registration_id VARCHAR(64) NOT NULL REFERENCES registrations(id) ON DELETE CASCADE,
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+    currency VARCHAR(8) NOT NULL DEFAULT 'PHP',
+    provider VARCHAR(32) NOT NULL DEFAULT 'stripe',
+    payment_intent_id VARCHAR(255) UNIQUE,
+    status VARCHAR(32) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+    paid_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 16. EVENT REQUIREMENTS TABLE (Operational Thresholds)
+CREATE TABLE IF NOT EXISTS event_requirements (
+    id VARCHAR(64) PRIMARY KEY DEFAULT ('ereq-' || gen_random_uuid()::text),
+    event_id VARCHAR(64) NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    min_power_kw INT NOT NULL DEFAULT 15,
+    required_facilities TEXT[] DEFAULT '{}',
+    min_capacity INT NOT NULL DEFAULT 100,
+    requires_indoor BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_event_requirements UNIQUE (event_id)
+);

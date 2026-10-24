@@ -198,3 +198,81 @@ ON events (organizer_id, status);
 -- Unique index on attendance turnstile admissions
 CREATE UNIQUE INDEX IF NOT EXISTS attendance_records_registration_unique 
 ON attendance_records (registration_id);
+
+-- --------------------------------------------------------
+-- 5. RECURSIVE SQL QUERY: Dependency-Based Change-Impact Tracing
+-- --------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_get_downstream_task_impact(p_task_id VARCHAR(64))
+RETURNS TABLE (
+    task_id VARCHAR(64),
+    task_title VARCHAR(255),
+    dependency_level INT,
+    path TEXT
+) LANGUAGE plpgsql AS $$
+BEGIN
+    RETURN QUERY
+    WITH RECURSIVE downstream_tasks AS (
+        -- Anchor member: immediate successors of the target task
+        SELECT 
+            t.id AS task_id,
+            t.title AS task_title,
+            1 AS dependency_level,
+            (p_task_id || ' -> ' || t.id)::TEXT AS path
+        FROM tasks t
+        WHERE p_task_id = ANY(t.dependencies)
+        
+        UNION ALL
+        
+        -- Recursive member: successors of successors
+        SELECT 
+            next_t.id AS task_id,
+            next_t.title AS task_title,
+            dt.dependency_level + 1,
+            (dt.path || ' -> ' || next_t.id)::TEXT
+        FROM tasks next_t
+        JOIN downstream_tasks dt ON dt.task_id = ANY(next_t.dependencies)
+    )
+    SELECT DISTINCT dt.task_id, dt.task_title, dt.dependency_level, dt.path
+    FROM downstream_tasks dt
+    ORDER BY dt.dependency_level ASC;
+END;
+$$;
+
+-- --------------------------------------------------------
+-- 6. SERVER-SIDE DATABASE VIEWS (Analytics & Data Abstraction)
+-- --------------------------------------------------------
+CREATE OR REPLACE VIEW v_event_revenue AS
+SELECT 
+    e.id AS event_id,
+    e.title AS event_title,
+    COUNT(r.id) AS total_registrations,
+    COALESCE(SUM(r.amount_paid), 0.00) AS gross_revenue_php,
+    ROUND(COALESCE(SUM(r.amount_paid), 0.00) / NULLIF(COUNT(r.id), 0), 2) AS avg_ticket_price_php
+FROM events e
+LEFT JOIN registrations r ON r.event_id = e.id AND r.status <> 'cancelled'
+GROUP BY e.id, e.title;
+
+CREATE OR REPLACE VIEW v_venue_utilization AS
+SELECT 
+    v.id AS venue_id,
+    v.name AS venue_name,
+    v.capacity AS max_venue_capacity,
+    COUNT(vb.id) AS total_confirmed_bookings,
+    COALESCE(SUM(EXTRACT(EPOCH FROM (vb.end_time - vb.start_time))/3600), 0) AS total_booked_hours
+FROM venues v
+LEFT JOIN venue_bookings vb ON vb.venue_id = v.id AND vb.status = 'confirmed'
+GROUP BY v.id, v.name, v.capacity;
+
+CREATE OR REPLACE VIEW v_task_readiness AS
+SELECT 
+    e.id AS event_id,
+    e.title AS event_title,
+    COUNT(t.id) AS total_tasks,
+    COUNT(CASE WHEN t.status = 'completed' THEN 1 END) AS completed_tasks,
+    COUNT(CASE WHEN t.status = 'in_progress' THEN 1 END) AS in_progress_tasks,
+    COUNT(CASE WHEN t.status = 'blocked' THEN 1 END) AS blocked_tasks,
+    ROUND((COUNT(CASE WHEN t.status = 'completed' THEN 1 END)::numeric / NULLIF(COUNT(t.id), 0)::numeric) * 100, 1) AS readiness_percentage
+FROM events e
+LEFT JOIN tasks t ON t.event_id = e.id
+GROUP BY e.id, e.title;
+
