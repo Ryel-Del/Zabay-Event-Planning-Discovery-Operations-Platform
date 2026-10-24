@@ -206,24 +206,24 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   ];
 
   return (
-    <div data-cy="event-wizard" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div data-cy="event-wizard" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]"
+        className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[94vh] sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header & Stepper */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center shrink-0">
                 <Calendar className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                   Guided Event Launch Wizard
                 </h3>
-                <p className="text-[11px] text-slate-500">
-                  Step {currentStep} of 4: {steps[currentStep - 1].label}
+                <p className="text-[10px] sm:text-[11px] text-slate-500">
+                  Step {currentStep} of 4: <strong className="text-slate-700 dark:text-slate-300">{steps[currentStep - 1].label}</strong>
                 </p>
               </div>
             </div>
@@ -238,9 +238,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           </div>
 
           {/* Stepper Progress Bar */}
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-2 pt-1">
             {steps.map((s) => (
-              <div key={s.num} className="flex-1 flex items-center gap-2">
+              <div key={s.num} className="flex-1 flex items-center gap-1 sm:gap-2">
                 <div
                   className={`h-1.5 flex-1 rounded-full transition-all ${
                     s.num <= currentStep
@@ -249,7 +249,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   }`}
                 />
                 <span
-                  className={`text-[10px] font-bold ${
+                  className={`text-[10px] font-bold hidden sm:inline ${
                     s.num === currentStep
                       ? 'text-[#3E6CB5] dark:text-[#7EA6E0]'
                       : s.num < currentStep
@@ -265,7 +265,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Wizard Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
           {persistedEvent && <div data-cy="saved-planning-event" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
             Event {persistedEvent.id} is saved in planning. Its details and dates are locked here; choose another venue or hall, then continue to retry booking. Closing keeps this event and starts a fresh wizard next time.
           </div>}

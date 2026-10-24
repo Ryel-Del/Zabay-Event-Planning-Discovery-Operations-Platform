@@ -227,7 +227,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             {/* Custom Modern Floating Dropdown Card */}
             {isEventPickerOpen && (
-              <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-12 mt-1 w-84 sm:w-96 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-12 mt-1 w-[calc(100vw-2rem)] max-w-sm sm:w-96 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>Switch Managed Event</span>
                   <span className="text-[10px] font-mono text-[#3E6CB5] dark:text-[#7EA6E0] font-normal">
@@ -428,7 +428,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </button>
 
           {isNotifOpen && (
-            <div className="absolute right-0 top-12 mt-1 w-80 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 top-12 mt-1 w-[calc(100vw-2rem)] max-w-xs sm:w-80 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
@@ -533,7 +533,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Profile Dropdown */}
           {isProfileMenuOpen && (
-            <div className="absolute right-0 top-12 mt-1 w-72 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute right-0 top-12 mt-1 w-[calc(100vw-2rem)] max-w-xs sm:w-72 bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
               {/* Account Header */}
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80">
                 <div className="flex items-center gap-3">

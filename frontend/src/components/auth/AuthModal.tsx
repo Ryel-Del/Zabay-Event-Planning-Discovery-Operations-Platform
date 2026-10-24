@@ -188,10 +188,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden text-slate-800 dark:text-slate-100 transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg max-h-[94vh] sm:max-h-[90vh] flex flex-col bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden text-slate-800 dark:text-slate-100 transition-colors">
         {/* Top Header */}
-        <div className="p-6 pb-4 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/40">
+        <div className="p-4 sm:p-6 pb-4 shrink-0 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/40">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
@@ -214,7 +214,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* 1-Click Demo Personas Bar */}
-        <div className="p-4 bg-blue-50/60 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/40 space-y-2">
+        <div className="p-3 sm:p-4 shrink-0 bg-blue-50/60 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/40 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
@@ -223,7 +223,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <span className="text-[10px] text-slate-400 font-mono">Instant Sign-In</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {DEMO_PERSONAS.map((persona) => (
               <button
                 key={persona.id}
@@ -250,7 +250,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex shrink-0 border-b border-slate-200/80 dark:border-slate-800">
           <button
             type="button"
             onClick={() => {
@@ -282,7 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
           {mode === 'register' && (
             <div className="space-y-1">
               <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">

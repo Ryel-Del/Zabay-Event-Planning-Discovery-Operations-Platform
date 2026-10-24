@@ -779,8 +779,8 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
 
       {/* Add Task Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <CheckSquare className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
@@ -822,7 +822,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Responsible Committee
@@ -860,7 +860,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Related Milestone (Optional)
@@ -893,7 +893,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Due Date
@@ -951,8 +951,8 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
 
       {/* Edit Task Modal */}
       {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto p-4 sm:p-6 shadow-xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-[#3E6CB5]" />
@@ -992,7 +992,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Status
@@ -1027,7 +1027,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Committee

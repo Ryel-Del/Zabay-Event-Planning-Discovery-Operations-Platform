@@ -508,8 +508,8 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
       {/* Modal: Add New Personnel */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-[#171E2B] rounded-2xl max-w-lg w-full border border-slate-200/80 dark:border-slate-800 shadow-xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#171E2B] rounded-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto border border-slate-200/80 dark:border-slate-800 shadow-xl p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#EBF3FC] dark:bg-[#1E293B] flex items-center justify-center text-[#3E6CB5] dark:text-[#7EA6E0]">

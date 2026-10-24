@@ -316,16 +316,16 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-3xl bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden text-slate-800 dark:text-slate-100 transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[94vh] sm:max-h-[92vh] overflow-hidden text-slate-800 dark:text-slate-100 transition-colors">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
+        <div className="p-4 sm:p-6 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
               <Trophy className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Register Facility or Sports Court</h2>
+              <h2 className="text-base sm:text-lg font-bold">Register Facility or Sports Court</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Register courts, arenas, gymnasiums, and venues for Bohol tournaments and events.
               </p>
@@ -340,7 +340,7 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-5 sm:space-y-6 flex-1 text-xs">
           {/* Preset Buttons */}
           <div className="space-y-2">
             <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">

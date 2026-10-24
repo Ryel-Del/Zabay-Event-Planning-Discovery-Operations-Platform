@@ -559,8 +559,8 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
 
       {/* Add Member Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl p-5 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4">
+          <div className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full max-h-[92vh] overflow-y-auto shadow-2xl p-4 sm:p-5 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-[#3E6CB5]" />

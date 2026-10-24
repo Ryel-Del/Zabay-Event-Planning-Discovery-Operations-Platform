@@ -39,6 +39,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [showTestPresets, setShowTestPresets] = useState(false);
   const verificationInFlight = useRef(false);
   const isOpenRef = useRef(isOpen);
   isOpenRef.current = isOpen;
@@ -258,10 +259,10 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   ];
 
   return (
-    <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#F8FAFD] dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl relative transition-colors max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
+    <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-[#F8FAFD] dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl relative transition-colors max-h-[94vh] sm:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Header Section (Fixed at top of modal) */}
-        <div className="p-4 sm:p-5 pb-3 border-b border-slate-200/80 dark:border-slate-800 shrink-0 space-y-3 relative">
+        <div className="p-3.5 sm:p-5 pb-3 border-b border-slate-200/80 dark:border-slate-800 shrink-0 space-y-2.5 sm:space-y-3 relative">
           {/* Close Button */}
           <button
             onClick={() => {
@@ -269,43 +270,43 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
               stopCamera();
               onClose();
             }}
-            className="absolute top-4 right-4 p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Modal Title */}
-          <div className="flex items-center gap-3 pr-8">
+          <div className="flex items-center gap-2.5 sm:gap-3 pr-8 sm:pr-10">
             <div className="p-2 bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl shrink-0">
-              <QrCode className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+              <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span>Gate Admittance QR Scanner</span>
+                <span>Gate Admittance Scanner</span>
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-mono">
-                  Duplicate & Event-Verified
+                  Verified Gate
                 </span>
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Hold a QR pass to camera or enter pass code.
+              <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                Hold a QR pass to camera or enter pass serial code.
               </p>
             </div>
           </div>
 
           {/* Active Gate Event Station & Event Selector */}
-          <div className="p-2.5 bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+          <div className="p-2 sm:p-2.5 bg-white dark:bg-[#121824] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 shadow-xs">
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <div className="min-w-0">
                 <div className="text-[9px] uppercase font-bold tracking-wider text-slate-400">
                   Gate Station Configured For:
                 </div>
-                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs sm:max-w-sm">
+                <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] sm:max-w-xs">
                   {currentGateEvent?.title || 'Active Event Gate'}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
+            <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto">
               <span className="text-[10px] text-slate-500 whitespace-nowrap">Gate:</span>
               <select
                 value={activeEventId}
@@ -313,7 +314,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                   setActiveEventId(e.target.value);
                   setResult(null);
                 }}
-                className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] max-w-[170px] truncate"
+                className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] w-full sm:w-auto sm:max-w-[180px] truncate cursor-pointer"
               >
                 {events.map((evt) => (
                   <option key={evt.id} value={evt.id}>
@@ -326,10 +327,10 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
         </div>
 
         {/* Scrollable Modal Body (Never clips, scrolls smoothly) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3">
           {/* Live Webcam Video Viewfinder */}
           <div className={`relative rounded-xl overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center shadow-inner transition-all ${
-            cameraActive ? 'aspect-video max-h-56 sm:max-h-60' : 'h-28 sm:h-32'
+            cameraActive ? 'aspect-video max-h-48 sm:max-h-56' : 'h-24 sm:h-28'
           }`}>
             <video
               ref={videoRef}
@@ -386,72 +387,79 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
               Pass Serial or Barcode Scan:
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 data-cy="manual-pass-code"
                 type="text"
                 value={passCodeInput}
                 onChange={(e) => setPassCodeInput(e.target.value)}
                 placeholder="e.g. ZABAY-PASS-9042-SOFIA"
-                className="flex-1 bg-white dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                className="flex-1 bg-white dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] min-w-0"
               />
               <button
                 onClick={() => handleManualVerify(passCodeInput)}
                 data-cy="verify-pass"
                 disabled={verifying}
-                className="px-3.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0"
+                className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs shrink-0 flex items-center justify-center gap-1.5"
               >
                 {verifying ? 'Checking...' : 'Verify Pass'}
               </button>
             </div>
           </div>
 
-          {/* Quick Test Presets (For grading/testing without phone) */}
-          <div className="space-y-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+          {/* Quick Test Presets (Collapsible to preserve vertical space on mobile) */}
+          <div className="pt-1 border-t border-slate-200/60 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => setShowTestPresets(!showTestPresets)}
+              className="w-full flex items-center justify-between py-1.5 px-2.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/50 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors text-[11px] font-semibold text-slate-700 dark:text-slate-300 cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                Turnstile Test Presets:
+                <span>Test & Demo Pass Codes ({sampleCodes.length})</span>
               </span>
-              <span className="text-[9px] px-2 py-0.5 rounded bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-mono font-semibold">
-                1-Click Tests
+              <span className="text-[10px] text-[#3E6CB5] dark:text-[#7EA6E0] font-bold">
+                {showTestPresets ? 'Hide ▲' : 'Show Options ▼'}
               </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {sampleCodes.map((item, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setPassCodeInput(item.code);
-                    handleManualVerify(item.code);
-                  }}
-                  className={`text-left px-2.5 py-1.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
-                    item.code.includes('LIAM')
-                      ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
-                      : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                      : item.code.includes('FORGED')
-                      ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                      : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
-                  }`}
-                >
-                  <div className="font-semibold text-[11px] truncate flex items-center gap-1 text-slate-800 dark:text-slate-200">
-                    <span className="text-[10px]">
-                      {item.code.includes('LIAM')
-                        ? '⚠️'
+            </button>
+
+            {showTestPresets && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2 animate-in fade-in duration-150">
+                {sampleCodes.map((item, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => {
+                      setPassCodeInput(item.code);
+                      handleManualVerify(item.code);
+                    }}
+                    className={`text-left px-2.5 py-1.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
+                      item.code.includes('LIAM')
+                        ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
                         : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                        ? '⛔'
+                        ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
                         : item.code.includes('FORGED')
-                        ? '🚫'
-                        : '🎟️'}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </div>
-                  <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
-                </button>
-              ))}
-            </div>
+                        ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                        : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
+                    }`}
+                  >
+                    <div className="font-semibold text-[11px] truncate flex items-center gap-1 text-slate-800 dark:text-slate-200">
+                      <span className="text-[10px]">
+                        {item.code.includes('LIAM')
+                          ? '⚠️'
+                          : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
+                          ? '⛔'
+                          : item.code.includes('FORGED')
+                          ? '🚫'
+                          : '🎟️'}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Result Verification Feedback */}
@@ -473,13 +481,13 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                 {result.success ? (
                   <ShieldCheck className="w-5 h-5 text-[#4E8268] dark:text-[#81B89B] shrink-0" />
                 ) : result.isWrongEvent ? (
-                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
+                  <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
                 ) : result.isDuplicate ? (
-                  <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0 animate-pulse" />
+                  <AlertTriangle className="w-5 h-5 text-[#B37E1C] dark:text-[#E8BD68] shrink-0" />
                 ) : (
                   <ShieldAlert className="w-5 h-5 text-[#C45547] dark:text-[#E07D70] shrink-0" />
                 )}
-                <span>{result.message}</span>
+                <span className="break-words">{result.message}</span>
               </div>
 
               {/* Wrong Event: Simple and direct statement, no full details display */}
@@ -488,7 +496,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                   <div className="font-bold flex items-center gap-1.5">
                     <span>⛔ WRONG EVENT ADMITTANCE REFUSED</span>
                   </div>
-                  <p className="text-[11px] font-sans opacity-95 leading-relaxed">
+                  <p className="text-[11px] font-sans opacity-95 leading-relaxed break-words">
                     This ticket was issued for <strong className="underline font-semibold">{result.registration?.event_title || 'a different event'}</strong>. Not valid for admission at this gate station.
                   </p>
                   <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5 font-mono">
@@ -508,10 +516,10 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                   <div className="font-bold flex items-center gap-1.5">
                     <span>🔒 ADMISSION POLICY ENFORCED</span>
                   </div>
-                  <p className="text-[10px] opacity-90">
+                  <p className="text-[10px] opacity-90 break-words">
                     Security verification: Each ticket allows exactly one admission. This pass has already been used for gate entry.
                   </p>
-                  <div className="flex gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
+                  <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5">
                     <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Pass Already Admitted</span>
                     <span className="bg-amber-200/60 dark:bg-amber-900/40 px-1.5 py-0.5 rounded">Re-entry Denied</span>
                   </div>
@@ -520,23 +528,23 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
 
               {/* ONLY render ticket details for valid check-in or duplicate, NEVER for wrong event */}
               {result.registration && !result.isWrongEvent && (
-                <div className="bg-white dark:bg-[#171E2B] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1 shadow-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Attendee Name:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{result.registration.attendee_name}</span>
+                <div className="bg-white dark:bg-[#171E2B] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1.5 shadow-xs overflow-hidden">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Attendee:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 truncate text-right">{result.registration.attendee_name}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Ticket Tier:</span>
-                    <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">{result.registration.ticket_type}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Ticket Tier:</span>
+                    <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold truncate text-right">{result.registration.ticket_type}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Pass Serial:</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold">{result.registration.qr_pass_code}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Pass Serial:</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold text-[10px] break-all text-right">{result.registration.qr_pass_code}</span>
                   </div>
                   {result.registration.event_title && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Registered Event:</span>
-                      <span className="font-medium text-slate-800 dark:text-slate-200">{result.registration.event_title}</span>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-slate-500 shrink-0">Event:</span>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate text-right">{result.registration.event_title}</span>
                     </div>
                   )}
                 </div>
