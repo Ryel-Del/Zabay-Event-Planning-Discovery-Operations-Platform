@@ -110,9 +110,20 @@ export function translateDbError(errData: any): string {
   }
 }
 
+let csrfToken: string | undefined;
+async function csrf() {
+  if (!csrfToken) {
+    const response = await fetch('/api/auth/session');
+    csrfToken = (await response.json()).csrfToken;
+  }
+  return csrfToken;
+}
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  const mutation = options.method && !['GET', 'HEAD'].includes(options.method);
+  const token = mutation && endpoint !== '/api/attendees/register' ? await csrf().catch(() => undefined) : undefined;
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'X-CSRF-Token': token } : {}),
     ...(options.headers || {}),
   };
 
@@ -125,6 +136,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
+      if (response.status === 401) csrfToken = undefined;
       if (!data) {
         return { success: false, error: 'Backend API is unavailable. No database change was confirmed.', code: 'NETWORK_ERROR' };
       }
@@ -132,7 +144,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       return {
         success: false,
         error: friendlyMessage,
-        code: data?.code,
+        code: data?.code || (response.status === 401 ? 'UNAUTHORIZED' : response.status === 403 ? 'FORBIDDEN' : undefined),
         isDuplicate: data?.isDuplicate,
       };
     }
@@ -148,6 +160,20 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 export const api = {
+  auth: {
+    session: async () => { const r = await fetch('/api/auth/session'); return r.json() as Promise<{ authenticated: boolean; csrfToken?: string }>; },
+    login: async (username: string, password: string) => {
+      const response = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+      const data = await response.json();
+      if (response.ok) csrfToken = data.csrfToken;
+      return { success: response.ok, error: data.error };
+    },
+    logout: async () => {
+      const token = await csrf();
+      await fetch('/api/auth/logout', { method: 'POST', headers: { 'X-CSRF-Token': token || '' } });
+      csrfToken = undefined;
+    },
+  },
   // System Health
   health: {
     check: async (): Promise<ApiResponse<HealthStatus>> => {

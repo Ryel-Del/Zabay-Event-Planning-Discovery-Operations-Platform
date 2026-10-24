@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
 import { pool, query } from '../config/db';
+import { optionalOperator } from '../middleware/auth';
 
 export async function getVenues(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -29,7 +30,8 @@ export async function getVenueById(req: Request, res: Response, next: NextFuncti
 
     const hallsResult = await query('SELECT * FROM venue_halls WHERE venue_id = $1', [id]);
     const bookingsResult = await query(
-      'SELECT * FROM venue_bookings WHERE venue_id = $1 AND status = $2 ORDER BY start_time ASC',
+      optionalOperator(req) ? 'SELECT * FROM venue_bookings WHERE venue_id = $1 AND status = $2 ORDER BY start_time ASC' :
+      "SELECT b.id, b.venue_id, b.hall_id, b.start_time, b.end_time, b.status FROM venue_bookings b JOIN events e ON e.id = b.event_id WHERE b.venue_id = $1 AND b.status = $2 AND e.is_private = false AND e.event_type = 'public' ORDER BY b.start_time ASC",
       [id, 'confirmed']
     );
 
@@ -50,8 +52,8 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
     const { id: venue_id } = req.params;
     const { event_id, event_title, start_time, end_time, hall_id, hall_name } = req.body || {};
 
-    if (typeof event_id !== 'string' || event_id.length === 0 ||
-        typeof event_title !== 'string' || event_title.trim().length === 0 ||
+    if (typeof event_id !== 'string' || event_id.length === 0 || event_id.length > 64 ||
+        typeof event_title !== 'string' || event_title.trim().length === 0 || event_title.length > 255 ||
         start_time === undefined || end_time === undefined) {
       return res.status(400).json({
         success: false,
@@ -70,6 +72,10 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
       });
     }
 
+    if (hall_name !== undefined && hall_name !== null && (typeof hall_name !== 'string' || hall_name.length > 255)) {
+      return res.status(400).json({ success: false, error: 'Invalid hall name' });
+    }
+
     const venueResult = await query('SELECT id FROM venues WHERE id = $1', [venue_id]);
     if (venueResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Venue not found' });
@@ -81,7 +87,7 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
     }
 
     if (hall_id !== undefined && hall_id !== null) {
-      if (typeof hall_id !== 'string' || hall_id.length === 0) {
+      if (typeof hall_id !== 'string' || hall_id.length === 0 || hall_id.length > 64) {
         return res.status(400).json({ success: false, error: 'hall_id must be a non-empty hall identifier' });
       }
       const hallResult = await query('SELECT venue_id FROM venue_halls WHERE id = $1', [hall_id]);

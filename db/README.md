@@ -10,7 +10,7 @@ Relational database schema, constraint definitions, and seed data for the **ZABA
 db/
 ├── schema.sql                     # Full relational schema with GiST EXCLUDE constraints
 ├── seeds/
-│   └── bohol_venues_seed.sql      # Verified Tagbilaran & Bohol venues, halls, and users
+│   └── bohol_venues_seed.sql      # Synthetic demonstration venues, halls, and users
 └── README.md
 ```
 
@@ -69,10 +69,12 @@ createdb -U postgres zabay_db
 psql -U postgres -d zabay_db -f schema.sql
 ```
 
-### 3. Load Verified Bohol Venues Seed Data
+### 3. Optional demonstration fixtures
 ```bash
-psql -U postgres -d zabay_db -f seeds/bohol_venues_seed.sql
+psql -U postgres -d zabay_demo -f seeds/bohol_venues_seed.sql
 ```
+
+The seed records are synthetic; addresses, contacts, prices, capacities, and coordinates are not verified operational data. Load them only into an isolated demonstration database.
 
 `schema.sql` is repeatable for existing databases. Apply it to upgrade a database
 created with the earlier schema; it converts `venue_bookings.booking_window` from

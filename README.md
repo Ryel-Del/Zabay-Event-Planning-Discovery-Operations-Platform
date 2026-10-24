@@ -6,9 +6,9 @@ ZABAY is a relational-database-driven platform for planning, running, and analyz
 
 ## Key Features
 
-- **Tagbilaran & Bohol Venue Directory**: Built-in verified registry of iconic Bohol venues (Bohol Cultural Center, Holy Name University Barder Gymnasium, Bohol Wisdom Gymnasium, Fortridge Pavilion, Bohol Tropics Resort, Plaza Rizal, etc.) with power (kW), seating capacities, and equipment specifications.
-- **Relational Change-Impact Analyzer (`fn_downstream_impact`)**: Recursively traces cascading schedule slippages across predecessor-successor task trees.
-- **Automated Venue Feasibility Matcher (`fn_match_venue_to_event`)**: Automatically evaluates physical specifications, electrical substation requirements, and booking conflicts (`EXCLUDE` constraints).
+- **Tagbilaran & Bohol Venue Directory**: Bundled sample directory of iconic Bohol venues (Bohol Cultural Center, Holy Name University Barder Gymnasium, Bohol Wisdom Gymnasium, Fortridge Pavilion, Bohol Tropics Resort, Plaza Rizal, etc.) with power (kW), seating capacities, and equipment specifications.
+- **Frontend Change-Impact Simulator**: Recursively traces cascading schedule slippages across predecessor-successor task trees.
+- **Frontend Venue Feasibility Matcher**: Automatically evaluates physical specifications, electrical substation requirements, and booking conflicts (`EXCLUDE` constraints).
 - **Interactive Kanban Board with 1-Click Starter Kits**: Pre-configured task templates for Student Organization Assemblies, Esports Tournaments, and Corporate Summits.
 - **Live Camera QR Gate Scanner**: Attendee check-in using your laptop or webcam with instant duplicate ticket prevention.
 - **Luma-Style Event Experience**: Public event discovery, interactive OpenStreetMap venue pins, and simulated digital pass checkout.
@@ -18,9 +18,9 @@ ZABAY is a relational-database-driven platform for planning, running, and analyz
 
 ## Clean Initial Workspace & Demo Environment
 
-For an initial commit and production-ready setup:
+For local development and demonstration:
 - **Clean Workspace by Default**: Starts with an empty event ledger, 0 attendee registrations, and a clean task board ready for organizers to create their own events.
-- **1-Click Bohol Sample Environment**: Toggle the **"Load Bohol Sample Data"** button in the header or empty states to instantly populate a full Bohol demonstration event (*Sandugo Tech & AI Youth Summit 2026*) with real passes, tasks, and schedules.
+- **1-Click Bohol Sample Environment**: Toggle the **"Load Bohol Sample Data"** button in the header or empty states to instantly populate a full Bohol demonstration event (*Sandugo Tech & AI Youth Summit 2026*) with synthetic passes, tasks, and schedules.
 - **Reset Anytime**: Click **"Clear to Clean Slate"** to return to a blank workspace.
 
 ---
@@ -30,8 +30,8 @@ For an initial commit and production-ready setup:
 ```
 zabay/
 ├── db/                       # PostgreSQL schema, EXCLUDE constraints, and Bohol seeds
-│   ├── schema.sql            # Full 20-table schema with btree_gist EXCLUDE
-│   ├── seeds/                # Verified Bohol venues & multi-hall fixtures
+│   ├── schema.sql            # Relational schema with btree_gist EXCLUDE
+│   ├── seeds/                # Synthetic Bohol venue and hall fixtures
 │   └── README.md
 ├── backend/                  # Express.js + TypeScript REST API
 │   ├── src/
@@ -49,7 +49,7 @@ zabay/
 │   │   ├── services/         # Algorithmic engines (venueMatcher, impactEngine, checkInService)
 │   │   ├── hooks/            # Custom React hooks (useApp)
 │   │   ├── context/          # Reactive application state provider
-│   │   ├── mock/             # Verified Bohol venue seeds & demo fixtures
+│   │   ├── mock/             # Synthetic venue and demo fixtures
 │   │   └── types/            # TypeScript interfaces matching relational schema
 │   ├── package.json
 │   └── vite.config.ts
@@ -61,7 +61,7 @@ zabay/
 ## Getting Started
 
 ### 1. Prerequisites
-- **Node.js** (v18 or higher recommended)
+- **Node.js** (v22 or newer)
 - **npm** or **pnpm**
 
 ### 2. Running the Client Application
@@ -71,7 +71,7 @@ npm install
 npm run dev
 ```
 
-Visit the local Vite development server in your browser (default: `http://localhost:5173`).
+Run the backend separately for live API operations. Visit the local Vite development server in your browser (default: `http://localhost:5173`).
 
 ---
 
@@ -81,3 +81,5 @@ Use the user profile menu in the top-right header to switch between perspectives
 1. **Organizer / Ops Studio**: 4-stage event planning lifecycle (`1. Organize` ➔ `2. Prepare` ➔ `3. Market` ➔ `4. Execute`), Kanban board, change-impact simulator, and calendar.
 2. **Venue Partner Hub**: Facility capacity oversight, operating rates, and `EXCLUDE` constraint booking logs.
 3. **Public Event Feed**: Luma-style attendee event exploration, interactive map, and pass generator.
+
+Deployment preparation and its limits are documented in [DEPLOYMENT.md](./DEPLOYMENT.md). The selected frontend role is a UI preview; operator API access requires login.

@@ -12,7 +12,7 @@ describe('attendee registration and check-in', () => {
 
   beforeEach(() => {
     eventTitle = `E2E public attendee event ${Date.now()}`;
-    cy.request('POST', '/api/events', {
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({ method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken }, body: {
       title: eventTitle,
       description: 'A public event fixture created through the real API for Cypress.',
       category: 'Community & Civic',
@@ -24,10 +24,10 @@ describe('attendee registration and check-in', () => {
       expected_attendance: 20,
       max_capacity: 100,
       ticket_price: 10,
-    }).then(({ status, body }) => {
+    } }).then(({ status, body }) => {
       expect(status).to.eq(201);
       eventId = body.data.id;
-    });
+    }));
   });
 
   function openEventRegistration() {

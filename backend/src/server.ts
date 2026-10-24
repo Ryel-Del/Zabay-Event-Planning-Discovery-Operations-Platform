@@ -1,12 +1,6 @@
-import dotenv from 'dotenv';
+import { validateConfig } from './config/runtime';
+validateConfig();
 import app from './app';
-
-dotenv.config();
-
-const PORT = process.env.PORT || 5000;
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-
-app.listen(PORT, () => {
-  console.log(`[Zabay API]: Server listening on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode.`);
-  console.log(`[Zabay API]: Allowing CORS requests from ${CLIENT_URL}`);
-});
+const port = Number(process.env.PORT || 5000);
+if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid TCP port');
+app.listen(port, '0.0.0.0', () => console.log(`Zabay listening on port ${port}`));

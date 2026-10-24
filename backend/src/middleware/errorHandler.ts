@@ -52,7 +52,7 @@ export function errorHandler(
 
   const statusCode = err.statusCode || 500;
   const message = statusCode >= 500 ? 'Internal server error' : (err.message || 'Request failed');
-  if (statusCode >= 500) console.error('[Zabay Server Error]:', err);
+  if (statusCode >= 500) console.error('[Zabay Server Error]:', err?.code || err?.name || 'unknown');
 
   res.status(statusCode).json({
     success: false,

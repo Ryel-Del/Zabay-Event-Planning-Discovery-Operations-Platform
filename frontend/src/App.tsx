@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import api from './services/api';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppHeader } from './components/layout/AppHeader';
 import { AppSidebar } from './components/layout/AppSidebar';
@@ -11,6 +12,12 @@ import { AuditLogViewer, QRCheckInScanner, ProfileView } from './components/moda
 
 const MainContent: React.FC = () => {
   const { currentRole, setCurrentRole } = useApp();
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  useEffect(() => { api.auth.session().then(data => setAuthenticated(data.authenticated)).catch(() => {}); }, []);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('overview');
   const [venueView, setVenueView] = useState<'overview' | 'calendar' | 'inventory'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -26,6 +33,20 @@ const MainContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAFD] dark:bg-[#0E131C] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+      <div className="absolute right-4 top-16 z-50 bg-white text-slate-900 p-2 rounded shadow">
+        {authenticated ? <button onClick={async () => { await api.auth.logout(); setAuthenticated(false); }}>Operator logout</button> :
+          <button onClick={() => setLoginOpen(true)}>Operator login</button>}
+      </div>
+      {loginOpen && <form className="absolute right-4 top-28 z-50 bg-white text-slate-900 p-4 rounded shadow flex flex-col gap-2" onSubmit={async event => {
+        event.preventDefault(); const result = await api.auth.login(username, password);
+        if (result.success) { setAuthenticated(true); setLoginOpen(false); setPassword(''); setLoginError(''); }
+        else setLoginError(result.error || 'Login failed');
+      }}>
+        <input aria-label="Operator username" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" />
+        <input aria-label="Operator password" type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" />
+        {loginError && <span role="alert">{loginError}</span>}
+        <button type="submit">Sign in</button><button type="button" onClick={() => setLoginOpen(false)}>Cancel</button>
+      </form>}
       {/* Universal Top Workspace Header */}
       <AppHeader
         onOpenAudit={() => setIsAuditOpen(true)}

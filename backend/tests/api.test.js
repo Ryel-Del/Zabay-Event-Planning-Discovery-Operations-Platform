@@ -15,6 +15,8 @@ if (testDatabaseUrl) {
   process.env.DATABASE_URL = testDatabaseUrl;
 }
 
+process.env.OPERATOR_USERNAME = 'test-operator';
+process.env.OPERATOR_PASSWORD = 'test-password-long-enough';
 const { app } = require('../dist/app');
 const { pool } = require('../dist/config/db');
 
@@ -26,12 +28,19 @@ test('health endpoint reports the service online', async () => {
 });
 
 test('database-backed API behavior uses the schema and seed', { skip: !testDatabaseUrl }, async (t) => {
+  const agent = request.agent(app);
+  assert.equal((await request(app).post('/api/events').send({ title: 'denied' })).status, 401);
+  const login = await agent.post('/api/auth/login').send({ username: process.env.OPERATOR_USERNAME, password: process.env.OPERATOR_PASSWORD });
+  assert.equal(login.status, 200);
+  const csrf = login.body.csrfToken;
+  const operator = { post: (route) => agent.post(route).set('X-CSRF-Token', csrf), patch: (route) => agent.patch(route).set('X-CSRF-Token', csrf) };
+  assert.equal((await agent.post('/api/events').send({ title: 'denied' })).status, 403);
   const venues = await request(app).get('/api/venues');
   assert.equal(venues.status, 200);
   assert.ok(Array.isArray(venues.body.data));
   assert.ok(venues.body.data.some((venue) => venue.id === 'ven-6'));
 
-  const event = await request(app).post('/api/events').send({
+  const event = await operator.post('/api/events').send({
     title: 'Automated foundation test',
     category: 'test',
     start_date: '2030-01-01T10:00:00Z',
@@ -43,8 +52,10 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   const eventId = event.body.data.id;
   assert.match(eventId, /^evt-[0-9a-f-]{36}$/);
   let planningId;
+  let privateId;
   t.after(async () => {
     if (planningId) await pool.query('DELETE FROM events WHERE id = $1', [planningId]);
+    if (privateId) await pool.query('DELETE FROM events WHERE id = $1', [privateId]);
     await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
     await pool.end();
   });
@@ -52,6 +63,19 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   const events = await request(app).get('/api/events');
   assert.equal(events.status, 200);
   assert.ok(events.body.data.some((row) => row.id === eventId));
+  assert.equal(events.body.data.find((row) => row.id === eventId).budget, undefined);
+  const privateEvent = await operator.post('/api/events').send({
+    title: 'Private test event', category: 'test', is_private: true, event_type: 'private',
+    start_date: '2030-02-01T10:00:00Z', end_date: '2030-02-01T12:00:00Z', organizer_id: 'usr-org-1',
+  });
+  assert.equal(privateEvent.status, 201);
+  privateId = privateEvent.body.data.id;
+  assert.equal((await request(app).get(`/api/events/${privateId}`)).status, 404);
+  assert.equal((await request(app).get('/api/events')).body.data.some((row) => row.id === privateId), false);
+  assert.equal((await agent.get(`/api/events/${privateId}`)).status, 200);
+  assert.equal((await request(app).post('/api/attendees/register').send({
+    event_id: privateId, attendee_name: 'Guest', attendee_email: 'guest@example.test', ticket_type: 'General Admission',
+  })).status, 404);
 
   const register = (overrides = {}) => request(app).post('/api/attendees/register').send({
     event_id: eventId,
@@ -69,7 +93,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.match(firstRegistration.body.data.id, /^reg-[0-9a-f-]{36}$/);
   assert.notEqual(firstRegistration.body.data.qr_pass_code, secondRegistration.body.data.qr_pass_code);
   assert.equal(Number(firstRegistration.body.data.amount_paid), 0);
-  const checkIn = (qr_pass_code) => request(app).post('/api/attendees/checkin').send({ qr_pass_code });
+  const checkIn = (qr_pass_code) => operator.post('/api/attendees/checkin').send({ qr_pass_code });
   assert.equal((await checkIn('')).status, 400);
   assert.equal((await checkIn('UNKNOWN-PASS')).status, 404);
   const firstPass = firstRegistration.body.data.qr_pass_code;
@@ -106,7 +130,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
 
   const rollbackRegistration = await register();
   assert.equal(rollbackRegistration.status, 201);
-  const failedAttendanceInsert = await request(app).post('/api/attendees/checkin').send({
+  const failedAttendanceInsert = await operator.post('/api/attendees/checkin').send({
     qr_pass_code: rollbackRegistration.body.data.qr_pass_code,
     verified_by_id: 'x'.repeat(65),
   });
@@ -124,11 +148,11 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
      VALUES ($1, $2, 'Foundation test task', 'day_of_ops', 'todo', 'medium', '10:00', '11:00')`,
     [taskId, eventId]
   );
-  const taskUpdate = await request(app).patch(`/api/tasks/${taskId}/status`).send({ status: 'completed' });
+  const taskUpdate = await operator.patch(`/api/tasks/${taskId}/status`).send({ status: 'completed' });
   assert.equal(taskUpdate.status, 200);
   assert.equal(taskUpdate.body.data.status, 'completed');
 
-  const book = (payload) => request(app).post('/api/venues/ven-6/book').send({
+  const book = (payload) => operator.post('/api/venues/ven-6/book').send({
     event_id: eventId,
     event_title: 'Automated foundation test',
     ...payload,
@@ -203,7 +227,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.equal(bookedEvent.body.data.venue_id, 'ven-6');
   assert.equal(bookedEvent.body.data.hall_id, 'vh-trop-harbor');
 
-  const planning = await request(app).post('/api/events').send({
+  const planning = await operator.post('/api/events').send({
     title: 'Unbooked planning event', category: 'test',
     start_date: '2030-01-02T10:00:00Z', end_date: '2030-01-02T12:00:00Z',
     organizer_id: 'usr-org-1',
@@ -267,13 +291,13 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
 
   assert.equal((await book({ ...slot(6, 'vh-trop-harbor'), end_time: '2030-01-06T09:00:00Z' })).status, 400);
   assert.equal((await book({ ...slot(6, 'vh-trop-harbor'), start_time: 'not-a-date' })).status, 400);
-  assert.equal((await request(app).post('/api/venues/ven-missing/book').send({
+  assert.equal((await operator.post('/api/venues/ven-missing/book').send({
     event_id: eventId, event_title: 'Missing venue', ...slot(7),
   })).status, 404);
   assert.equal((await book({ ...slot(7), event_id: 'missing-event' })).status, 404);
   assert.equal((await book(slot(7, 'missing-hall'))).status, 404);
   assert.equal((await book(slot(7, 'vh-metro-grand'))).status, 400);
-  assert.equal((await request(app).post('/api/venues/ven-6/book').send({ event_id: eventId })).status, 400);
+  assert.equal((await operator.post('/api/venues/ven-6/book').send({ event_id: eventId })).status, 400);
 
   await assert.rejects(pool.query(
     `INSERT INTO venue_bookings (id, venue_id, hall_id, event_id, event_title, booking_window, start_time, end_time)
@@ -383,4 +407,39 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
     await migrationClient.query(`DROP SCHEMA IF EXISTS ${legacySchema} CASCADE`);
     migrationClient.release();
   }
+});
+
+test('operator sessions enforce CSRF, expiry, logout, and public access', async () => {
+  const agent = request.agent(app);
+  assert.equal((await request(app).get('/api/health')).status, 200);
+  assert.equal((await request(app).post('/api/attendees/register').send({})).status, 400);
+  assert.equal((await request(app).get('/api/tasks')).status, 401);
+  assert.equal((await request(app).post('/api/attendees/checkin').send({ qr_pass_code: 'x' })).status, 401);
+  assert.equal((await request(app).post('/api/venues/ven-6/book').send({})).status, 401);
+  const invalid = await agent.post('/api/auth/login').send({ username: 'wrong', password: 'wrong' });
+  assert.equal(invalid.status, 401);
+  const login = await agent.post('/api/auth/login').send({ username: process.env.OPERATOR_USERNAME, password: process.env.OPERATOR_PASSWORD });
+  assert.equal(login.status, 200);
+  const csrf = login.body.csrfToken;
+  assert.equal((await agent.patch('/api/tasks/none/status').send({ status: 'completed' })).status, 403);
+  assert.equal((await agent.patch('/api/tasks/none/status').set('X-CSRF-Token', csrf).send({ status: 'invalid' })).status, 400);
+  const now = Date.now;
+  try {
+    Date.now = () => now() + 9 * 60 * 60 * 1000;
+    assert.equal((await agent.get('/api/tasks')).status, 401);
+  } finally { Date.now = now; }
+  const newLogin = await agent.post('/api/auth/login').send({ username: process.env.OPERATOR_USERNAME, password: process.env.OPERATOR_PASSWORD });
+  assert.equal(newLogin.status, 200);
+  assert.equal((await agent.post('/api/auth/logout').set('X-CSRF-Token', newLogin.body.csrfToken)).status, 200);
+  assert.equal((await agent.get('/api/tasks')).status, 401);
+});
+
+test('readiness reports database failure without infrastructure details', async () => {
+  const original = pool.query;
+  pool.query = async () => { throw new Error('secret-host.example:5432 password=hidden'); };
+  try {
+    const response = await request(app).get('/api/ready');
+    assert.equal(response.status, 503);
+    assert.deepEqual(response.body, { status: 'unavailable' });
+  } finally { pool.query = original; }
 });

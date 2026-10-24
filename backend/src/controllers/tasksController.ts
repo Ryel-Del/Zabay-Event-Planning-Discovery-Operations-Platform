@@ -24,7 +24,10 @@ export async function getTasks(req: Request, res: Response, next: NextFunction) 
 export async function updateTaskStatus(req: Request, res: Response, next: NextFunction) {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status } = req.body || {};
+    if (!['backlog', 'todo', 'in_progress', 'completed', 'blocked'].includes(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid task status' });
+    }
 
     const result = await query(
       'UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
