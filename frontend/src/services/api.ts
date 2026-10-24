@@ -214,6 +214,11 @@ export const api = {
   venues: {
     getAll: () => request<DbVenue[]>('/api/venues'),
     getById: (id: string) => request<DbVenue>(`/api/venues/${id}`),
+    create: (venueData: Partial<Venue>) =>
+      request<DbVenue>('/api/venues', {
+        method: 'POST',
+        body: JSON.stringify(venueData),
+      }),
     book: (venueId: string, booking: VenueBookingRequest) =>
       request<{ id: string; venue_id: string; hall_id?: string; status: string }>(
         `/api/venues/${venueId}/book`,

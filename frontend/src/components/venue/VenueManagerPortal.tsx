@@ -15,9 +15,11 @@ import {
   Mail,
   Phone,
   ArrowRight,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { VenueView } from '../layout/AppSidebar';
+import { CreateVenueModal } from './CreateVenueModal';
 
 interface VenueManagerPortalProps {
   currentView?: VenueView;
@@ -38,6 +40,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   };
 
   const [selectedVenueId, setSelectedVenueId] = useState<string>('');
+  const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId) || venues[0];
   const [testStart, setTestStart] = useState('2026-11-13T10:00:00Z');
   const [testEnd, setTestEnd] = useState('2026-11-13T18:00:00Z');
@@ -98,11 +101,8 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
             </div>
           </div>
 
-          {/* Venue Selector */}
+          {/* Venue Selector & Register Button */}
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">
-              Select Venue:
-            </span>
             <select
               value={selectedVenue.id}
               onChange={(e) => {
@@ -120,6 +120,14 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                 </option>
               ))}
             </select>
+
+            <button
+              onClick={() => setIsCreateVenueOpen(true)}
+              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Register Facility</span>
+            </button>
           </div>
         </div>
 
@@ -594,6 +602,15 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
           </div>
         </div>
       )}
+
+      <CreateVenueModal
+        isOpen={isCreateVenueOpen}
+        onClose={() => setIsCreateVenueOpen(false)}
+        onVenueCreated={(newV) => {
+          setSelectedVenueId(newV.id);
+        }}
+      />
     </div>
   );
 };
+

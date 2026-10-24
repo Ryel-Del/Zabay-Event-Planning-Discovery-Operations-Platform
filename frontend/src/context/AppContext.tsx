@@ -75,6 +75,7 @@ interface AppContextType {
   createEvent: (eventData: Partial<ZabayEvent>) => Promise<ZabayEvent>;
 
   venues: Venue[];
+  addVenue: (venueData: Omit<Venue, 'id'>) => Promise<Venue>;
   venueBookings: VenueBooking[];
   resources: Resource[];
   personnel: Personnel[];
@@ -1091,6 +1092,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const addVenue = async (venueData: Omit<Venue, 'id'>): Promise<Venue> => {
+    let newVenue: Venue;
+
+    if (!isDemoMode && isLiveBackend) {
+      try {
+        const res = await api.venues.create(venueData);
+        if (res.success && res.data) {
+          newVenue = adaptVenue(res.data);
+        } else {
+          const newId = `ven-${Date.now().toString(36)}`;
+          newVenue = {
+            ...venueData,
+            id: newId,
+          };
+        }
+      } catch {
+        const newId = `ven-${Date.now().toString(36)}`;
+        newVenue = {
+          ...venueData,
+          id: newId,
+        };
+      }
+    } else {
+      const newId = `ven-${Date.now().toString(36)}`;
+      newVenue = {
+        ...venueData,
+        id: newId,
+      };
+    }
+
+    setVenues((prev) => [newVenue, ...prev]);
+
+    const auditLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'VENUE_CHANGE',
+      entity_type: 'venue',
+      entity_id: newVenue.id,
+      change_summary: `Registered facility: "${newVenue.name}" in ${newVenue.city} (Capacity: ${newVenue.capacity.toLocaleString()}, Rate: ₱${newVenue.hourly_rate.toLocaleString()}/hr).`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+
+    return newVenue;
+  };
+
+
   // Register for an event and retain the returned QR pass in this workspace.
   const registerForEvent = async (
     eventId: string,
@@ -1234,6 +1283,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedEvent,
       setSelectedEvent,
       venues,
+      addVenue,
       venueBookings,
       resources,
       personnel,

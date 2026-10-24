@@ -8,15 +8,18 @@ import {
   CheckCircle2,
   MapPin,
   Sliders,
-  DollarSign,
   Users,
   Zap,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
+import { CreateVenueModal } from '../venue/CreateVenueModal';
 
 export const VenueMasterDetail: React.FC = () => {
   const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, isDemoMode } = useApp();
+
+  const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
   // Interactive Requirement Controls for Student Orgs & Planners
   const [targetAttendance, setTargetAttendance] = useState<number>(
@@ -31,11 +34,18 @@ export const VenueMasterDetail: React.FC = () => {
   // Available facilities student orgs can toggle
   const availableFacilityOptions = [
     'Dedicated Gigabit Fiber WiFi',
+    'Indoor Arena Hardwood Court',
+    'Olympic 8-Lane Rubberized Tartan Track Oval',
+    'Dual Regulation Beach Volleyball Quartz Sand Courts',
+    '4-Court Synthetic Badminton Floor Mats',
+    'Electronic Digital Scoreboards',
+    'High-Intensity Stadium Floodlights',
+    'Bleacher Seating System',
+    'Athlete Locker Rooms & Shower Facilities',
     'Concert PA & Audio System',
     '4K LED Wall & Displays',
     'Commercial Prep Kitchen',
     'Breakout Workshop Rooms',
-    'Indoor Arena Hardwood Court',
     'Grand Ballroom Crystal Chandeliers',
     'Audiovisual Lecture Hall',
     'Private Executive Conference Rooms',
@@ -157,7 +167,7 @@ export const VenueMasterDetail: React.FC = () => {
     setTimeout(() => setBookingFeedback(null), 4500);
   };
 
-  const cities = ['All', 'Tagbilaran City', 'Dauis'];
+  const cities = ['All', 'Tagbilaran City', 'Dauis', 'Panglao'];
 
   return (
     <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-6 transition-colors">
@@ -176,8 +186,17 @@ export const VenueMasterDetail: React.FC = () => {
           </p>
         </div>
 
-        <div className="text-xs bg-[#F8FAFD] dark:bg-[#111722] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400">
-          Target: <strong>{targetAttendance.toLocaleString()}</strong> attendees • Max <strong>₱{maxBudgetPerHour}/hr</strong>
+        <div className="flex items-center gap-3">
+          <div className="text-xs bg-[#F8FAFD] dark:bg-[#111722] px-3.5 py-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400">
+            Target: <strong>{targetAttendance.toLocaleString()}</strong> attendees • Max <strong>₱{maxBudgetPerHour}/hr</strong>
+          </div>
+          <button
+            onClick={() => setIsCreateVenueOpen(true)}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Facility / Court
+          </button>
         </div>
       </div>
 
@@ -237,7 +256,7 @@ export const VenueMasterDetail: React.FC = () => {
           <div className="space-y-1.5 bg-white dark:bg-[#171E2B] p-3 rounded-xl border border-slate-200/80 dark:border-slate-800">
             <div className="flex justify-between text-xs">
               <span className="text-slate-500 font-semibold flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-[#4E8268]" /> Max Budget:
+                <span className="font-bold text-xs text-[#4E8268]">₱</span> Max Budget:
               </span>
               <span className="font-bold text-slate-900 dark:text-slate-100">₱{maxBudgetPerHour.toLocaleString()}/hr</span>
             </div>
@@ -610,6 +629,14 @@ export const VenueMasterDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      <CreateVenueModal
+        isOpen={isCreateVenueOpen}
+        onClose={() => setIsCreateVenueOpen(false)}
+        onVenueCreated={(newV) => {
+          setSelectedVenueId(newV.id);
+        }}
+      />
     </div>
   );
 };

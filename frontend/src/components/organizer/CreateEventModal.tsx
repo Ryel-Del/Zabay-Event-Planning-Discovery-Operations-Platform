@@ -10,9 +10,11 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { EventCategory, ZabayEvent } from '../../types';
+import { CreateVenueModal } from '../venue/CreateVenueModal';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   const [startDate, setStartDate] = useState('2026-11-20');
   const [endDate, setEndDate] = useState('2026-11-20');
   const [powerKw, setPowerKw] = useState(30);
+  const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
   // Step 3: Staff Delegation
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(['per-1', 'per-2']);
@@ -398,9 +401,19 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Select Bohol Venue
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    Select Bohol Venue
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateVenueOpen(true)}
+                    className="text-xs text-[#3E6CB5] dark:text-[#7EA6E0] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    + Register Facility / Court
+                  </button>
+                </div>
                 <select
                   data-cy="event-venue"
                   value={venueId}
@@ -752,6 +765,17 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           </div>
         </form>
       </div>
+
+      <CreateVenueModal
+        isOpen={isCreateVenueOpen}
+        onClose={() => setIsCreateVenueOpen(false)}
+        onVenueCreated={(newV) => {
+          setVenueId(newV.id);
+          if (newV.halls && newV.halls.length > 0) {
+            setHallId(newV.halls[0].id);
+          }
+        }}
+      />
     </div>
   );
 };

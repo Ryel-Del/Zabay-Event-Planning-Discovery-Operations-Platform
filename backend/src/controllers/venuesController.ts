@@ -140,3 +140,119 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
     next(err);
   }
 }
+
+export async function createVenue(req: Request, res: Response, next: NextFunction) {
+  try {
+    const {
+      name,
+      city,
+      address,
+      lat,
+      lng,
+      capacity,
+      hourly_rate,
+      facilities,
+      power_kw_capacity,
+      is_indoor,
+      operating_hours,
+      image_url,
+      contact_email,
+      contact_phone,
+      halls,
+    } = req.body || {};
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Venue name is required' });
+    }
+
+    const venueId = `ven-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const parsedCapacity = Number(capacity) || 500;
+    const parsedRate = Number(hourly_rate) || 1500;
+    const parsedPower = Number(power_kw_capacity) || 100;
+    const parsedLat = Number(lat) || 9.6496;
+    const parsedLng = Number(lng) || 123.8624;
+    const facilitiesArray = Array.isArray(facilities) ? facilities : [];
+    const openTime = operating_hours?.open || '06:00';
+    const closeTime = operating_hours?.close || '23:59';
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const insertVenueSql = `
+        INSERT INTO venues (
+          id, name, city, address, lat, lng, capacity, hourly_rate,
+          facilities, power_kw_capacity, is_indoor, operating_hours_open, operating_hours_close,
+          image_url, contact_email, contact_phone, created_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+        ) RETURNING *;
+      `;
+      const venueResult = await client.query(insertVenueSql, [
+        venueId,
+        name.trim(),
+        city || 'Tagbilaran City',
+        address || 'Tagbilaran City, Bohol',
+        parsedLat,
+        parsedLng,
+        parsedCapacity,
+        parsedRate,
+        facilitiesArray,
+        parsedPower,
+        is_indoor !== false,
+        openTime,
+        closeTime,
+        image_url || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop&q=80',
+        contact_email || 'venue@zabay.ph',
+        contact_phone || '+63 (38) 411-0000',
+      ]);
+
+      const insertedHalls: any[] = [];
+      if (Array.isArray(halls) && halls.length > 0) {
+        for (const hall of halls) {
+          const hallId = hall.id || `vh-${venueId}-${Date.now().toString(36).slice(2, 6)}`;
+          const insertHallSql = `
+            INSERT INTO venue_halls (
+              id, venue_id, name, capacity, hourly_rate, is_indoor, dimensions, facilities, description, created_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+            ) RETURNING *;
+          `;
+          const hallResult = await client.query(insertHallSql, [
+            hallId,
+            venueId,
+            hall.name || `${name} Main Court`,
+            Number(hall.capacity) || parsedCapacity,
+            Number(hall.hourly_rate) || parsedRate,
+            hall.is_indoor !== false,
+            hall.dimensions || '28m x 15m (420 sqm)',
+            Array.isArray(hall.facilities) ? hall.facilities : [],
+            hall.description || '',
+          ]);
+          insertedHalls.push(hallResult.rows[0]);
+        }
+      }
+
+      await client.query('COMMIT');
+
+      const createdVenue = {
+        ...venueResult.rows[0],
+        operating_hours: { open: openTime, close: closeTime },
+        halls: insertedHalls,
+      };
+
+      res.status(201).json({
+        success: true,
+        message: 'Venue registered successfully',
+        data: createdVenue,
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    next(err);
+  }
+}
+
