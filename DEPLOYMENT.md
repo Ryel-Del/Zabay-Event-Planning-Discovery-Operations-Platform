@@ -10,9 +10,15 @@ Create a PostgreSQL 16 database in Neon and copy its connection string. Use a de
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/schema.sql
 ```
 
-Verify `SELECT extname FROM pg_extension WHERE extname = 'btree_gist';` and inspect the exclusion constraint and booking trigger. `schema.sql` creates the required tables and integrity rules; it is never run at app startup. Apply schema changes intentionally after a backup. PostgreSQL 16 was tested in a disposable local container. Neon extension permissions and TLS have not been tested against a real account.
+Verify `SELECT extname FROM pg_extension WHERE extname = 'btree_gist';` and inspect the exclusion constraint and booking trigger. `schema.sql` creates the required tables, integrity rules, and one `zabay-operator` organizer record. The authenticated API assigns every new event to that record regardless of a browser-supplied organizer ID. The row is not a login credential. The schema is never run at app startup. Apply schema changes intentionally after a backup. PostgreSQL 16 was tested in a disposable local container. Neon extension permissions and TLS have not been tested against a real account.
 
-`db/seeds/bohol_venues_seed.sql` is **synthetic demonstration data**, including users, venues, halls, and tasks. Do not load it into a production database containing actual operations. If a public demo requires it, load it once into an isolated demonstration database and clearly label all records as samples. Real operator identity is configured through environment variables and is unrelated to the seed `users` table.
+`db/seeds/bohol_venues_seed.sql` is **synthetic demonstration data**, including users, venues, halls, and tasks. Do not load it into a production database containing actual operations. If a public demo requires it, load it once into an isolated demonstration database and clearly label all records as samples. Operator login is configured through environment variables and is unrelated to the seed `users` table.
+
+## Disposable staging verification
+
+Use a fresh PostgreSQL 16 database whose name contains `test`. Initialize only `db/schema.sql`, then run `TEST_DATABASE_URL="$DATABASE_URL" npm run test:fresh --prefix backend`. This regression verifies login, event creation without seed users or venues, event ownership, booking with a synthetic venue, public registration, QR check-in, duplicate prevention, and logout. It removes its synthetic records afterward. For browser testing, `npm run test:e2e:local --prefix frontend` starts its own disposable PostgreSQL container, applies the schema and synthetic venue seed, then runs the backend and Cypress suites. These commands run in development mode because the local database has no TLS certificate. Set `OPERATOR_USERNAME` and `OPERATOR_PASSWORD` when starting the app manually; never place them in frontend environment variables.
+
+An otherwise empty schema has no venues to select. For a disposable staging demo, load `db/seeds/bohol_venues_seed.sql` after the schema-only test, or create verified venue records through controlled SQL. The seed's venue names, locations, contact details, and pricing are illustrative and must be labeled as samples in any shared staging instance.
 
 ## Render web service
 
@@ -49,7 +55,7 @@ A local PostgreSQL server without TLS is unsuitable for `NODE_ENV=production`; u
 
 Free tiers can sleep, cold-start slowly, and have small compute and connection allowances; verify current Render and Neon plans before provisioning. The connection pool is capped at five. Back up before schema changes and periodically export data using `pg_dump`; restore to a fresh database with `pg_restore`, validate counts and booking constraints, then switch `DATABASE_URL`. Confirm the provider's own retention and restore features. Roll back by redeploying the last known good commit and restoring a database backup if a schema change is incompatible. Avoid running an older application against a changed schema without a compatibility check.
 
-This MVP has one shared operator identity, process-local sessions and rate limits, no password recovery or audit-grade identity attribution, and no production data migration. The role switcher, personnel editor, workflow templates, scheduling impact simulator, and demo mode are frontend simulations. Browser-selected roles do not authorize API calls. Attendee registration is public and issues a pass without payment. Actual hosting, managed PostgreSQL TLS, DNS, backups, scale behavior, and public abuse controls require verification before deployment.
+This MVP has one shared operator identity, process-local sessions and rate limits, no password recovery or audit-grade identity attribution, and no production data migration. Events, venue bookings, registrations, QR check-ins, and task status updates are stored in PostgreSQL. The role switcher, personnel editor, workflow templates, scheduling impact simulator, session notices, and Sample Mode are browser-only simulations. Browser-selected roles do not authorize API calls. Attendee registration is public and issues a pass without payment. Actual hosting, managed PostgreSQL TLS, DNS, backups, scale behavior, and public abuse controls require verification before deployment.
 
 ## Dependency audit at this milestone
 

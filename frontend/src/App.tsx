@@ -11,13 +11,18 @@ import { AttendeePage } from './pages/attendee/AttendeePage';
 import { AuditLogViewer, QRCheckInScanner, ProfileView } from './components/modals';
 
 const MainContent: React.FC = () => {
-  const { currentRole, setCurrentRole } = useApp();
+  const { currentRole, setCurrentRole, refreshBackendStatus } = useApp();
   const [authenticated, setAuthenticated] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  useEffect(() => { api.auth.session().then(data => setAuthenticated(data.authenticated)).catch(() => {}); }, []);
+  useEffect(() => {
+    api.auth.session().then(data => setAuthenticated(data.authenticated)).catch(() => setLoginError('Could not check operator session.'));
+    const sessionEnded = () => setAuthenticated(false);
+    window.addEventListener('zabay:operator-session-ended', sessionEnded);
+    return () => window.removeEventListener('zabay:operator-session-ended', sessionEnded);
+  }, []);
   const [organizerView, setOrganizerView] = useState<OrganizerView>('overview');
   const [venueView, setVenueView] = useState<'overview' | 'calendar' | 'inventory'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -34,12 +39,13 @@ const MainContent: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFD] dark:bg-[#0E131C] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <div className="absolute right-4 top-16 z-50 bg-white text-slate-900 p-2 rounded shadow">
-        {authenticated ? <button onClick={async () => { await api.auth.logout(); setAuthenticated(false); }}>Operator logout</button> :
+        {authenticated ? <button onClick={async () => { const result = await api.auth.logout(); if (result.success) { setAuthenticated(false); void refreshBackendStatus(); } else setLoginError(result.error || 'Logout failed'); }}>Operator logout</button> :
           <button onClick={() => setLoginOpen(true)}>Operator login</button>}
+        {!loginOpen && loginError && <span role="alert">{loginError}</span>}
       </div>
       {loginOpen && <form className="absolute right-4 top-28 z-50 bg-white text-slate-900 p-4 rounded shadow flex flex-col gap-2" onSubmit={async event => {
         event.preventDefault(); const result = await api.auth.login(username, password);
-        if (result.success) { setAuthenticated(true); setLoginOpen(false); setPassword(''); setLoginError(''); }
+        if (result.success) { setAuthenticated(true); setLoginOpen(false); setPassword(''); setLoginError(''); void refreshBackendStatus(); }
         else setLoginError(result.error || 'Login failed');
       }}>
         <input aria-label="Operator username" value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" />

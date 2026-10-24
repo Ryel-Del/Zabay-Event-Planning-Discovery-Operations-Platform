@@ -369,7 +369,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isLiveBackend) throw new Error('PostgreSQL is unavailable. Connect the database or choose Sample Data mode.');
       const response = await api.events.create({
         ...data,
-        organizer_id: currentUser.id,
+        organizer_id: undefined,
         venue_id: undefined,
         hall_id: undefined,
         hall_name: undefined,

@@ -1,4 +1,22 @@
 describe('application startup', () => {
+  it('hydrates operator login and revokes protected mutations after logout', () => {
+    cy.visit('/');
+    cy.contains('button', 'Operator logout').should('be.visible').click();
+    cy.contains('button', 'Operator login').should('be.visible');
+    cy.request({ method: 'POST', url: '/api/events', failOnStatusCode: false, body: {
+      title: 'Denied synthetic event', category: 'test',
+      start_date: '2031-03-01T10:00:00Z', end_date: '2031-03-01T12:00:00Z',
+    } }).its('status').should('eq', 401);
+    cy.contains('button', 'Operator login').click();
+    cy.env<{ OPERATOR_USERNAME: string; OPERATOR_PASSWORD: string }>(['OPERATOR_USERNAME', 'OPERATOR_PASSWORD'])
+      .then(({ OPERATOR_USERNAME, OPERATOR_PASSWORD }) => {
+        cy.get('input[aria-label="Operator username"]').type(OPERATOR_USERNAME);
+        cy.get('input[aria-label="Operator password"]').type(OPERATOR_PASSWORD);
+      });
+    cy.contains('button', 'Sign in').click();
+    cy.contains('button', 'Operator logout').should('be.visible');
+    cy.request('/api/auth/session').its('body.authenticated').should('eq', true);
+  });
   it('connects to PostgreSQL and loads seeded venues and halls', () => {
     cy.intercept('GET', '/api/health').as('health');
     cy.intercept('GET', '/api/venues').as('venues');

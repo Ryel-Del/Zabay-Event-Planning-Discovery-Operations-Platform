@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Single deployment operator used for event ownership. The session is still
+-- authenticated by OPERATOR_USERNAME/OPERATOR_PASSWORD, never by this row.
+INSERT INTO users (id, name, email, role)
+VALUES ('zabay-operator', 'Zabay Operator', 'operator@zabay.invalid', 'organizer')
+ON CONFLICT (id) DO NOTHING;
+
 -- 2. VENUES TABLE
 CREATE TABLE IF NOT EXISTS venues (
     id VARCHAR(64) PRIMARY KEY,
