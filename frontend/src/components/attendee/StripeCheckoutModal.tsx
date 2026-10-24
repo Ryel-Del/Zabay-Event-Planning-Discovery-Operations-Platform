@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import {
   Ticket,
   X,
   CheckCircle2,
   Sparkles,
   ArrowRight,
+  Printer,
+  Download,
+  Check,
 } from 'lucide-react';
 import type { ZabayEvent, Registration } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { downloadPassAsImage, printPassSlip } from '../../services/passExportService';
 
 interface StripeCheckoutModalProps {
   event: ZabayEvent;
@@ -24,7 +28,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, isDemoMode } = useApp();
+  const { registerForEvent, currentUser, isDemoMode, venues } = useApp();
 
   const [ticketTier, setTicketTier] = useState<'General Admission' | 'VIP Access'>('General Admission');
   const [name, setName] = useState(currentUser.name);
@@ -32,6 +36,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedReg, setCompletedReg] = useState<Registration | null>(null);
   const [submitError, setSubmitError] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   if (!isOpen) return null;
 
@@ -201,7 +206,12 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
             {/* Digital Pass Preview Box */}
             <div className="p-4 bg-white dark:bg-[#171513] border border-stone-200 dark:border-stone-800 rounded-xl space-y-2 text-left">
               <div className="flex justify-center rounded-lg bg-white p-2">
-                <QRCodeSVG value={completedReg.qr_pass_code} size={112} level="M" />
+                <QRCodeCanvas
+                  data-qr={completedReg.qr_pass_code}
+                  value={completedReg.qr_pass_code}
+                  size={112}
+                  level="M"
+                />
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-stone-500">Attendee:</span>
@@ -217,11 +227,53 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               </div>
             </div>
 
+            {/* Quick Export Actions */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isDownloading}
+                onClick={async () => {
+                  setIsDownloading(true);
+                  try {
+                    const vn = venues.find((v) => v.id === event.venue_id);
+                    await downloadPassAsImage({ registration: completedReg, event, venue: vn });
+                  } finally {
+                    setTimeout(() => setIsDownloading(false), 1000);
+                  }
+                }}
+                className="px-3 py-2 bg-white dark:bg-[#171513] hover:bg-stone-50 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                {isDownloading ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                    <span>Saved!</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                    <span>Save Image (PNG)</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const vn = venues.find((v) => v.id === event.venue_id);
+                  printPassSlip({ registration: completedReg, event, venue: vn });
+                }}
+                className="px-3 py-2 bg-white dark:bg-[#171513] hover:bg-stone-50 dark:hover:bg-stone-800 border border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <Printer className="w-3.5 h-3.5 text-stone-500" />
+                <span>Print Ticket Slip</span>
+              </button>
+            </div>
+
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="w-full py-2.5 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-xs"
             >
-              Close & View My Passes
+              Done & View My Passes
             </button>
           </div>
         )}
