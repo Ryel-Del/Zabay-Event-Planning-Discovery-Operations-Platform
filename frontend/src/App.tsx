@@ -218,7 +218,12 @@ const MainContent: React.FC = () => {
           )}
 
           {/* 2. Venue Manager Mode: Facility & Multi-Hall Operations Hub */}
-          {currentRole === 'venue_manager' && <VenuePage />}
+          {currentRole === 'venue_manager' && (
+            <VenuePage
+              currentView={venueView}
+              onSelectView={(v) => setVenueView(v)}
+            />
+          )}
 
           {/* 3. Event Staff Mode: Crew Run-of-Show & Shift Portal */}
           {currentRole === 'staff' && <StaffPage />}

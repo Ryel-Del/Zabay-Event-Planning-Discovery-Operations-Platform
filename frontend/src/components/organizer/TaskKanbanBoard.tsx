@@ -15,15 +15,22 @@ import {
   Filter,
   Heart,
   FileText,
+  ChevronDown,
+  ChevronUp,
+  Edit3,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { TaskStatus, TaskPriority, TaskTrack } from '../../types';
+import type { Task, TaskStatus, TaskPriority, TaskTrack } from '../../types';
 
 export const TaskKanbanBoard: React.FC = () => {
   const {
     tasks,
     workflowKits,
     updateTaskStatus,
+    updateTask,
+    deleteTask,
     addTask,
     loadTaskTemplate,
     resetTasksToDefault,
@@ -33,6 +40,21 @@ export const TaskKanbanBoard: React.FC = () => {
   const [activeTrackFilter, setActiveTrackFilter] = useState<string>('all');
   const [activeTemplateFeedback, setActiveTemplateFeedback] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Expandable card and edit modal state
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Edit task form state
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editPriority, setEditPriority] = useState<TaskPriority>('medium');
+  const [editTrack, setEditTrack] = useState<TaskTrack>('venue_logistics');
+  const [editStatus, setEditStatus] = useState<TaskStatus>('todo');
+  const [editStartTime, setEditStartTime] = useState('09:00');
+  const [editEndTime, setEditEndTime] = useState('11:00');
+  const [editDueDate, setEditDueDate] = useState('2026-11-12');
+  const [editAssigneeId, setEditAssigneeId] = useState('');
 
   // New task form state
   const [newTitle, setNewTitle] = useState('');
@@ -89,6 +111,48 @@ export const TaskKanbanBoard: React.FC = () => {
     setNewTitle('');
     setNewDescription('');
     setIsAddModalOpen(false);
+  };
+
+  const openEditModal = (task: Task) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditDescription(task.description);
+    setEditPriority(task.priority);
+    setEditTrack(task.track || 'venue_logistics');
+    setEditStatus(task.status);
+    setEditStartTime(task.start_time);
+    setEditEndTime(task.end_time);
+    setEditDueDate(task.due_date || '2026-11-12');
+    setEditAssigneeId(task.personnel_assignments[0]?.personnel_id || '');
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask || !editTitle.trim()) return;
+
+    const assignedPerson = personnel.find((p) => p.id === editAssigneeId);
+
+    updateTask(editingTask.id, {
+      title: editTitle.trim(),
+      description: editDescription.trim(),
+      priority: editPriority,
+      track: editTrack,
+      status: editStatus,
+      start_time: editStartTime,
+      end_time: editEndTime,
+      due_date: editDueDate,
+      personnel_assignments: assignedPerson
+        ? [{ personnel_id: assignedPerson.id, personnel_name: assignedPerson.name, role: assignedPerson.role }]
+        : [],
+    });
+
+    setEditingTask(null);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    deleteTask(taskId);
+    if (expandedTaskId === taskId) setExpandedTaskId(null);
+    if (editingTask?.id === taskId) setEditingTask(null);
   };
 
   const getPriorityBadge = (priority: TaskPriority) => {
@@ -287,27 +351,32 @@ export const TaskKanbanBoard: React.FC = () => {
                 ) : (
                   colTasks.map((task) => {
                     const trackBadge = getTrackBadge(task.track);
+                    const isExpanded = expandedTaskId === task.id;
 
                     return (
                       <div
                         key={task.id}
-                        className={`p-3.5 rounded-xl border bg-[#F8FAFD] dark:bg-[#111722] transition-all space-y-2.5 shadow-xs hover:border-[#86ABDF] dark:hover:border-[#3E6CB5] ${
-                          task.has_conflict
-                            ? 'border-[#F5C2BC] dark:border-[#52251F]'
-                            : 'border-slate-200/90 dark:border-slate-800'
+                        onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}
+                        className={`p-3.5 rounded-xl border bg-[#F8FAFD] dark:bg-[#111722] transition-all space-y-2.5 shadow-xs cursor-pointer ${
+                          isExpanded
+                            ? 'ring-2 ring-[#3E6CB5]/60 border-[#3E6CB5] bg-white dark:bg-[#141B27]'
+                            : task.has_conflict
+                            ? 'border-[#F5C2BC] dark:border-[#52251F] hover:border-[#86ABDF] dark:hover:border-[#3E6CB5]'
+                            : 'border-slate-200/90 dark:border-slate-800 hover:border-[#86ABDF] dark:hover:border-[#3E6CB5]'
                         }`}
                       >
                         {/* Top Badges & Quick Checkbox */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 updateTaskStatus(
                                   task.id,
                                   task.status === 'completed' ? 'todo' : 'completed'
-                                )
-                              }
-                              className={`w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer ${
+                                );
+                              }}
+                              className={`w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                                 task.status === 'completed'
                                   ? 'bg-[#2B6149] border-[#2B6149] text-white'
                                   : 'border-slate-300 dark:border-slate-600 hover:border-[#3E6CB5]'
@@ -325,15 +394,20 @@ export const TaskKanbanBoard: React.FC = () => {
                             </span>
                           </div>
 
-                          <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${trackBadge.bg}`}>
-                            {trackBadge.label}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${trackBadge.bg}`}>
+                              {trackBadge.label}
+                            </span>
+                            <span className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </span>
+                          </div>
                         </div>
 
                         {/* Title & Description */}
                         <div>
                           <h5
-                            className={`text-xs font-bold ${
+                            className={`text-xs font-bold leading-snug ${
                               task.status === 'completed'
                                 ? 'line-through text-slate-400 dark:text-slate-500'
                                 : 'text-slate-900 dark:text-slate-100'
@@ -341,7 +415,11 @@ export const TaskKanbanBoard: React.FC = () => {
                           >
                             {task.title}
                           </h5>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                          <p
+                            className={`text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed ${
+                              isExpanded ? '' : 'line-clamp-2'
+                            }`}
+                          >
                             {task.description}
                           </p>
                         </div>
@@ -354,23 +432,96 @@ export const TaskKanbanBoard: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Schedule & Assignee Footer */}
-                        <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>
-                              {task.start_time} - {task.end_time}
-                            </span>
+                        {/* Expanded Full Details Section */}
+                        {isExpanded && (
+                          <div className="pt-2.5 border-t border-slate-200/80 dark:border-slate-800 space-y-2 text-xs animate-in fade-in duration-150">
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-0.5">
+                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Due Date</span>
+                                <span className="font-mono text-slate-800 dark:text-slate-200">
+                                  {task.due_date || '2026-11-12'}
+                                </span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-0.5">
+                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Time Slot</span>
+                                <span className="font-mono text-slate-800 dark:text-slate-200">
+                                  {task.start_time} - {task.end_time}
+                                </span>
+                              </div>
+                            </div>
+
+                            {task.personnel_assignments && task.personnel_assignments.length > 0 && (
+                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-1">
+                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Assigned Staff</span>
+                                {task.personnel_assignments.map((pa, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[11px]">
+                                    <span className="font-semibold text-slate-800 dark:text-slate-200">{pa.personnel_name}</span>
+                                    <span className="text-slate-500 font-mono text-[10px]">{pa.role}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {task.resource_assignments && task.resource_assignments.length > 0 && (
+                              <div className="p-2 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 space-y-1">
+                                <span className="text-[10px] text-slate-400 font-semibold block uppercase">Allocated Resources</span>
+                                {task.resource_assignments.map((ra, idx) => (
+                                  <div key={idx} className="flex items-center justify-between text-[11px]">
+                                    <span className="text-slate-700 dark:text-slate-300">{ra.resource_name}</span>
+                                    <span className="text-slate-500 font-mono text-[10px]">Qty: {ra.quantity}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Action Buttons Toolbar */}
+                            <div className="pt-2 flex items-center justify-between gap-2 border-t border-slate-200/60 dark:border-slate-800">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTask(task.id);
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Delete task"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Delete</span>
+                              </button>
+
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(task);
+                                }}
+                                className="flex items-center gap-1 px-3 py-1 text-[11px] font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] rounded-lg shadow-xs transition-colors cursor-pointer"
+                                title="Edit full task details"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                                <span>Edit Details</span>
+                              </button>
+                            </div>
                           </div>
+                        )}
 
-                          {task.personnel_assignments.length > 0 && (
-                            <span className="font-medium text-slate-700 dark:text-slate-300">
-                              {task.personnel_assignments[0].personnel_name.split(' ')[0]}
-                            </span>
-                          )}
-                        </div>
+                        {/* Collapsed Schedule & Quick Controls Footer */}
+                        {!isExpanded && (
+                          <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {task.start_time} - {task.end_time}
+                              </span>
+                            </div>
 
-                        {/* Dependency Pill & Quick Move Controls */}
+                            {task.personnel_assignments && task.personnel_assignments.length > 0 && (
+                              <span className="font-medium text-slate-700 dark:text-slate-300">
+                                {task.personnel_assignments[0].personnel_name.split(' ')[0]}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Bottom Lane Move Controls */}
                         <div className="flex items-center justify-between pt-1">
                           {task.downstream_impact_count && task.downstream_impact_count > 0 ? (
                             <span className="text-[10px] font-mono text-[#3E6CB5] dark:text-[#8BB0E8] flex items-center gap-1">
@@ -378,19 +529,27 @@ export const TaskKanbanBoard: React.FC = () => {
                               Blocks {task.downstream_impact_count}
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">Standalone</span>
+                            <span className="text-[10px] text-slate-400">
+                              {isExpanded ? 'Full details expanded' : 'Click to expand'}
+                            </span>
                           )}
 
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => moveTask(task.id, task.status, 'prev')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveTask(task.id, task.status, 'prev');
+                              }}
                               className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
                               title="Move to previous lane"
                             >
                               <ArrowLeft className="w-3 h-3" />
                             </button>
                             <button
-                              onClick={() => moveTask(task.id, task.status, 'next')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                moveTask(task.id, task.status, 'next');
+                              }}
                               className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
                               title="Move to next lane"
                             >
@@ -556,6 +715,197 @@ export const TaskKanbanBoard: React.FC = () => {
                 >
                   Save Task
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] rounded-xl">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Edit Task Details
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-mono">
+                    ID: {editingTask.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingTask(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Task Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                  placeholder="e.g. Venue Ingress & Power Check"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Full Description & Procedures
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                  placeholder="Operational instructions for event team..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Lane Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                  >
+                    <option value="todo">To Do</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="blocked">Blocked / In Review</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value as TaskPriority)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Track
+                  </label>
+                  <select
+                    value={editTrack}
+                    onChange={(e) => setEditTrack(e.target.value as TaskTrack)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5]"
+                  >
+                    <option value="venue_logistics">Venue & Facilities</option>
+                    <option value="technical_av">Lights, Sound & Stage</option>
+                    <option value="marketing_tickets">Registration & Promotion</option>
+                    <option value="day_of_ops">Day-of Coordination</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={editStartTime}
+                    onChange={(e) => setEditStartTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={editEndTime}
+                    onChange={(e) => setEditEndTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Assign Lead Personnel / Volunteer
+                </label>
+                <select
+                  value={editAssigneeId}
+                  onChange={(e) => setEditAssigneeId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100"
+                >
+                  <option value="">Unassigned</option>
+                  {personnel.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.role}) - ₱{p.hourly_rate}/hr
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTask(editingTask.id)}
+                  className="px-3.5 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Task</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-semibold transition-all cursor-pointer shadow-xs"
+                  >
+                    Save Changes
+                  </button>
+                </div>
               </div>
             </form>
           </div>

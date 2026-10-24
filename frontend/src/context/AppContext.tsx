@@ -86,6 +86,8 @@ interface AppContextType {
   applyTaskDelay: (taskId: string, delayMinutes: number, reason: string) => void;
   resetTasksToDefault: () => void;
   addTask: (task: Omit<Task, 'id'>) => void;
+  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  deleteTask: (taskId: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
   checkInAttendee: (qrCode: string) => Promise<{ success: boolean; message: string; registration?: Registration; isDuplicate?: boolean }>;
@@ -683,6 +685,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: taskId,
+      change_summary: `Modified operational task details (${Object.keys(updates).join(', ')})`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  const deleteTask = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: taskId,
+      change_summary: `Removed operational task`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
   const updateTaskStatus = (taskId: string, status: TaskStatus) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status } : t))
@@ -1021,6 +1056,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       applyTaskDelay,
       resetTasksToDefault,
       addTask,
+      updateTask,
+      deleteTask,
       updateTaskStatus,
       loadTaskTemplate,
       checkInAttendee,
