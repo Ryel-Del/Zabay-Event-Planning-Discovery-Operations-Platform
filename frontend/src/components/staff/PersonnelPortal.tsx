@@ -66,14 +66,22 @@ export const PersonnelPortal: React.FC = () => {
     : (personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel);
   const hasScannerPermission = isSupervisorMode || canPersonnelScanTickets(currentPerson);
 
-  // Active venue details
+  // Active venue details (with robust fallback for empty workspace or clean slate)
   const activeVenue =
     venues.find(
       (v) =>
         v.id === selectedEvent?.venue_id ||
         v.name.toLowerCase().includes('wisdom') ||
         v.id === 'ven-3'
-    ) || venues[0];
+    ) || venues[0] || {
+      id: 'ven-default',
+      name: selectedEvent?.location || 'Designated Event Venue',
+      address: 'Tagbilaran City, Bohol',
+      city: 'Tagbilaran City',
+      operating_hours: { open: '08:00', close: '22:00' },
+      contact_phone: '+63 (38) 411-2000',
+      facilities: ['Main Hall', 'Staff Staging Area', 'First Aid Station'],
+    };
 
   // Tasks assigned to this specific personnel member
   const myTasks = tasks.filter((t) =>
