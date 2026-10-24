@@ -135,7 +135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const previewStaffPortal = (staffId?: string) => {
     const targetStaffId = staffId || activeStaffId || 'per-3';
     setActiveStaffId(targetStaffId);
-    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0];
+    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0] || mockPersonnel[0];
     if (targetPerson) {
       setCurrentUser({
         id: `usr-stf-${targetPerson.id}`,
