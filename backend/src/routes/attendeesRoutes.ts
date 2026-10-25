@@ -1,11 +1,10 @@
 import { Router } from 'express';
-import { requireOrganizerOrOperator, requireUser, verifyRegistrationMode } from '../middleware/auth';
-import { checkInAttendee, getMyRegistrations, registerForEvent } from '../controllers/attendeesController';
+import { requireOrganizerOrOperator } from '../middleware/auth';
+import { checkInAttendee, registerForEvent } from '../controllers/attendeesController';
 
 const router = Router();
 
 router.post('/checkin', requireOrganizerOrOperator, checkInAttendee);
-router.post('/register', verifyRegistrationMode, registerForEvent);
-router.get('/registrations/me', requireUser, getMyRegistrations);
+router.post('/register', registerForEvent);
 
 export default router;
