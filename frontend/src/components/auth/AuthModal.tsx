@@ -24,7 +24,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { setCurrentUser, setCurrentRole, previewStaffPortal, unlockDevMode } = useApp();
+  const { setCurrentUser, setCurrentRole, previewStaffPortal } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
@@ -106,19 +106,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     e.preventDefault();
     const trimmedEmail = email.trim();
     const trimmedPass = password.trim();
-
-    // Secret passcode entry in AuthModal: entering ZABAY2026 in either field unlocks developer mode
-    if (trimmedEmail.toUpperCase() === 'ZABAY2026' || trimmedPass.toUpperCase() === 'ZABAY2026') {
-      const devRes = unlockDevMode('ZABAY2026');
-      if (devRes.success) {
-        setSuccessMessage('Developer Mode unlocked! Master dataset and evaluation personas activated.');
-        setTimeout(() => {
-          setSuccessMessage(null);
-          onClose();
-        }, 800);
-        return;
-      }
-    }
 
     if (!trimmedEmail) {
       setErrorMessage('Please enter an email address.');

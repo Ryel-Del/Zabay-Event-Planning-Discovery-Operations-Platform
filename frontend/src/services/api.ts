@@ -194,6 +194,11 @@ export const api = {
         return { success: false, error: 'Operator logout failed. Please retry.' };
       }
     },
+    verifyDevKey: (devKey: string) =>
+      request<{ message: string; csrfToken?: string }>('/api/auth/verify-key', {
+        method: 'POST',
+        body: JSON.stringify({ devKey }),
+      }),
   },
   // System Health
   health: {

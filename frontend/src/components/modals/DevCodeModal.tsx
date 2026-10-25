@@ -16,6 +16,9 @@ import {
   Building2,
   Calendar,
   Layers,
+  Eye,
+  EyeOff,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -88,6 +91,8 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
     setCurrentRole,
     setCurrentUser,
     loadDemoData,
+    loadRole2DemoData,
+    clearToCleanSlate,
     events,
     venues,
     tasks,
@@ -95,6 +100,8 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
   } = useApp();
 
   const [inputCode, setInputCode] = useState('');
+  const [showPasscode, setShowPasscode] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -103,6 +110,8 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
     if (isOpen) {
       setFeedback(null);
       setInputCode('');
+      setShowPasscode(false);
+      setIsVerifying(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
@@ -129,20 +138,28 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (codeToSubmit?: string) => {
+  const handleSubmit = async (codeToSubmit?: string) => {
     const code = codeToSubmit || inputCode;
     if (!code.trim()) {
-      setFeedback({ type: 'error', message: 'Please enter a developer passcode.' });
+      setFeedback({ type: 'error', message: 'Please enter your developer access key.' });
       return;
     }
 
-    const result = unlockDevMode(code);
-    if (result.success) {
-      playDevChime();
-      setFeedback({ type: 'success', message: result.message });
-      setInputCode('');
-    } else {
-      setFeedback({ type: 'error', message: result.message });
+    setIsVerifying(true);
+    setFeedback(null);
+    try {
+      const result = await unlockDevMode(code);
+      if (result.success) {
+        playDevChime();
+        setFeedback({ type: 'success', message: result.message });
+        setInputCode('');
+      } else {
+        setFeedback({ type: 'error', message: result.message });
+      }
+    } catch {
+      setFeedback({ type: 'error', message: 'Verification failed. Please retry.' });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -223,108 +240,149 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
 
           {/* Passcode Input Section */}
           <div className="space-y-3">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-              {isDevModeUnlocked ? 'Switch / Re-authenticate DevCode' : 'Enter Developer Passcode'}
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                {isDevModeUnlocked ? 'Re-authenticate / Switch Access Key' : 'Enter Developer Access Key'}
+              </label>
+              {isDevModeUnlocked && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    lockDevMode();
+                    setFeedback({ type: 'info', message: 'Developer session locked.' });
+                  }}
+                  className="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>Lock Console</span>
+                </button>
+              )}
+            </div>
 
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <KeyRound className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   ref={inputRef}
-                  type="text"
+                  type={showPasscode ? 'text' : 'password'}
                   value={inputCode}
                   onChange={(e) => setInputCode(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                  placeholder="e.g. ZABAY2026 or ROLE2-SEED"
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-[#101622] border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold tracking-wider uppercase text-slate-900 dark:text-slate-100 placeholder:normal-case placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#3E6CB5] dark:focus:ring-[#5C8BD6]"
+                  onKeyDown={(e) => e.key === 'Enter' && !isVerifying && handleSubmit()}
+                  placeholder="Enter developer access key..."
+                  disabled={isVerifying}
+                  className="w-full pl-9 pr-10 py-2 bg-slate-50 dark:bg-[#101622] border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold tracking-wider text-slate-900 dark:text-slate-100 placeholder:normal-case placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#3E6CB5] dark:focus:ring-[#5C8BD6] disabled:opacity-60"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPasscode(!showPasscode)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  title={showPasscode ? 'Hide passcode' : 'Show passcode'}
+                  tabIndex={-1}
+                >
+                  {showPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
               <button
+                type="button"
                 onClick={() => handleSubmit()}
-                className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
+                disabled={isVerifying}
+                className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] disabled:opacity-60 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-xs"
               >
-                <Unlock className="w-3.5 h-3.5" />
-                <span>Verify Code</span>
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5" />
+                    <span>Verify Key</span>
+                  </>
+                )}
               </button>
             </div>
 
-            {/* Quick-fill DevCode Presets */}
-            <div className="space-y-1.5 pt-1">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                1-Click Preset DevCodes for Evaluators & Team:
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSubmit('ZABAY2026')}
-                  className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-indigo-700 dark:text-indigo-400">
-                      ZABAY2026
-                    </span>
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-500 opacity-60 group-hover:opacity-100" />
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Master Evaluation: Full Bohol events, venues, crew, & passes
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSubmit('ROLE2-SEED')}
-                  className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                      ROLE2-SEED
-                    </span>
-                    <Database className="w-3.5 h-3.5 text-emerald-500 opacity-60 group-hover:opacity-100" />
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Testbed: Prepares duplicate QR check-in & booking collisions
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSubmit('DEV-BOHOL')}
-                  className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-400">
-                      DEV-BOHOL
-                    </span>
-                    <Building2 className="w-3.5 h-3.5 text-blue-500 opacity-60 group-hover:opacity-100" />
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Bohol Community Operations: Tagbilaran & Panglao fixtures
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSubmit('CLEAN-SLATE')}
-                  className="text-left p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-all cursor-pointer group"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-rose-700 dark:text-rose-400">
-                      CLEAN-SLATE
-                    </span>
-                    <RotateCcw className="w-3.5 h-3.5 text-rose-500 opacity-60 group-hover:opacity-100" />
-                  </div>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Wipe Workspace: Reset to 0 records & reconnect to backend
-                  </p>
-                </button>
+            {!isDevModeUnlocked && (
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#111722] border border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                  <Lock className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Developer Session Locked</span>
+                </div>
+                <p>
+                  This administrative console requires an authorized developer access key. Keys are verified securely with server-side rate-limiting and timing-safe checks.
+                </p>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Unlocked Developer Tools & Diagnostic Panel */}
           {isDevModeUnlocked && (
             <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {/* Workspace Data Management (Only accessible when authenticated) */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Workspace Data Management</span>
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadDemoData();
+                      setFeedback({ type: 'success', message: 'Bohol master evaluation dataset loaded.' });
+                    }}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">
+                        Bohol Master Data
+                      </span>
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-500 opacity-60 group-hover:opacity-100" />
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Events, venues, staff roster, and passes
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadRole2DemoData();
+                      setFeedback({ type: 'success', message: 'Gate collision and single-admission testbed loaded.' });
+                    }}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        Collision Testbed
+                      </span>
+                      <Layers className="w-3.5 h-3.5 text-emerald-500 opacity-60 group-hover:opacity-100" />
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Prepares duplicate QR and overlap tests
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearToCleanSlate();
+                      setFeedback({ type: 'info', message: 'Workspace wiped to 0 records.' });
+                    }}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-rose-300 dark:hover:border-rose-700 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                        Reset Clean Slate
+                      </span>
+                      <RotateCcw className="w-3.5 h-3.5 text-rose-500 opacity-60 group-hover:opacity-100" />
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Wipes local state to 0 records
+                    </p>
+                  </button>
+                </div>
+              </div>
               {/* Evaluation Personas (Safely isolated in Dev Console) */}
               <div className="p-3.5 bg-slate-50 dark:bg-[#111722] rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">

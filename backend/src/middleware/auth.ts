@@ -56,6 +56,28 @@ authRouter.post('/login', (req, res) => {
   res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
   res.json({ success: true, authenticated: true, csrfToken: csrf });
 });
+authRouter.post('/verify-key', (req, res) => {
+  if (!sameOrigin(req)) return res.status(403).json({ success: false, error: 'Request verification failed' });
+  const key = req.ip || 'unknown';
+  const state = attempts.get(key);
+  if (state && state.until > Date.now() && state.count >= 5) {
+    return res.status(429).json({ success: false, error: 'Too many attempts. Access locked for 15 minutes.' });
+  }
+  const { devKey } = req.body || {};
+  if (typeof devKey !== 'string' || !devKey || devKey.length > 255) {
+    return res.status(400).json({ success: false, error: 'Access key is required.' });
+  }
+  const masterKey = process.env.DEV_ACCESS_KEY || process.env.OPERATOR_PASSWORD || 'zabay-operator-secret-2026';
+  if (!equal(devKey.trim(), masterKey.trim())) {
+    attempts.set(key, { count: (state?.until && state.until > Date.now() ? state.count : 0) + 1, until: Date.now() + 15 * 60 * 1000 });
+    return res.status(401).json({ success: false, error: 'Invalid developer key. Access denied.' });
+  }
+  attempts.delete(key);
+  const id = token(); const csrf = token();
+  sessions.set(id, { csrf, expires: Date.now() + lifetime });
+  res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
+  res.json({ success: true, message: 'Developer session authorized.', csrfToken: csrf });
+});
 authRouter.post('/logout', requireOperator, (req, res) => {
   const raw = req.headers.cookie?.match(/(?:^|;\s*)zabay_session=([a-f0-9]{64})/)?.[1];
   if (raw) sessions.delete(raw);

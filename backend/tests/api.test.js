@@ -450,3 +450,17 @@ test('readiness reports database failure without infrastructure details', async 
     assert.deepEqual(response.body, { status: 'unavailable' });
   } finally { pool.query = original; }
 });
+
+test('verify-key validates developer authorization and rejects invalid keys', async () => {
+  const denied = await request(app).post('/api/auth/verify-key').send({ devKey: 'wrong-key' });
+  assert.equal(denied.status, 401);
+  assert.equal(denied.body.success, false);
+
+  const missing = await request(app).post('/api/auth/verify-key').send({});
+  assert.equal(missing.status, 400);
+
+  const allowed = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.OPERATOR_PASSWORD });
+  assert.equal(allowed.status, 200);
+  assert.equal(allowed.body.success, true);
+  assert.ok(allowed.body.csrfToken);
+});

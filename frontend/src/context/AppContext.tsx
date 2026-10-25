@@ -48,7 +48,7 @@ interface AppContextType {
   // Developer & Evaluation DevCode System
   isDevModeUnlocked: boolean;
   unlockedDevCode: string | null;
-  unlockDevMode: (code: string) => { success: boolean; message: string; devCode?: string };
+  unlockDevMode: (code: string) => Promise<{ success: boolean; message: string; devCode?: string }>;
   lockDevMode: () => void;
   loadRole2DemoData: () => void;
 
@@ -226,37 +226,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  const computeSha256 = async (message: string): Promise<string> => {
+    try {
+      const msgBuffer = new TextEncoder().encode(message.trim());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch {
+      return '';
+    }
+  };
+
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
-      const devCode = localStorage.getItem('zabay-dev-code');
-      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL')) {
-        return localStorage.getItem('zabay-demo-mode') === 'true';
-      }
-      localStorage.removeItem('zabay-demo-mode');
+      const devUnlocked = sessionStorage.getItem('zabay-dev-unlocked') === 'true';
+      return devUnlocked && sessionStorage.getItem('zabay-demo-mode') === 'true';
     }
     return false;
   });
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
-      const devCode = localStorage.getItem('zabay-dev-code');
-      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL' || devCode === 'ROLE2-SEED' || devCode === 'CLEAN-SLATE')) {
-        return true;
-      }
-      localStorage.removeItem('zabay-dev-unlocked');
-      localStorage.removeItem('zabay-dev-code');
+      return sessionStorage.getItem('zabay-dev-unlocked') === 'true';
     }
     return false;
   });
 
   const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
-      const devCode = localStorage.getItem('zabay-dev-code');
-      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL' || devCode === 'ROLE2-SEED' || devCode === 'CLEAN-SLATE')) {
-        return devCode;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') {
+        return sessionStorage.getItem('zabay-dev-code') || 'AUTHORIZED';
       }
     }
     return null;
@@ -273,8 +272,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (localStorage.getItem('zabay-clean-slate') === 'true') {
         return null;
       }
-      const isDevUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
-      const devCode = localStorage.getItem('zabay-dev-code');
+      const isDevUnlocked = sessionStorage.getItem('zabay-dev-unlocked') === 'true';
       const savedUserStr = localStorage.getItem('zabay-user');
       let userId = 'usr-guest';
       if (savedUserStr) {
@@ -285,8 +283,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // ignore
         }
       }
-      // Only preselect mockEvents[0] if explicitly dev unlocked with demo dataset OR user is Mark Bautista ('usr-org-1')
-      if ((isDevUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL')) || userId === 'usr-org-1') {
+      // Only preselect mockEvents[0] if explicitly dev unlocked and user is Mark Bautista ('usr-org-1')
+      if (isDevUnlocked && userId === 'usr-org-1') {
         return mockEvents[0] || null;
       }
       return null;
@@ -303,7 +301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockVenueBookings;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockVenueBookings;
     }
     return [];
   });
@@ -319,28 +317,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // ignore parsing error
         }
       }
-      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockPersonnel;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockPersonnel;
     }
     return [];
   });
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockTasks;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockTasks;
     }
     return [];
   });
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockRegistrations;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockRegistrations;
     }
     return [];
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockAuditLogs;
+      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockAuditLogs;
     }
     return [];
   });
@@ -499,14 +497,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs(mockAuditLogs);
     setIsDemoMode(true);
     setIsDevModeUnlocked(true);
-    setUnlockedDevCode((prev) => prev || 'ZABAY2026');
+    setUnlockedDevCode((prev) => prev || 'AUTHORIZED');
     if (typeof window !== 'undefined') {
       localStorage.removeItem('zabay-clean-slate');
-      localStorage.setItem('zabay-demo-mode', 'true');
-      localStorage.setItem('zabay-dev-unlocked', 'true');
-      if (!localStorage.getItem('zabay-dev-code')) {
-        localStorage.setItem('zabay-dev-code', 'ZABAY2026');
-      }
+      sessionStorage.setItem('zabay-demo-mode', 'true');
+      sessionStorage.setItem('zabay-dev-unlocked', 'true');
+      sessionStorage.setItem('zabay-dev-code', 'AUTHORIZED');
+      localStorage.removeItem('zabay-dev-unlocked');
+      localStorage.removeItem('zabay-dev-code');
       localStorage.removeItem('zabay_custom_personnel');
     }
   };
@@ -594,11 +592,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setIsDemoMode(true);
     setIsDevModeUnlocked(true);
-    setUnlockedDevCode('ROLE2-SEED');
+    setUnlockedDevCode('AUTHORIZED');
     if (typeof window !== 'undefined') {
-      localStorage.setItem('zabay-demo-mode', 'true');
-      localStorage.setItem('zabay-dev-unlocked', 'true');
-      localStorage.setItem('zabay-dev-code', 'ROLE2-SEED');
+      sessionStorage.setItem('zabay-demo-mode', 'true');
+      sessionStorage.setItem('zabay-dev-unlocked', 'true');
+      sessionStorage.setItem('zabay-dev-code', 'AUTHORIZED');
+      localStorage.removeItem('zabay-dev-unlocked');
+      localStorage.removeItem('zabay-dev-code');
       localStorage.removeItem('zabay_custom_personnel');
     }
 
@@ -614,54 +614,120 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotifications((prev) => [testbedNotice, ...prev]);
   };
 
-  const unlockDevMode = (code: string): { success: boolean; message: string; devCode?: string } => {
-    const normalized = (code || '').trim().toUpperCase();
-    if (normalized === 'ZABAY2026' || normalized === 'DEV-BOHOL') {
+  const unlockDevMode = async (code: string): Promise<{ success: boolean; message: string; devCode?: string }> => {
+    const raw = (code || '').trim();
+    if (!raw) {
+      return {
+        success: false,
+        message: 'Developer access key is required.',
+      };
+    }
+
+    // 1. If backend API is live or reachable, attempt secure server-side verification
+    if (isLiveBackend) {
+      try {
+        const res = await api.auth.verifyDevKey(raw);
+        if (res.success) {
+          loadDemoData();
+          setIsDevModeUnlocked(true);
+          setUnlockedDevCode('AUTHORIZED');
+          setCurrentUser(mockCurrentUser);
+          setCurrentRole('organizer');
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('zabay-dev-unlocked', 'true');
+            sessionStorage.setItem('zabay-dev-code', 'AUTHORIZED');
+            sessionStorage.setItem('zabay-demo-mode', 'true');
+            localStorage.setItem('zabay-user', JSON.stringify(mockCurrentUser));
+            localStorage.setItem('zabay-role', 'organizer');
+            localStorage.removeItem('zabay-dev-unlocked');
+            localStorage.removeItem('zabay-dev-code');
+          }
+          return {
+            success: true,
+            message: 'Developer session authorized via secure server key.',
+            devCode: 'AUTHORIZED',
+          };
+        }
+      } catch (err: any) {
+        if (err?.message?.includes('Too many') || err?.message?.includes('Access locked')) {
+          return {
+            success: false,
+            message: 'Too many failed attempts. Console locked for 15 minutes.',
+          };
+        }
+        if (err?.status === 401 || err?.status === 403) {
+          return {
+            success: false,
+            message: 'Invalid developer key. Access denied.',
+          };
+        }
+      }
+    }
+
+    // 2. Offline / Resilient Cryptographic SHA-256 verification (no plaintext passcodes in client JS)
+    const normalized = raw.toUpperCase();
+    const hash = await computeSha256(normalized);
+
+    // Cryptographic hashes of authorized developer keys:
+    const HASH_MASTER = '57657f2decf0f713fae8d9ad588dc5e7a6110c4ab13944f84993fac8add0032b';
+    const HASH_BOHOL = 'a9a534cf393dcfd174e25f3c97c49fd5b40a5998360d4463fc7addf55edd0908';
+    const HASH_ROLE2 = 'f24b41698af9cdd65c9ac8b36a439c803dac87e5d4b46011850918b2a4407324';
+    const HASH_CLEAN = 'c0ef37c9ed162dbdb951a5eefc91f453cb5a834024def49cf21b13ae64704cf6';
+
+    const customEnvKey = (import.meta as any).env?.VITE_DEV_KEY;
+    const isCustomMatch = customEnvKey && (raw === customEnvKey || normalized === customEnvKey.toUpperCase());
+
+    if (hash === HASH_MASTER || hash === HASH_BOHOL || isCustomMatch) {
       loadDemoData();
       setIsDevModeUnlocked(true);
-      setUnlockedDevCode(normalized);
+      setUnlockedDevCode('AUTHORIZED');
       setCurrentUser(mockCurrentUser);
       setCurrentRole('organizer');
       if (typeof window !== 'undefined') {
-        localStorage.setItem('zabay-dev-unlocked', 'true');
-        localStorage.setItem('zabay-dev-code', normalized);
+        sessionStorage.setItem('zabay-dev-unlocked', 'true');
+        sessionStorage.setItem('zabay-dev-code', 'AUTHORIZED');
+        sessionStorage.setItem('zabay-demo-mode', 'true');
         localStorage.setItem('zabay-user', JSON.stringify(mockCurrentUser));
         localStorage.setItem('zabay-role', 'organizer');
+        localStorage.removeItem('zabay-dev-unlocked');
+        localStorage.removeItem('zabay-dev-code');
       }
       return {
         success: true,
-        message: `DevCode "${normalized}" verified! Bohol Master dataset & evaluation persona loaded.`,
-        devCode: normalized,
+        message: 'Developer session authorized! Bohol evaluation dataset & persona loaded.',
+        devCode: 'AUTHORIZED',
       };
     }
 
-    if (normalized === 'ROLE2-SEED') {
+    if (hash === HASH_ROLE2) {
       loadRole2DemoData();
       return {
         success: true,
-        message: 'DevCode "ROLE2-SEED" verified! Collision check and single-admission testbed loaded.',
-        devCode: 'ROLE2-SEED',
+        message: 'Developer testbed loaded: collision checks and single-admission rules active.',
+        devCode: 'AUTHORIZED',
       };
     }
 
-    if (normalized === 'CLEAN-SLATE') {
+    if (hash === HASH_CLEAN) {
       clearToCleanSlate();
       setIsDevModeUnlocked(true);
-      setUnlockedDevCode('CLEAN-SLATE');
+      setUnlockedDevCode('AUTHORIZED');
       if (typeof window !== 'undefined') {
-        localStorage.setItem('zabay-dev-unlocked', 'true');
-        localStorage.setItem('zabay-dev-code', 'CLEAN-SLATE');
+        sessionStorage.setItem('zabay-dev-unlocked', 'true');
+        sessionStorage.setItem('zabay-dev-code', 'AUTHORIZED');
+        localStorage.removeItem('zabay-dev-unlocked');
+        localStorage.removeItem('zabay-dev-code');
       }
       return {
         success: true,
-        message: 'DevCode "CLEAN-SLATE" executed. Workspace wiped to clean slate.',
-        devCode: 'CLEAN-SLATE',
+        message: 'Workspace reset to clean slate.',
+        devCode: 'AUTHORIZED',
       };
     }
 
     return {
       success: false,
-      message: 'Invalid developer passcode. Try "ZABAY2026".',
+      message: 'Invalid developer key. Access denied.',
     };
   };
 
@@ -676,6 +742,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVenueBookings([]);
     setAuditLogs([]);
     if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('zabay-dev-unlocked');
+      sessionStorage.removeItem('zabay-dev-code');
+      sessionStorage.removeItem('zabay-demo-mode');
       localStorage.removeItem('zabay-dev-unlocked');
       localStorage.removeItem('zabay-dev-code');
       localStorage.removeItem('zabay-user');
