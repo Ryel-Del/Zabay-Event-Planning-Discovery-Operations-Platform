@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Lock,
@@ -10,6 +10,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  KeyRound,
+  Terminal,
+  Database,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -20,12 +23,20 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   intent?: string;
+  initialMode?: 'signin' | 'register' | 'operator';
+  onOpenDevConsole?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent }) => {
-  const { setCurrentUser, setCurrentRole } = useApp();
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  intent,
+  initialMode = 'signin',
+  onOpenDevConsole,
+}) => {
+  const { setCurrentUser, setCurrentRole, isLiveBackend, operatorAuthenticated } = useApp();
 
-  const [mode, setMode] = useState<'signin' | 'register'>('signin');
+  const [mode, setMode] = useState<'signin' | 'register' | 'operator'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,6 +47,55 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent })
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [operatorUsername, setOperatorUsername] = useState('');
+  const [operatorPassword, setOperatorPassword] = useState('');
+  const [operatorError, setOperatorError] = useState<string | null>(null);
+  const [isOperatorSubmitting, setIsOperatorSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode || 'signin');
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setOperatorError(null);
+    }
+  }, [isOpen, initialMode]);
+
+  const handleOperatorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOperatorError(null);
+    setIsOperatorSubmitting(true);
+    try {
+      const result = await api.auth.login(operatorUsername, operatorPassword);
+      if (result.success) {
+        setSuccessMessage('Operator session authenticated. Reloading session...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
+        setOperatorError(result.error || 'Operator login failed.');
+      }
+    } catch {
+      setOperatorError('Operator login request failed.');
+    } finally {
+      setIsOperatorSubmitting(false);
+    }
+  };
+
+  const handleOperatorLogout = async () => {
+    setOperatorError(null);
+    try {
+      const result = await api.auth.logout();
+      if (result.success) {
+        window.location.reload();
+      } else {
+        setOperatorError(result.error || 'Operator logout failed.');
+      }
+    } catch {
+      setOperatorError('Operator logout failed.');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -215,10 +275,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent })
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {mode === 'signin' ? 'Sign In to Zabay' : 'Create New Account'}
+                {mode === 'signin' ? 'Sign In to Zabay' : mode === 'register' ? 'Create New Account' : 'Operator Access'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Event Planning, Discovery & Operations Platform
+                {mode === 'operator' ? 'Administrative Operations & PostgreSQL Access' : 'Event Planning, Discovery & Operations Platform'}
               </p>
             </div>
           </div>
@@ -260,10 +320,137 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent })
           >
             Register New Account
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('operator');
+              setErrorMessage(null);
+              setOperatorError(null);
+            }}
+            className={`py-3 px-3.5 text-xs font-bold transition-colors border-b-2 flex items-center justify-center gap-1.5 ${
+              mode === 'operator'
+                ? 'border-[#3E6CB5] text-[#3E6CB5] dark:text-[#7EA6E0]'
+                : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+            }`}
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>Operator</span>
+          </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+        {mode === 'operator' ? (
+          <form onSubmit={handleOperatorSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Database className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                  <span>PostgreSQL Database Engine</span>
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  <span className={`w-2 h-2 rounded-full ${isLiveBackend ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  <span>{isLiveBackend ? 'Postgres Live' : 'Offline'}</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                Operator credentials authorize privileged database mutations (event creation, venue reservations, and roster management) when local development requires authenticated session cookies.
+              </p>
+            </div>
+
+            {operatorAuthenticated ? (
+              <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Operator Session Active</span>
+                </div>
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                  Your browser currently holds a valid operator session cookie. Protected API mutations are permitted.
+                </p>
+                <div className="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOperatorLogout}
+                    className="py-2 px-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold transition-all cursor-pointer shadow-xs"
+                  >
+                    Operator logout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('signin')}
+                    className="py-2 px-3 text-slate-600 dark:text-slate-400 hover:underline cursor-pointer font-medium"
+                  >
+                    Return to User Login
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                  <span>Operator login</span>
+                </h2>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Operator Username</label>
+                  <input
+                    aria-label="Operator username"
+                    autoComplete="username"
+                    required
+                    value={operatorUsername}
+                    onChange={(e) => setOperatorUsername(e.target.value)}
+                    placeholder="e.g. operator"
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold text-slate-700 dark:text-slate-300">Operator Password</label>
+                  <input
+                    aria-label="Operator password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={operatorPassword}
+                    onChange={(e) => setOperatorPassword(e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3.5 py-2.5 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
+                </div>
+
+                {operatorError && (
+                  <div role="alert" className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                    <X className="w-4 h-4 shrink-0" />
+                    <span>{operatorError}</span>
+                  </div>
+                )}
+
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 space-y-1">
+                  <div className="font-semibold text-slate-700 dark:text-slate-300">Local developer credentials:</div>
+                  <div className="font-mono text-[10px]">User: <strong className="text-slate-800 dark:text-slate-200">operator</strong></div>
+                  <div className="font-mono text-[10px]">Pass: <strong className="text-slate-800 dark:text-slate-200">zabay-operator-secret-2026</strong></div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setMode('signin')}
+                    className="py-2 px-3 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isOperatorSubmitting}
+                    className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isOperatorSubmitting ? 'Authenticating...' : 'Sign in'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </form>
+        ) : (
+          /* Form Body */
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
           {intent && <p role="status" data-cy="registration-signin-prompt" className="rounded-xl bg-blue-50 p-3 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">{intent}</p>}
           {/* Google SSO Login Action */}
           <div className="space-y-3 pb-1">
@@ -448,7 +635,54 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent })
             <Lock className="w-3 h-3 text-slate-400" />
             <span>Protected by industry-standard encrypted authentication</span>
           </div>
+
+          {/* System & Operator Administrative Access Footer */}
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${isLiveBackend ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                Database: {isLiveBackend ? 'Postgres Live' : 'Offline'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {operatorAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleOperatorLogout}
+                  className="text-[11px] font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
+                >
+                  Operator logout
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setErrorMessage(null);
+                    setOperatorError(null);
+                    setMode('operator');
+                  }}
+                  className="text-[11px] font-semibold text-[#3E6CB5] hover:underline dark:text-[#7EA6E0] transition-colors cursor-pointer"
+                >
+                  Operator login
+                </button>
+              )}
+              <span className="text-slate-300 dark:text-slate-700">•</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  if (onOpenDevConsole) onOpenDevConsole();
+                }}
+                className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <Terminal className="w-3 h-3" />
+                <span>Dev Console</span>
+              </button>
+            </div>
+          </div>
         </form>
+      )}
       </div>
 
 

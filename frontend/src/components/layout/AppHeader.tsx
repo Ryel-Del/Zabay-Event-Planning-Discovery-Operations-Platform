@@ -26,6 +26,7 @@ import {
   Terminal,
   Menu,
   LogOut,
+  ShieldCheck,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { UserRole } from '../../types';
@@ -57,7 +58,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     setCurrentRole,
     currentUser,
     operatorAuthenticated,
-    isLiveBackend,
     selectedEvent,
     setSelectedEvent,
     events,
@@ -82,10 +82,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isOperatorLoginOpen, setIsOperatorLoginOpen] = useState(false);
-  const [operatorUsername, setOperatorUsername] = useState('');
-  const [operatorPassword, setOperatorPassword] = useState('');
-  const [operatorError, setOperatorError] = useState('');
 
   const menuRef = useRef<HTMLDivElement>(null);
   const eventPickerRef = useRef<HTMLDivElement>(null);
@@ -352,18 +348,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Studio CTA & Account Menu */}
       <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2.5 shrink-0">
-        <span data-cy="backend-status" className="hidden sm:inline text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-          {isLiveBackend ? 'Postgres Live' : 'Offline'}
-        </span>
-        {operatorAuthenticated ? (
-          <button type="button" className="text-[10px] font-semibold text-slate-600 dark:text-slate-300" onClick={async () => {
-            const result = await api.auth.logout();
-            if (result.success) window.location.reload();
-            else setOperatorError(result.error || 'Operator logout failed.');
-          }}>Operator logout</button>
-        ) : currentUser.id === 'usr-guest' ? (
-          <button type="button" className="text-[10px] font-semibold text-slate-600 dark:text-slate-300" onClick={() => setIsOperatorLoginOpen(true)}>Operator login</button>
-        ) : null}
         {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on desktop md+; mobile has bottom nav) */}
         {currentRole === 'attendee' && (
           <button
@@ -746,6 +730,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </button>
                 )}
 
+                {/* Operator Session status if active */}
+                {operatorAuthenticated && (
+                  <div className="p-2 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/60 flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>Operator Active</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const result = await api.auth.logout();
+                        if (result.success) window.location.reload();
+                      }}
+                      className="font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
+                    >
+                      Operator logout
+                    </button>
+                  </div>
+                )}
+
                 {/* Developer Access / Evaluation Tools in dedicated separate menu */}
                 {isDevModeUnlocked ? (
                   <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1.5">
@@ -806,22 +810,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
         />
-      )}
-      {isOperatorLoginOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-          <form className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900" onSubmit={async (event) => {
-            event.preventDefault();
-            const result = await api.auth.login(operatorUsername, operatorPassword);
-            if (result.success) window.location.reload();
-            else setOperatorError(result.error || 'Operator login failed.');
-          }}>
-            <h2 className="text-base font-bold">Operator login</h2>
-            <input aria-label="Operator username" autoComplete="username" required value={operatorUsername} onChange={event => setOperatorUsername(event.target.value)} className="w-full rounded-lg border p-2 text-sm" />
-            <input aria-label="Operator password" type="password" autoComplete="current-password" required value={operatorPassword} onChange={event => setOperatorPassword(event.target.value)} className="w-full rounded-lg border p-2 text-sm" />
-            {operatorError && <p role="alert" className="text-xs text-red-600">{operatorError}</p>}
-            <div className="flex justify-end gap-2 text-sm"><button type="button" onClick={() => setIsOperatorLoginOpen(false)}>Cancel</button><button type="submit" className="rounded-lg bg-blue-600 px-3 py-2 text-white">Sign in</button></div>
-          </form>
-        </div>
       )}
     </header>
   );

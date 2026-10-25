@@ -11,10 +11,20 @@ import { AttendeePage } from './pages/attendee/AttendeePage';
 import { AuditLogViewer, QRCheckInScanner, ProfileView, DevCodeModal } from './components/modals';
 import { AuthModal } from './components/auth/AuthModal';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
+import api from './services/api';
 
 const MainContent: React.FC = () => {
-  const { currentRole, setCurrentRole, selectedEvent, currentUser, isDevModeUnlocked } = useApp();
+  const {
+    currentRole,
+    setCurrentRole,
+    selectedEvent,
+    currentUser,
+    isDevModeUnlocked,
+    isLiveBackend,
+    operatorAuthenticated,
+  } = useApp();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'register' | 'operator'>('signin');
   const [organizerView, setOrganizerView] = useState<OrganizerView>('overview');
   const [venueView, setVenueView] = useState<'overview' | 'calendar' | 'inventory'>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -67,7 +77,10 @@ const MainContent: React.FC = () => {
         onOpenScanner={() => handleOpenScannerWithCode()}
         onOpenProfile={() => setIsProfileOpen(true)}
         onOpenDevConsole={() => setIsDevModalOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => {
+          setAuthModalMode('signin');
+          setIsAuthOpen(true);
+        }}
         onToggleMobileMenu={() => setIsMobileNavOpen((prev) => !prev)}
       />
 
@@ -132,7 +145,10 @@ const MainContent: React.FC = () => {
               </div>
               <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
                 <button
-                  onClick={() => setIsAuthOpen(true)}
+                  onClick={() => {
+                    setAuthModalMode('signin');
+                    setIsAuthOpen(true);
+                  }}
                   className="py-2.5 px-4 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
                 >
                   Sign In with Google / Email
@@ -175,6 +191,60 @@ const MainContent: React.FC = () => {
         </main>
       </div>
 
+      {/* System Status & Evaluation Footer Bar */}
+      <footer className="w-full py-2 px-3 sm:px-6 bg-white/90 dark:bg-[#111722]/90 backdrop-blur-xs border-t border-slate-200/80 dark:border-slate-800/80 text-[11px] text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-2.5 shrink-0 z-20">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-slate-700 dark:text-slate-300">Zabay OS</span>
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+          <span>Bohol Instance</span>
+        </div>
+
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${isLiveBackend ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+            <span data-cy="backend-status" className="font-semibold text-slate-700 dark:text-slate-300">
+              {isLiveBackend ? 'Postgres Live' : 'Offline'}
+            </span>
+          </div>
+
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+
+          {operatorAuthenticated ? (
+            <button
+              type="button"
+              onClick={async () => {
+                const res = await api.auth.logout();
+                if (res.success) window.location.reload();
+              }}
+              className="font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 transition-colors cursor-pointer"
+            >
+              Operator logout
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setAuthModalMode('operator');
+                setIsAuthOpen(true);
+              }}
+              className="font-semibold text-slate-600 hover:text-[#3E6CB5] dark:text-slate-400 dark:hover:text-[#7EA6E0] transition-colors cursor-pointer"
+            >
+              Operator login
+            </button>
+          )}
+
+          <span className="text-slate-300 dark:text-slate-700">•</span>
+
+          <button
+            type="button"
+            onClick={() => setIsDevModalOpen(true)}
+            className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+          >
+            Dev Console
+          </button>
+        </div>
+      </footer>
+
       {/* Mobile Ergonomic Bottom Navigation Bar (< md screens) */}
       <MobileBottomNav
         currentView={currentRole === 'venue_manager' ? venueView : organizerView}
@@ -184,11 +254,19 @@ const MainContent: React.FC = () => {
         }}
         onOpenScanner={() => handleOpenScannerWithCode()}
         onOpenProfile={() => setIsProfileOpen(true)}
-        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenAuth={() => {
+          setAuthModalMode('signin');
+          setIsAuthOpen(true);
+        }}
       />
 
       {/* Global Modals */}
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        initialMode={authModalMode}
+        onOpenDevConsole={() => setIsDevModalOpen(true)}
+      />
       <AuditLogViewer isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
       <QRCheckInScanner
         isOpen={isScannerOpen}
