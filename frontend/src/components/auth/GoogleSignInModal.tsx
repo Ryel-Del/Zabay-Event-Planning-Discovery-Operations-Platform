@@ -1,7 +1,21 @@
-import React, { useState } from 'react';
-import { X, UserPlus, ArrowRight, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, ArrowRight, ShieldCheck, Mail, User as UserIcon } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { User, UserRole } from '../../types';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts?: {
+        id?: {
+          initialize: (config: { client_id: string; callback: (res: { credential: string }) => void }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 interface GoogleSignInModalProps {
   isOpen: boolean;
@@ -14,109 +28,123 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { setCurrentUser, setCurrentRole, loadDemoData } = useApp();
-  const [isCustomMode, setIsCustomMode] = useState(false);
-  const [customName, setCustomName] = useState('');
-  const [customEmail, setCustomEmail] = useState('');
-  const [customRole, setCustomRole] = useState<UserRole>('attendee');
+  const { setCurrentUser, setCurrentRole } = useApp();
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [role, setRole] = useState<UserRole>('attendee');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [hasGoogleClient, setHasGoogleClient] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  // Initialize real Google Identity Services (GIS) if client ID is configured
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (googleClientId && window.google?.accounts?.id && googleBtnRef.current) {
+      setHasGoogleClient(true);
+      try {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: (response: { credential: string }) => {
+            handleGoogleJwtSuccess(response.credential);
+          },
+        });
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: 340,
+          text: 'continue_with',
+          shape: 'pill',
+        });
+      } catch (err) {
+        console.warn('Google Identity Services initialization:', err);
+      }
+    }
+  }, [isOpen, googleClientId]);
 
   if (!isOpen) return null;
 
-  const quickGoogleAccounts = [
-    {
-      name: 'Sofia Ramos',
-      email: 'sofia.ramos@bisu.edu.ph',
-      title: 'Signed in',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-      role: 'attendee' as UserRole,
-      org: 'Bohol Island State University',
-    },
-    {
-      name: 'Mark Bautista',
-      email: 'mark.bautista@zabay.ph',
-      title: 'Signed in',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      role: 'organizer' as UserRole,
-      org: 'Tagbilaran Youth & Sports Council',
-    },
-  ];
-
-  const handleSelectAccount = (account: {
-    name: string;
-    email: string;
-    avatar: string;
-    role: UserRole;
-    org: string;
-  }) => {
+  const handleGoogleJwtSuccess = (jwtCredential: string) => {
     setIsAuthenticating(true);
+    try {
+      const base64Url = jwtCredential.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const data = JSON.parse(jsonPayload);
 
-    setTimeout(() => {
       const googleUser: User = {
-        id: `usr-g-${Date.now().toString(36)}`,
-        name: account.name,
-        email: account.email,
-        role: account.role,
-        roles: account.role === 'organizer' ? ['organizer', 'attendee'] : ['attendee'],
-        avatar: account.avatar,
-        organization: account.org,
-        location: 'Tagbilaran City, Bohol',
-        bio: `Authenticated via Google SSO (${account.email})`,
-      };
-
-      if (account.role === 'organizer') {
-        loadDemoData();
-      }
-
-      setCurrentUser(googleUser);
-      setCurrentRole(account.role);
-
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('zabay-user', JSON.stringify(googleUser));
-        localStorage.setItem('zabay-role', account.role);
-      }
-
-      setIsAuthenticating(false);
-      onSuccess(googleUser);
-      onClose();
-    }, 700);
-  };
-
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customName.trim() || !customEmail.trim()) return;
-
-    setIsAuthenticating(true);
-
-    setTimeout(() => {
-      const googleUser: User = {
-        id: `usr-g-${Date.now().toString(36)}`,
-        name: customName.trim(),
-        email: customEmail.trim(),
-        role: customRole,
-        roles: customRole === 'organizer' ? ['organizer', 'attendee'] : ['attendee'],
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(customName.trim())}&background=3E6CB5&color=fff&bold=true`,
+        id: `usr-g-${data.sub || Date.now().toString(36)}`,
+        name: data.name || data.email.split('@')[0],
+        email: data.email,
+        role: 'attendee',
+        roles: ['attendee', 'organizer', 'venue_manager'],
+        avatar:
+          data.picture ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'User')}&background=3E6CB5&color=fff&bold=true`,
         organization: 'Google Account',
         location: 'Bohol, Philippines',
-        bio: `Signed in with Google Account (${customEmail.trim()})`,
+        bio: `Verified Google Account (${data.email})`,
       };
 
-      if (customRole === 'organizer') {
-        loadDemoData();
-      }
-
       setCurrentUser(googleUser);
-      setCurrentRole(customRole);
+      setCurrentRole('attendee');
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-user', JSON.stringify(googleUser));
-        localStorage.setItem('zabay-role', customRole);
+        localStorage.setItem('zabay-role', 'attendee');
       }
 
       setIsAuthenticating(false);
       onSuccess(googleUser);
       onClose();
-    }, 700);
+    } catch {
+      setIsAuthenticating(false);
+    }
+  };
+
+  const handleManualGoogleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleEmail.trim()) return;
+
+    setIsAuthenticating(true);
+
+    const displayName = googleName.trim() || googleEmail.split('@')[0];
+    setTimeout(() => {
+      const googleUser: User = {
+        id: `usr-g-${Date.now().toString(36)}`,
+        name: displayName,
+        email: googleEmail.trim().toLowerCase(),
+        role: role,
+        roles: role === 'organizer' ? ['organizer', 'attendee', 'venue_manager'] : ['attendee', 'organizer'],
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=3E6CB5&color=fff&bold=true`,
+        organization: googleEmail.includes('@bisu.edu.ph')
+          ? 'Bohol Island State University'
+          : googleEmail.includes('@hnu.edu.ph')
+          ? 'Holy Name University'
+          : 'Google Account',
+        location: 'Bohol, Philippines',
+        bio: `Authenticated via Google Account (${googleEmail.trim().toLowerCase()})`,
+      };
+
+      setCurrentUser(googleUser);
+      setCurrentRole(role);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-user', JSON.stringify(googleUser));
+        localStorage.setItem('zabay-role', role);
+      }
+
+      setIsAuthenticating(false);
+      onSuccess(googleUser);
+      onClose();
+    }, 600);
   };
 
   return (
@@ -150,7 +178,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Choose an account to continue to <span className="font-semibold text-slate-700 dark:text-slate-300">Zabay</span> (<code className="text-[11px] font-mono">zabay.ph</code>)
+              Continue to <span className="font-semibold text-slate-700 dark:text-slate-300">Zabay</span> (<code className="text-[11px] font-mono">zabay.ph</code>)
             </p>
           </div>
 
@@ -178,138 +206,80 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
           </div>
         )}
 
-        {/* Account Selector Body */}
-        {!isAuthenticating && !isCustomMode && (
-          <div className="p-4 space-y-2">
-            <div className="space-y-1.5">
-              {quickGoogleAccounts.map((account) => (
-                <button
-                  key={account.email}
-                  onClick={() => handleSelectAccount(account)}
-                  className="w-full flex items-center justify-between p-3 rounded-2xl border border-slate-200/90 dark:border-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-all text-left cursor-pointer group"
+        {/* Account Authentication Body */}
+        {!isAuthenticating && (
+          <div className="p-6 space-y-4">
+            {/* Live Google Button Mount Point (Rendered if GIS client configured) */}
+            {hasGoogleClient && (
+              <div className="flex flex-col items-center justify-center py-2 space-y-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div ref={googleBtnRef} />
+                <span className="text-[10px] text-slate-400 uppercase font-semibold">Or enter account below</span>
+              </div>
+            )}
+
+            <form onSubmit={handleManualGoogleSubmit} className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  Google Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="yourname@gmail.com or @bisu.edu.ph"
+                  value={googleEmail}
+                  onChange={(e) => setGoogleEmail(e.target.value)}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-slate-400" />
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Your Google Profile Name"
+                  value={googleName}
+                  onChange={(e) => setGoogleName(e.target.value)}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Initial Workspace Mode
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={account.avatar}
-                      alt={account.name}
-                      className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
-                        {account.name}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        {account.email}
-                      </p>
-                      <span className="text-[10px] text-slate-400 truncate block">
-                        {account.title}
-                      </span>
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  <option value="attendee">Attendee / Delegate (Public Events & Passes)</option>
+                  <option value="organizer">Event Organizer (Planning Studio & Ops)</option>
+                  <option value="venue_manager">Venue Manager (Hall Reservations)</option>
+                </select>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={!googleEmail.trim() || isAuthenticating}
+                  className="w-full py-2.5 px-4 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <span>Continue with Google</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-              ))}
-            </div>
+              </div>
 
-            {/* Custom Account Option */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setIsCustomMode(true)}
-                className="w-full flex items-center gap-3 p-3 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all text-left cursor-pointer text-slate-700 dark:text-slate-300"
-              >
-                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    Use another Google account
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    Enter your real name and email address
-                  </p>
-                </div>
-              </button>
-            </div>
+              <div className="pt-1 flex items-center justify-center gap-1.5 text-[10px] text-slate-400 text-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                <span>To enable live 1-click Google OAuth popups, configure VITE_GOOGLE_CLIENT_ID.</span>
+              </div>
+            </form>
           </div>
         )}
-
-        {/* Custom Google Account Input Form */}
-        {!isAuthenticating && isCustomMode && (
-          <form onSubmit={handleCustomSubmit} className="p-5 space-y-3.5">
-            <div className="flex items-center justify-between pb-1">
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                Enter your Google Account
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsCustomMode(false)}
-                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
-                Back to accounts
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Radel Santos"
-                value={customName}
-                onChange={(e) => setCustomName(e.target.value)}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Google Email Address
-              </label>
-              <input
-                type="email"
-                required
-                placeholder="e.g. yourname@gmail.com"
-                value={customEmail}
-                onChange={(e) => setCustomEmail(e.target.value)}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Select Platform Role
-              </label>
-              <select
-                value={customRole}
-                onChange={(e) => setCustomRole(e.target.value as UserRole)}
-                className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="attendee">Attendee (Discover events, map & QR passes)</option>
-                <option value="organizer">Event Organizer (Manage schedule & operations)</option>
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full mt-2 py-2.5 px-4 bg-[#1A73E8] hover:bg-[#1557B0] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <span>Continue with this account</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </form>
-        )}
-
-        {/* Google Privacy Footer */}
-        <div className="px-6 py-3 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Secure OAuth 2.0 verification</span>
-          </div>
-          <span>English (United States)</span>
-        </div>
       </div>
     </div>
   );
