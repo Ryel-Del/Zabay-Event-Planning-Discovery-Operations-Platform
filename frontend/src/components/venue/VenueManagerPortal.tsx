@@ -31,7 +31,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   currentView = 'overview',
   onSelectView,
 }) => {
-  const { venues, venueBookings, bookVenue, selectedEvent, currentUser, isDevModeUnlocked, forkVenueLayout } = useApp();
+  const { venues, venueBookings, bookVenue, selectedEvent, currentUser, currentRole, isDevModeUnlocked, forkVenueLayout } = useApp();
   const [internalView, setInternalView] = useState<VenueView>('overview');
   const activeView = currentView || internalView;
 
@@ -47,10 +47,13 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   const [testEnd, setTestEnd] = useState('2026-11-13T18:00:00Z');
   const [bookingStatus, setBookingStatus] = useState<{ success: boolean; message: string } | null>(null);
   const [forkSuccessToast, setForkSuccessToast] = useState<string | null>(null);
+  const [managerOverride, setManagerOverride] = useState(false);
 
-  // Permission boundary: Check if logged-in user is verified venue owner
+  // Permission boundary: Check if logged-in user is verified venue owner or in venue manager role
   const isVenueOwner =
     isDevModeUnlocked ||
+    managerOverride ||
+    currentRole === 'venue_manager' ||
     (selectedVenue &&
       !selectedVenue.is_custom_fork &&
       (selectedVenue.manager_id === currentUser.id ||
@@ -136,24 +139,34 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                   </span>
                 )}
                 {isVenueOwner ? (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold font-mono">
+                  <button
+                    type="button"
+                    onClick={() => setManagerOverride(false)}
+                    className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold font-mono flex items-center gap-1 hover:opacity-80 cursor-pointer"
+                    title="Click to switch to Organizer View for testing"
+                  >
                     👑 Master Owner Control
-                  </span>
+                  </button>
                 ) : (
-                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium font-mono">
-                    👁️ Organizer View
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setManagerOverride(true)}
+                    className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium font-mono flex items-center gap-1 hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer"
+                    title="Click to test as Verified Facility Owner"
+                  >
+                    👁️ Organizer View (Click to test as Owner)
+                  </button>
                 )}
-                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
-                  Collision-Safe Booking
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold font-mono">
+                  Collision-Safe
                 </span>
               </div>
-              <div className="flex items-center gap-3 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
-                <p className="flex items-center gap-1.5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <p className="flex items-center gap-1.5 truncate">
                   <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <span>{selectedVenue.address}</span>
                 </p>
-                <span>•</span>
+                <span className="hidden sm:inline text-slate-300 dark:text-slate-600">•</span>
                 <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
                   {selectedVenue.is_custom_fork ? (
                     <>
