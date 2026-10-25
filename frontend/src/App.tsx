@@ -33,8 +33,13 @@ const MainContent: React.FC = () => {
         setIsDevModalOpen((prev) => !prev);
       }
     };
+    const handleOpenAuth = () => setIsAuthOpen(true);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('zabay:open-auth', handleOpenAuth);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('zabay:open-auth', handleOpenAuth);
+    };
   }, []);
 
   const handleOpenScannerWithCode = (code?: string) => {

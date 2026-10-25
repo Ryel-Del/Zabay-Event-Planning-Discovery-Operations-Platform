@@ -218,6 +218,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               )}
             </div>
 
+            {currentUser.id === 'usr-guest' && (
+              <div className="mt-4 pt-4 border-t border-slate-200/80 dark:border-slate-800 p-4 rounded-xl bg-[#EBF3FC] dark:bg-[#152338] border border-[#C8DCF7] dark:border-[#2D4160] flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-[#244A85] dark:text-[#8BB0E8] flex items-center justify-center sm:justify-start gap-1.5">
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Please Sign In to Access Your Full Profile & Passes</span>
+                  </p>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
+                    Signing in lets you view your purchased passes, organize Bohol events, and manage crew tasks.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    window.dispatchEvent(new CustomEvent('zabay:open-auth'));
+                  }}
+                  className="px-4 py-2 bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer whitespace-nowrap"
+                >
+                  Please Sign In / Register
+                </button>
+              </div>
+            )}
+
             {/* Profile Bio */}
             {!isEditing ? (
               <p className="text-xs text-slate-600 dark:text-slate-300 mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-800 leading-relaxed">

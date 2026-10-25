@@ -7,6 +7,7 @@ import {
   Download,
   QrCode,
   Check,
+  Lock,
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
@@ -75,21 +76,44 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
       </div>
 
       {userPasses.length === 0 ? (
-        <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-10 text-center space-y-4 shadow-xs">
-          <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto">
-            <Ticket className="w-7 h-7" />
+        currentUser.id === 'usr-guest' ? (
+          <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-8 sm:p-10 text-center space-y-4 shadow-xs">
+            <div className="w-14 h-14 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+              <Lock className="w-7 h-7" />
+            </div>
+            <div className="space-y-1.5 max-w-md mx-auto">
+              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
+                Please Sign In to Access Your Passes
+              </h3>
+              <p className="text-xs text-stone-500">
+                You are currently browsing as a Guest. Sign in with Google or your email to view your confirmed tickets, access instant QR check-in codes, and sync passes across your devices.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('zabay:open-auth'))}
+                className="px-5 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer inline-flex items-center gap-2"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Please Sign In / Register</span>
+              </button>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
-              {currentUser.id === 'usr-guest' ? 'No Registered Passes Yet' : `No Registered Passes for ${currentUser.name}`}
-            </h3>
-            <p className="text-xs text-stone-500 max-w-md mx-auto">
-              {currentUser.id === 'usr-guest'
-                ? 'You are currently browsing as a Guest. Register for any upcoming Bohol event on the Discovery feed to receive an instant scannable digital QR pass.'
-                : `You are currently viewing as ${currentUser.name} (${currentUser.email}). You can register for any upcoming Bohol event on the Discovery page to receive an instant scannable digital QR pass.`}
-            </p>
+        ) : (
+          <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-10 text-center space-y-4 shadow-xs">
+            <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto">
+              <Ticket className="w-7 h-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
+                No Registered Passes for {currentUser.name}
+              </h3>
+              <p className="text-xs text-stone-500 max-w-md mx-auto">
+                You are currently viewing as {currentUser.name} ({currentUser.email}). You can register for any upcoming Bohol event on the Discovery page to receive an instant scannable digital QR pass.
+              </p>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {userPasses.map((reg) => {

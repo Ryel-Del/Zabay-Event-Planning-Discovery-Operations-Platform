@@ -344,11 +344,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Studio CTA & Account Menu */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-        {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on tablet/desktop; mobile has bottom nav) */}
+        {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on desktop md+; mobile has bottom nav) */}
         {currentRole === 'attendee' && (
           <button
             onClick={() => setCurrentRole('organizer')}
-            className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+            className="hidden md:flex items-center gap-2 px-3.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0 whitespace-nowrap"
           >
             <Layers className="w-3.5 h-3.5 text-[#D4E4F7]" />
             <span>Organizer Studio</span>
@@ -475,11 +475,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {isDark ? <Sun className="w-4 h-4 text-[#7EA6E0]" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
 
-        {/* Sign In CTA (Shown on tablet/desktop; on mobile, Sign In is already in the bottom nav bar) */}
+        {/* Sign In CTA (Shown on desktop md+; on mobile, Sign In is already in the bottom nav bar) */}
         {currentUser.id === 'usr-guest' && (
           <button
             onClick={() => (onOpenAuth ? onOpenAuth() : setIsAuthModalOpen(true))}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] rounded-xl transition-all shadow-xs cursor-pointer shrink-0 whitespace-nowrap"
             title="Sign In with Google or Email"
           >
             <Lock className="w-3.5 h-3.5" />
@@ -553,6 +553,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Guest Quick Sign-in Action */}
+              {currentUser.id === 'usr-guest' && (
+                <div className="p-2 border-b border-slate-100 dark:border-slate-800/80">
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      if (onOpenAuth) onOpenAuth();
+                      else setIsAuthModalOpen(true);
+                    }}
+                    className="w-full py-2.5 px-3 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Please Sign In / Register</span>
+                  </button>
+                </div>
+              )}
 
               {/* Profile Page Action */}
               <div className="p-2 border-b border-slate-100 dark:border-slate-800/80">

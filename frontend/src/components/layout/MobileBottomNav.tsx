@@ -242,7 +242,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           </button>
 
           <button
-            onClick={onOpenProfile}
+            onClick={() => {
+              if (currentUser.id === 'usr-guest') {
+                if (onOpenAuth) onOpenAuth();
+                else onOpenProfile();
+              } else {
+                onOpenProfile();
+              }
+            }}
             className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
           >
             <div className="p-1 rounded-lg">
