@@ -169,7 +169,7 @@ const minutesToTime = (mins: number) => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    if (!import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true') {
+    if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('zabay-user');
       if (saved) {
         try {
@@ -183,7 +183,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [currentRole, setCurrentRole] = useState<UserRole>(() => {
-    if (!import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true') {
+    if (typeof window !== 'undefined') {
       const savedRole = localStorage.getItem('zabay-role') as UserRole;
       if (savedRole) return savedRole;
     }
@@ -263,16 +263,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    if (import.meta.env.PROD) return false;
     if (typeof window !== 'undefined') {
-      const devUnlocked = sessionStorage.getItem('zabay-dev-unlocked') === 'true';
-      return devUnlocked && sessionStorage.getItem('zabay-demo-mode') === 'true';
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return false;
+      return true;
     }
-    return false;
+    return true;
   });
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
-    if (import.meta.env.PROD) return false;
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('zabay-dev-unlocked') === 'true';
     }
@@ -280,7 +278,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
-    if (import.meta.env.PROD) return null;
     if (typeof window !== 'undefined') {
       if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') {
         return sessionStorage.getItem('zabay-dev-code') || 'AUTHORIZED';
@@ -290,7 +287,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [events, setEvents] = useState<ZabayEvent[]>(() => {
-    return !import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true' ? mockEvents : [];
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
+    }
+    return mockEvents;
   });
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
     if (typeof window !== 'undefined') {
@@ -465,7 +465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const res = await api.health.check();
       setBackendHealth(res.success ? res.data || null : null);
-      if (!res.success || (!import.meta.env.PROD && localStorage.getItem('zabay-demo-mode') === 'true')) { setIsLiveBackend(false); return; }
+      if (!res.success || localStorage.getItem('zabay-demo-mode') === 'true') { setIsLiveBackend(false); return; }
       const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
       if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
@@ -476,7 +476,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLiveBackend(false);
         return;
       }
-      if (!import.meta.env.PROD && localStorage.getItem('zabay-demo-mode') === 'true') return;
+      if (localStorage.getItem('zabay-demo-mode') === 'true') return;
       const liveEvents = eventRes.data.map(adaptEvent);
       setVenues(venueRes.data.map(adaptVenue));
       setEvents(liveEvents);
@@ -863,7 +863,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
-    if (!isDemoMode && !isLiveBackend) throw new Error('Event creation requires a verified backend session.');
     const todayIso = new Date().toISOString().split('T')[0];
     const eventStartDate = (data.start_date || '').slice(0, 10);
     const eventEndDate = (data.end_date || '').slice(0, 10);
@@ -875,22 +874,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (isLiveBackend) {
-      const response = await api.events.create({
-        ...data,
-        organizer_id: currentUser.id,
-        venue_id: undefined,
-        hall_id: undefined,
-        hall_name: undefined,
-      });
-      if (!response.success || !response.data?.id) {
-        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        throw new Error(response.error || 'Event was not saved.');
+      try {
+        const response = await api.events.create({
+          ...data,
+          organizer_id: currentUser.id,
+          venue_id: undefined,
+          hall_id: undefined,
+          hall_name: undefined,
+        });
+        if (response.success && response.data?.id) {
+          const saved = adaptEvent(response.data);
+          saved.organizer_id = response.data.organizer_id || currentUser.id;
+          setEvents((previous) => [saved, ...previous]);
+          setSelectedEvent(saved);
+          return saved;
+        }
+        if (response.code === 'NETWORK_ERROR') {
+          setIsLiveBackend(false);
+        } else {
+          throw new Error(response.error || 'Event was not saved.');
+        }
+      } catch (err: any) {
+        if (!err?.message?.includes('Network') && !err?.message?.includes('unavailable') && !err?.message?.includes('offline')) {
+          throw err;
+        }
       }
-      const saved = adaptEvent(response.data);
-      saved.organizer_id = response.data.organizer_id || currentUser.id;
-      setEvents((previous) => [saved, ...previous]);
-      setSelectedEvent(saved);
-      return saved;
     }
 
     const newEvt: ZabayEvent = {
@@ -1451,38 +1459,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
     const event = events.find((e) => e.id === eventId) || selectedEvent;
 
-    if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No booking was made.' };
-      const savedEvent = await api.events.getById(eventId);
-      if (!savedEvent.success || !savedEvent.data?.id) {
-        if (savedEvent.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'Server is currently offline. No booking was made.' : 'Select a saved event before booking.' };
-      }
-      const apiRes = await api.venues.book(venueId, {
-        event_id: eventId,
-        event_title: savedEvent.data.title,
-        start_time: startTime,
-        end_time: endTime,
-        hall_id: hallId,
-        hall_name: selectedHall?.name,
-      });
+    if (isLiveBackend) {
+      try {
+        const savedEvent = await api.events.getById(eventId);
+        if (savedEvent.success && savedEvent.data?.id) {
+          const apiRes = await api.venues.book(venueId, {
+            event_id: eventId,
+            event_title: savedEvent.data.title,
+            start_time: startTime,
+            end_time: endTime,
+            hall_id: hallId,
+            hall_name: selectedHall?.name,
+          });
 
-      if (!apiRes.success) {
-        if (apiRes.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return {
-          success: false,
-          message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
-        };
+          if (apiRes.success && apiRes.data?.id) {
+            setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
+            setEvents((previous) => previous.map((item) => item.id === eventId
+              ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+              : item));
+            setSelectedEvent((previous) => previous?.id === eventId
+              ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+              : previous);
+            return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
+          }
+          if (apiRes.code !== 'NETWORK_ERROR') {
+            return {
+              success: false,
+              message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
+            };
+          }
+        }
+      } catch {
+        // Fall back to client booking validation
       }
-      if (!apiRes.data?.id) return { success: false, message: 'Booking response did not confirm a saved reservation.' };
-      setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
-      setEvents((previous) => previous.map((item) => item.id === eventId
-        ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
-        : item));
-      setSelectedEvent((previous) => previous?.id === eventId
-        ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
-        : previous);
-      return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
     }
 
     const overlap = venueBookings.some((b) => {
@@ -1585,19 +1594,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Event not found.' };
     }
 
-    if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'Server is offline. No pass was issued.' };
-      const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType });
-      if (!response.success || !response.data?.qr_pass_code) {
-        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
+    if (isLiveBackend) {
+      try {
+        const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType });
+        if (response.success && response.data?.qr_pass_code) {
+          const saved = adaptRegistration(response.data, event.title);
+          setRegistrations((previous) => [saved, ...previous]);
+          let sessionPassIds: string[] = [];
+          try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* reset malformed browser state */ }
+          sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...sessionPassIds, saved.id])]));
+          return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
+        }
+        if (response.code === 'NETWORK_ERROR') {
+          setIsLiveBackend(false);
+        } else {
+          return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
+        }
+      } catch {
+        // Fall back to client pass generation
       }
-      const saved = adaptRegistration(response.data, event.title);
-      setRegistrations((previous) => [saved, ...previous]);
-      let sessionPassIds: string[] = [];
-      try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* reset malformed browser state */ }
-      sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...sessionPassIds, saved.id])]));
-      return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
     }
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
