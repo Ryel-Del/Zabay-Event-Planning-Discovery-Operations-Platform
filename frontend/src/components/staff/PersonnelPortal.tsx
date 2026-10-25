@@ -20,6 +20,9 @@ import {
   X,
   Bell,
   Sparkles,
+  Send,
+  MessageSquare,
+  AlertTriangle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
@@ -39,6 +42,9 @@ export const PersonnelPortal: React.FC = () => {
     isDevModeUnlocked,
     staffInvitations,
     respondToStaffInvitation,
+    crewMessages,
+    sendCrewMessage,
+    sendStaffInvitation,
   } = useApp();
 
   // Filter invitations directed to this user
@@ -53,11 +59,19 @@ export const PersonnelPortal: React.FC = () => {
   const [invitationResponseAlert, setInvitationResponseAlert] = useState<string | null>(null);
 
   // In normal mode, identify the logged-in staff member; in dev mode allow selecting another personnel
-  const loggedInStaffPersonnel = personnel.find(
+  const currentUserPersonnel = personnel.find(
     (p) =>
-      p.email === currentUser.email ||
-      p.name.toLowerCase() === currentUser.name.toLowerCase()
-  ) || {
+      (p.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      (p.name && p.name.toLowerCase() === currentUser.name.toLowerCase()) ||
+      (p.user_id && p.user_id === currentUser.id)
+  );
+
+  const hasConfirmedSlot = Boolean(
+    currentUserPersonnel &&
+      (currentUserPersonnel.invitation_status === 'confirmed' || !currentUserPersonnel.invitation_status)
+  );
+
+  const loggedInStaffPersonnel = currentUserPersonnel || {
     id: currentUser.id,
     name: currentUser.name,
     role: 'Event Coordinator',
@@ -75,6 +89,34 @@ export const PersonnelPortal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'crew_group' | 'venue_contacts'>('my_tasks');
   const [searchRunOfShow, setSearchRunOfShow] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isAnnouncementMode, setIsAnnouncementMode] = useState(false);
+
+  const handleSendChat = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!chatInput.trim()) return;
+    sendCrewMessage(selectedEvent?.id || 'evt-athletics-2026', chatInput.trim(), isAnnouncementMode);
+    setChatInput('');
+    setIsAnnouncementMode(false);
+  };
+
+  const handleSimulateInvitation = () => {
+    sendStaffInvitation({
+      event_id: selectedEvent?.id || 'evt-athletics-2026',
+      event_title: selectedEvent?.title || 'Bohol Interschool Athletics Cup 2026',
+      event_date: 'Oct 28, 2026 • 08:00 AM',
+      venue_name: activeVenue.name,
+      user_id: currentUser.id,
+      user_name: currentUser.name || 'Staff Crew Member',
+      user_email: currentUser.email || 'staff@zabay.ph',
+      role: 'Gate Operations & Turnstile Coordinator',
+      call_time: '08:00 AM - 06:00 PM',
+      hourly_rate: 500,
+      can_scan_tickets: true,
+      notes: 'Please confirm your slot for the Main Gate turnstile access and attendee ticket verification.',
+    });
+    setInvitationResponseAlert('✨ Demo crew invitation sent to your account! You can now confirm your slot below.');
+  };
 
   // Sync when activeStaffId changes from external preview click
   useEffect(() => {
@@ -294,6 +336,33 @@ export const PersonnelPortal: React.FC = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding & Readiness Hub when user has no active event assignment */}
+      {!hasConfirmedSlot && myPendingInvitations.length === 0 && !isSupervisorMode && (
+        <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 text-center space-y-4 shadow-sm animate-in fade-in">
+          <div className="w-16 h-16 rounded-3xl bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] flex items-center justify-center text-[#244A85] dark:text-[#8BB0E8] mx-auto">
+            <Users className="w-8 h-8" />
+          </div>
+          <div className="max-w-md mx-auto space-y-2">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+              No Active Event Crew Assignments Yet
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              You are signed in as <strong className="text-slate-800 dark:text-slate-200">{currentUser.name}</strong> ({currentUser.email || 'Registered User'}). When an event organizer invites you to their crew (like adding a friend on Facebook), your slot invitation and event Group Chat will appear here.
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button
+              onClick={handleSimulateInvitation}
+              className="px-5 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Simulate Incoming Crew Invitation</span>
+            </button>
           </div>
         </div>
       )}
@@ -784,105 +853,242 @@ export const PersonnelPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: Event Crew Roster & Comms Directory (Like a Group Chat / Crew Roster) */}
+      {/* TAB 3: Event Crew Group Chat (GC) & Ops Comms Directory */}
       {activeTab === 'crew_group' && (
         <div className="space-y-4">
+          {/* Header Banner */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#171E2B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                Event Crew Roster & Comms Directory
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                All confirmed personnel on shift for <strong>{selectedEvent?.title || 'Active Event'}</strong>. Direct contact and radio frequencies.
-              </p>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] flex items-center justify-center font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    Event Crew Group Chat (GC)
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      ● Live Connected
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Real-time operational coordination for <strong>{selectedEvent?.title || 'Active Event'}</strong>
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-mono px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 font-bold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                {personnel.length} Crew On Shift
+              <span className="text-xs font-mono px-3 py-1 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160] flex items-center gap-1.5 font-bold">
+                <Radio className="w-3.5 h-3.5 text-[#3E6CB5] animate-pulse" />
+                VHF CH 04
+              </span>
+              <span className="text-xs font-mono px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold">
+                {personnel.length} Crew Online
               </span>
             </div>
           </div>
 
-          {/* Master Radio Comms Dispatch */}
-          <div className="p-4 rounded-2xl bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
-            <div className="flex items-center gap-3 text-[#244A85] dark:text-[#8BB0E8]">
-              <Radio className="w-5 h-5 shrink-0 animate-pulse text-[#3E6CB5]" />
-              <div>
-                <span className="font-bold block text-sm">Active Crew Radio Channel: VHF CH 04 (Operations & Staging)</span>
-                <span className="text-[11px] opacity-80">Security & Gate Staff on CH 02 • Registration on CH 01 • Medical on CH 09</span>
+          {/* Interactive GC Grid: Chat Window (Left 65%) + Crew Roster (Right 35%) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left: Chat Feed & Composer */}
+            <div className="lg:col-span-8 bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col h-[560px] shadow-xs">
+              {/* Chat Stream Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800 dark:text-slate-200">#crew-operations</span>
+                  <span className="text-[10px] text-slate-400">• Official Team Dispatch</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Messages persist in workspace
+                </span>
+              </div>
+
+              {/* Message List */}
+              <div className="flex-1 overflow-y-auto py-3 space-y-3.5 pr-1">
+                {(crewMessages || [])
+                  .filter((m) => !m.event_id || m.event_id === (selectedEvent?.id || 'evt-athletics-2026'))
+                  .map((msg) => {
+                    const isCurrentUser =
+                      msg.sender_id === currentUser.id ||
+                      msg.sender_name.toLowerCase() === currentUser.name.toLowerCase();
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex gap-3 text-xs ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}
+                      >
+                        {/* Avatar */}
+                        <div
+                          className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
+                            isCurrentUser
+                              ? 'bg-[#3E6CB5] text-white'
+                              : msg.is_announcement
+                              ? 'bg-amber-500 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {msg.sender_name.slice(0, 1)}
+                        </div>
+
+                        {/* Content Bubble */}
+                        <div className={`max-w-[80%] space-y-1 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                          <div className={`flex items-center gap-1.5 flex-wrap ${isCurrentUser ? 'justify-end' : 'justify-start'}`}>
+                            <span className="font-bold text-slate-900 dark:text-slate-100 text-[11px]">
+                              {isCurrentUser ? 'You' : msg.sender_name}
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+                              {msg.sender_role}
+                            </span>
+                            {msg.is_announcement && (
+                              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold uppercase tracking-wider font-mono flex items-center gap-1">
+                                <AlertTriangle className="w-2.5 h-2.5" /> Announcement
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+
+                          <div
+                            className={`p-3 rounded-2xl text-xs leading-relaxed ${
+                              msg.is_announcement
+                                ? 'bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 shadow-xs'
+                                : isCurrentUser
+                                ? 'bg-[#3E6CB5] text-white rounded-tr-none'
+                                : 'bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/70 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-none'
+                            }`}
+                          >
+                            <p>{msg.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Quick Reply Chips */}
+              <div className="pt-2 pb-2 flex items-center gap-1.5 overflow-x-auto border-t border-slate-100 dark:border-slate-800">
+                {[
+                  '📻 Ingress moving smoothly',
+                  '⚡ Tech check completed',
+                  '🚪 Turnstiles ready',
+                  '🥤 Water bottles restocked',
+                ].map((quickText) => (
+                  <button
+                    key={quickText}
+                    type="button"
+                    onClick={() => {
+                      sendCrewMessage(selectedEvent?.id || 'evt-athletics-2026', quickText, false);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] text-[10px] font-medium text-slate-600 dark:text-slate-300 hover:text-[#244A85] shrink-0 transition-colors cursor-pointer"
+                  >
+                    {quickText}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chat Composer Input */}
+              <form onSubmit={handleSendChat} className="pt-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Message the event crew GC... (Press Enter to send)"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer disabled:opacity-40"
+                  >
+                    <span>Send</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isAnnouncementMode}
+                      onChange={(e) => setIsAnnouncementMode(e.target.checked)}
+                      className="rounded text-[#3E6CB5] focus:ring-0 cursor-pointer"
+                    />
+                    <span className="font-semibold text-amber-700 dark:text-amber-400">
+                      📢 Post as High-Priority Crew Broadcast
+                    </span>
+                  </label>
+                  <span className="text-[10px] text-slate-400">Notifies all on-shift crew</span>
+                </div>
+              </form>
+            </div>
+
+            {/* Right: Confirmed Crew Directory on Shift */}
+            <div className="lg:col-span-4 bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+                <h4 className="font-bold text-xs text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-[#3E6CB5]" />
+                  <span>Crew in this GC ({personnel.length})</span>
+                </h4>
+                <span className="text-[10px] text-emerald-600 font-bold font-mono">
+                  ● On Shift
+                </span>
+              </div>
+
+              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+                {personnel.map((p) => {
+                  const isSelf =
+                    p.email.toLowerCase() === currentUser.email.toLowerCase() ||
+                    p.name.toLowerCase() === currentUser.name.toLowerCase();
+
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-2.5 rounded-xl border text-xs transition-colors ${
+                        isSelf
+                          ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800'
+                          : 'bg-[#F8FAFD] dark:bg-[#111722] border-slate-200/60 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] flex items-center justify-center font-bold text-xs">
+                            {p.name.slice(0, 1)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-slate-900 dark:text-slate-100">{p.name}</span>
+                              {isSelf && (
+                                <span className="text-[8px] px-1 rounded bg-[#3E6CB5] text-white font-bold">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold block">
+                              {p.role}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Active in GC" />
+                      </div>
+
+                      <div className="mt-2 pt-1.5 border-t border-slate-200/40 dark:border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
+                        <a href={`tel:${p.phone}`} className="flex items-center gap-1 hover:underline font-mono">
+                          <Phone className="w-3 h-3 text-slate-400" />
+                          <span>{p.phone}</span>
+                        </a>
+                        {p.can_scan_tickets && (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-0.5 font-mono">
+                            <QrCode className="w-2.5 h-2.5" /> Scanner
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <span className="px-3 py-1 rounded-xl bg-white dark:bg-[#111722] text-[#244A85] dark:text-[#8BB0E8] font-mono font-bold text-[11px] border border-[#C8DCF7] dark:border-[#2D4160] shrink-0">
-              Station Broadcast Active
-            </span>
-          </div>
-
-          {/* Crew Members Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {personnel.map((p) => {
-              const isSelf =
-                p.email.toLowerCase() === currentUser.email.toLowerCase() ||
-                p.name.toLowerCase() === currentUser.name.toLowerCase();
-
-              return (
-                <div
-                  key={p.id}
-                  className={`p-4 rounded-2xl border transition-all ${
-                    isSelf
-                      ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 shadow-xs ring-1 ring-blue-300 dark:ring-blue-700'
-                      : 'bg-white dark:bg-[#171E2B] border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] flex items-center justify-center font-bold text-sm text-[#244A85] dark:text-[#8BB0E8]">
-                        {p.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">{p.name}</h4>
-                          {isSelf && (
-                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#3E6CB5] text-white font-bold">
-                              YOU
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">{p.role}</p>
-                      </div>
-                    </div>
-                    <span
-                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1"
-                      title="Confirmed & Active on Shift"
-                    />
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <a href={`tel:${p.phone}`} className="hover:underline font-mono text-slate-800 dark:text-slate-200 font-medium">
-                        {p.phone}
-                      </a>
-                    </div>
-                    <div className="flex items-center gap-2 truncate">
-                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="truncate">{p.email}</span>
-                    </div>
-                    {p.can_scan_tickets && (
-                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px] pt-1">
-                        <QrCode className="w-3 h-3 shrink-0" />
-                        <span>Gate Ticket Scanner Operator</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}

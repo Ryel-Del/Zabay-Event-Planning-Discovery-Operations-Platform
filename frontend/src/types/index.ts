@@ -99,10 +99,26 @@ export interface Venue {
   is_verified_partner?: boolean; // Verified Facility Partner badge & status
   is_custom_fork?: boolean;      // Forked layout for an organizer's custom event
   forked_from_id?: string;
+  forked_from_name?: string;
+  forked_by_user_id?: string;
+  forked_by_user_name?: string;
+  forked_for_event_id?: string;
   image_url: string;
   contact_email: string;
   contact_phone: string;
   halls?: VenueHall[];
+}
+
+export interface CrewChatMessage {
+  id: string;
+  event_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_avatar?: string;
+  sender_role: string;
+  message: string;
+  timestamp: string;
+  is_announcement?: boolean;
 }
 
 export interface VenueBooking {

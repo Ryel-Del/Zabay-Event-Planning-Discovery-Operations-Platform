@@ -18,6 +18,7 @@ import type {
   AuditLog,
   WorkflowTemplateKit,
   StaffInvitation,
+  CrewChatMessage,
 } from '../types';
 
 export const guestUser: User = {
@@ -3580,6 +3581,49 @@ export const mockStaffInvitations: StaffInvitation[] = [
     status: 'pending',
     invited_at: '2026-10-25T08:00:00Z',
     notes: 'Please confirm your slot for the Main Gate turnstile access and attendee ticket verification.',
+  },
+];
+
+export const mockCrewMessages: CrewChatMessage[] = [
+  {
+    id: 'cmsg-1',
+    event_id: 'evt-athletics-2026',
+    sender_id: 'usr-org-1',
+    sender_name: 'Mark Bautista',
+    sender_role: 'Lead Organizer',
+    message: '👋 Welcome to the event crew group chat everyone! Please make sure you confirm your slot and check your call time.',
+    timestamp: '2026-10-25T07:15:00Z',
+    is_announcement: true,
+  },
+  {
+    id: 'cmsg-2',
+    event_id: 'evt-athletics-2026',
+    sender_id: 'usr-stf-1',
+    sender_name: 'Carlos Mendoza',
+    sender_role: 'Stage Manager',
+    message: 'Sound check starts at 07:45 AM at Main Court. Stage Bay crew please report early for line-array tuning.',
+    timestamp: '2026-10-25T07:30:00Z',
+    is_announcement: false,
+  },
+  {
+    id: 'cmsg-3',
+    event_id: 'evt-athletics-2026',
+    sender_id: 'per-4',
+    sender_name: 'Aileen Robles',
+    sender_role: 'Security Lead',
+    message: 'Turnstiles 1 & 2 are powered on. Scanner app test successful. Barricades in place for public ingress.',
+    timestamp: '2026-10-25T07:42:00Z',
+    is_announcement: false,
+  },
+  {
+    id: 'cmsg-4',
+    event_id: 'evt-athletics-2026',
+    sender_id: 'usr-org-1',
+    sender_name: 'Mark Bautista',
+    sender_role: 'Lead Organizer',
+    message: '📢 Gate opens at 08:00 AM sharp! Water stations and medical kits are ready at Hall Entrance A.',
+    timestamp: '2026-10-25T07:50:00Z',
+    is_announcement: true,
   },
 ];
 
