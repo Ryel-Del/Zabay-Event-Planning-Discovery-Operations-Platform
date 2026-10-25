@@ -184,8 +184,60 @@ describe('event creation and venue booking', () => {
           expect(body.data.status).to.eq('planning');
           expect(body.data.venue_id).to.equal(null);
         });
+        cy.task('db:eventBookingState', { eventId }).then((state) => {
+          expect(state).to.include({ id: eventId, status: 'planning', booking_count: 0 });
+        });
         cy.get('[data-cy="event-submit-error"]').should('not.contain.text', 'booking confirmed');
       });
+    });
+  });
+
+  it('does not create a local event when the API rejects event creation', () => {
+    const title = `E2E rejected event ${Date.now()}`;
+    cy.intercept('POST', '/api/events', { statusCode: 503, body: { success: false, error: 'Event service unavailable' } }).as('rejectedEvent');
+    openWizardWithEvent(title);
+    cy.get('[data-cy="event-save"]').click();
+    cy.wait('@rejectedEvent');
+    cy.get('[data-cy="event-submit-error"]').should('contain.text', 'Event service unavailable');
+    cy.get('[data-cy="saved-planning-event"]').should('not.exist');
+    cy.get('[data-cy="event-wizard"] button').first().click();
+    cy.get('[data-cy="event-picker"]').click().should('not.contain.text', title);
+    cy.request('/api/events').its('body.data').then((events: Array<{ title: string }>) => {
+      expect(events.filter((event) => event.title === title)).to.have.length(0);
+    });
+  });
+
+  it('does not claim event creation succeeded when the network outcome is unknown', () => {
+    const title = `E2E uncertain event ${Date.now()}`;
+    cy.intercept('POST', '/api/events', { forceNetworkError: true }).as('uncertainEvent');
+    openWizardWithEvent(title);
+    cy.get('[data-cy="event-save"]').click();
+    cy.wait('@uncertainEvent');
+    cy.get('[data-cy="event-submit-error"]').should('contain.text', 'Could not confirm whether the event was saved');
+    cy.get('[data-cy="saved-planning-event"]').should('not.exist');
+    cy.get('[data-cy="event-wizard"] button').first().click();
+    cy.get('[data-cy="event-picker"]').click().should('not.contain.text', title);
+  });
+
+  it('allows local simulation after explicitly loading Dev Mode data', () => {
+    const title = `E2E Dev Mode event ${Date.now()}`;
+    cy.window().then((window) => window.sessionStorage.setItem('zabay-dev-unlocked', 'true'));
+    cy.reload();
+    cy.contains('button', 'Zabay Operator').click();
+    cy.contains('button', 'Console').click();
+    cy.contains('button', 'Bohol Master Data').click();
+    cy.get('button[title="Close (Esc)"]').click();
+    cy.get('[data-cy="backend-status"]').should('not.have.text', 'Postgres Live');
+    cy.intercept('POST', '/api/events', cy.spy().as('devEventWrite'));
+    cy.intercept('POST', '/api/venues/ven-6/book', cy.spy().as('devBookingWrite'));
+    openWizardWithEvent(title);
+    cy.get('[data-cy="event-save"]').click();
+    cy.get('[data-cy="event-wizard"]').should('not.exist');
+    cy.get('[data-cy="event-picker"]').click().should('contain.text', title);
+    cy.get('@devEventWrite').should('not.have.been.called');
+    cy.get('@devBookingWrite').should('not.have.been.called');
+    cy.request('/api/events').its('body.data').then((events: Array<{ title: string }>) => {
+      expect(events.filter((event) => event.title === title)).to.have.length(0);
     });
   });
 });
