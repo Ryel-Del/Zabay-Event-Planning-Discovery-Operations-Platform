@@ -11,6 +11,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useEventRoster } from '../../services/useEventRoster';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
 import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
@@ -20,7 +21,8 @@ interface OperationsOverviewProps {
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, isLiveBackend, isDemoMode } = useApp();
+  const roster = useEventRoster(selectedEvent?.id, isDemoMode, isLiveBackend, registrations);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   if (!selectedEvent) {
@@ -80,7 +82,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   const eventAuditLogs = auditLogs.filter(log =>
     log.entity_id === selectedEvent.id || eventTasks.some(task => task.id === log.entity_id)
   );
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
+  const registered = roster.data?.summary.registered ?? null;
+  const admitted = roster.data?.summary.checked_in ?? null;
+  const capacity = Number.isFinite(selectedEvent.max_capacity) && selectedEvent.max_capacity > 0 ? selectedEvent.max_capacity : null;
+  const capacityPercent = registered !== null && capacity !== null
+    ? Math.min(100, Math.max(0, Math.round(registered / capacity * 100))) : null;
+  const estimatedTicketValue = registered === null ? null : registered * selectedEvent.ticket_price;
 
   return (
     <div className="space-y-6">
@@ -160,12 +167,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Capacity Registered</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
+                {capacityPercent === null ? '—' : `${capacityPercent}%`}
               </span>
-              <span className="text-slate-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+              <span className="text-slate-500">{registered === null ? '—' : registered} / {capacity === null ? 'capacity unknown' : capacity}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${capacityPercent ?? 0}%` }} />
             </div>
           </div>
 
@@ -377,11 +384,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <div>
                 <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
                 <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                  {registrations.filter((r) => r.status === 'checked_in').length} / {registrations.length} Checked In
+                  {admitted === null || registered === null ? 'Unavailable' : `${admitted} / ${registered} Checked In`}
                 </p>
               </div>
               <span className="text-[10px] px-2 py-1 bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] rounded-lg font-bold">
-                Zero Duplicates
+                {roster.data ? `${roster.data.summary.integrity_issues} data discrepancies` : 'Not verified'}
               </span>
             </div>
           </div>
