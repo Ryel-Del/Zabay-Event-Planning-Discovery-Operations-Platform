@@ -641,6 +641,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
+    const todayIso = new Date().toISOString().split('T')[0];
+    const eventStartDate = (data.start_date || '').slice(0, 10);
+    const eventEndDate = (data.end_date || '').slice(0, 10);
+    if (eventStartDate && eventStartDate < todayIso) {
+      throw new Error('Events cannot be scheduled in the past. Please select today or a future date.');
+    }
+    if (eventEndDate && eventStartDate && eventEndDate < eventStartDate) {
+      throw new Error('End date cannot precede the event start date.');
+    }
+
     if (!isDemoMode) {
       if (!isLiveBackend) throw new Error('Live server is unavailable. Please check your connection or continue in local mode.');
       const response = await api.events.create({

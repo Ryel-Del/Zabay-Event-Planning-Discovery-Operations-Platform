@@ -22,10 +22,21 @@ interface CreateEventModalProps {
   onCreated?: (newEvent: ZabayEvent) => void;
 }
 
+const getTodayIso = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated }) => {
   const { venues, personnel, createEvent, bookVenue, broadcastEventChange, loadDemoData, isDemoMode, isLiveBackend } = useApp();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+
+  const todayIso = getTodayIso();
+  const defaultInitialDate = '2026-11-20' >= todayIso ? '2026-11-20' : todayIso;
 
   // Step 1: Basics
   const [title, setTitle] = useState('');
@@ -37,8 +48,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   // Step 2: Venue & Hall
   const [venueId, setVenueId] = useState<string>(venues[0]?.id || '');
   const [hallId, setHallId] = useState<string>('');
-  const [startDate, setStartDate] = useState('2026-11-20');
-  const [endDate, setEndDate] = useState('2026-11-20');
+  const [startDate, setStartDate] = useState(defaultInitialDate);
+  const [endDate, setEndDate] = useState(defaultInitialDate);
   const [powerKw, setPowerKw] = useState(30);
   const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
@@ -87,7 +98,22 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   };
 
   const handleNext = () => {
-    if (currentStep === 1 && !title.trim()) return;
+    if (currentStep === 1) {
+      if (!title.trim()) return;
+      setSubmitError('');
+    }
+    if (currentStep === 2) {
+      const today = getTodayIso();
+      if (!startDate || startDate < today) {
+        setSubmitError('Events cannot be scheduled in the past. Please select today or a future date.');
+        return;
+      }
+      if (!endDate || endDate < startDate) {
+        setSubmitError('End date cannot precede the event start date.');
+        return;
+      }
+      setSubmitError('');
+    }
     if (currentStep < 4) {
       setCurrentStep((prev) => (prev + 1) as any);
     }
@@ -108,6 +134,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
 
   const closeWizard = () => {
     if (savingRef.current) return;
+    const currentToday = getTodayIso();
+    const defaultDate = '2026-11-20' >= currentToday ? '2026-11-20' : currentToday;
     setCurrentStep(1);
     setTitle('');
     setDescription('');
@@ -116,8 +144,8 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     setExpectedAttendance(250);
     setVenueId(venues[0]?.id || '');
     setHallId('');
-    setStartDate('2026-11-20');
-    setEndDate('2026-11-20');
+    setStartDate(defaultDate);
+    setEndDate(defaultDate);
     setPowerKw(30);
     setSelectedStaffIds(['per-1', 'per-2']);
     setTicketPrice(50);
@@ -130,6 +158,18 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    const today = getTodayIso();
+    if (!startDate || startDate < today) {
+      setSubmitError('Events cannot be scheduled in the past. Please select today or a future date.');
+      setCurrentStep(2);
+      return;
+    }
+    if (!endDate || endDate < startDate) {
+      setSubmitError('End date cannot precede the event start date.');
+      setCurrentStep(2);
+      return;
+    }
 
     if (savingRef.current) return;
     savingRef.current = true;
@@ -518,10 +558,13 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                         type="button"
                         disabled={Boolean(persistedEvent) || saving}
                         onClick={() => {
-                          const start = new Date(startDate || '2026-11-20');
+                          const baseStart = startDate && startDate >= todayIso ? startDate : todayIso;
+                          const start = new Date(baseStart);
                           const end = new Date(start);
                           end.setDate(start.getDate() + (p.days - 1));
+                          if (startDate !== baseStart) setStartDate(baseStart);
                           setEndDate(end.toISOString().split('T')[0]);
+                          setSubmitError('');
                         }}
                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                           currentDays === p.days
@@ -544,15 +587,29 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                       data-cy="event-start-date"
                       type="date"
                       disabled={Boolean(persistedEvent) || saving}
+                      min={todayIso}
                       value={startDate}
                       onChange={(e) => {
-                        setStartDate(e.target.value);
-                        if (new Date(e.target.value) > new Date(endDate)) {
-                          setEndDate(e.target.value);
+                        const val = e.target.value;
+                        setStartDate(val);
+                        if (val && val < todayIso) {
+                          setSubmitError('Events cannot be scheduled in the past. Please select today or a future date.');
+                        } else if (submitError.includes('past')) {
+                          setSubmitError('');
+                        }
+                        if (val && new Date(val) > new Date(endDate)) {
+                          setEndDate(val);
                         }
                       }}
-                      className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                      className={`w-full bg-white dark:bg-[#171E2B] border ${
+                        startDate && startDate < todayIso
+                          ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
+                          : 'border-slate-200 dark:border-slate-700'
+                      } rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none`}
                     />
+                    {startDate && startDate < todayIso && (
+                      <p className="text-[10px] text-rose-500 mt-1 font-medium">Event cannot be in the past</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">
@@ -562,11 +619,28 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                       data-cy="event-end-date"
                       type="date"
                       disabled={Boolean(persistedEvent) || saving}
-                      min={startDate}
+                      min={startDate && startDate >= todayIso ? startDate : todayIso}
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setEndDate(val);
+                        if (val && val < startDate) {
+                          setSubmitError('End date cannot precede the event start date.');
+                        } else if (val && val < todayIso) {
+                          setSubmitError('Events cannot be scheduled in the past. Please select today or a future date.');
+                        } else if (submitError.includes('precede') || submitError.includes('past')) {
+                          setSubmitError('');
+                        }
+                      }}
+                      className={`w-full bg-white dark:bg-[#171E2B] border ${
+                        (endDate && endDate < startDate) || (endDate && endDate < todayIso)
+                          ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
+                          : 'border-slate-200 dark:border-slate-700'
+                      } rounded-lg px-2.5 py-1.5 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none`}
                     />
+                    {endDate && endDate < startDate && (
+                      <p className="text-[10px] text-rose-500 mt-1 font-medium">Cannot precede start date</p>
+                    )}
                   </div>
                 </div>
                 {persistedEvent && <p className="text-[11px] text-amber-700 dark:text-amber-300">These dates are already confirmed for this event. Changing only the venue or hall assignment.</p>}

@@ -79,6 +79,11 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
         (budget !== undefined && (typeof budget !== 'number' || budget < 0 || budget > 9999999999))) {
       return res.status(400).json({ success: false, error: 'Invalid event details' });
     }
+
+    // Disallow organizing events in the past (allowing 24-hour buffer for timezones)
+    if (Date.parse(start_date) < Date.now() - 86400000) {
+      return res.status(400).json({ success: false, error: 'Events cannot be scheduled in the past. Please select today or a future date.' });
+    }
     const sql = `
       INSERT INTO events (
         title, description, category, event_type, is_private,
