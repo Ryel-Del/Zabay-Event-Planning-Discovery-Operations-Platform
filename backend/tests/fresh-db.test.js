@@ -161,6 +161,14 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await otherOrganizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
     assert.equal((await request(app).get('/api/attendees/registrations/me')).status, 401);
     assert.equal((await organizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
+    const claimedGuestMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken)
+      .send({ ...registrationPayload, registration_mode: 'guest', attendee_id: secondRegistration.body.user.id });
+    assert.equal(claimedGuestMode.status, 201);
+    assert.equal(claimedGuestMode.body.data.attendee_id, registered.body.user.id);
+    const omittedMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken)
+      .send({ ...registrationPayload, attendee_id: secondRegistration.body.user.id });
+    assert.equal(omittedMode.status, 201);
+    assert.equal(omittedMode.body.data.attendee_id, registered.body.user.id);
     const guestRegistration = await attendee.post('/api/attendees/register').send({ ...registrationPayload, registration_mode: 'guest' });
     assert.equal(guestRegistration.status, 403);
     // Omitting registration_mode does not bypass CSRF or account ownership.
