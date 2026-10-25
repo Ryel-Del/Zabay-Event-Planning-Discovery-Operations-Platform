@@ -95,3 +95,15 @@ Schema initialization creates one `zabay-operator` user for event ownership.
 Operator login uses the server's `OPERATOR_USERNAME` and `OPERATOR_PASSWORD`, not
 this row or the synthetic demonstration users. The API assigns all new events to
 `zabay-operator` regardless of any organizer ID supplied by a browser.
+
+### Authentication migration
+
+`db/schema.sql` now adds nullable `password_hash`, `password_salt`, and
+`firebase_uid` columns to `users`, plus a unique Firebase UID index. Apply the
+schema to an isolated copy first. For existing environments, take a backup, review
+that copy, and run `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/schema.sql` during
+a maintenance window. The additions preserve existing rows and leave legacy
+passwordless accounts inactive for password login. Do not populate credentials from
+an unverified login attempt. Legacy password activation or Firebase account linking
+requires independently verified ownership and an administrator-controlled process.
+No production migration is performed by this change.

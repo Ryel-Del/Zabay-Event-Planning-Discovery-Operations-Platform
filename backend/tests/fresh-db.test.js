@@ -20,6 +20,8 @@ test('schema-only database supports the complete operator workflow', async () =>
     }
     const users = await pool.query('SELECT id FROM users');
     assert.deepEqual(users.rows.map(row => row.id), ['zabay-operator']);
+    const authColumns = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'users' AND column_name IN ('password_hash', 'password_salt', 'firebase_uid')");
+    assert.deepEqual(authColumns.rows.map(row => row.column_name).sort(), ['firebase_uid', 'password_hash', 'password_salt']);
 
     const agent = request.agent(app);
     const eventPayload = {
@@ -70,7 +72,38 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await agent.post('/api/auth/logout').set('X-CSRF-Token', csrf)).status, 200);
     assert.equal((await agent.get('/api/auth/session')).body.authenticated, false);
     assert.equal((await agent.post('/api/events').set('X-CSRF-Token', csrf).send(eventPayload)).status, 401);
+    const attendee = request.agent(app);
+    const registered = await attendee.post('/api/auth/register').send({ name: 'Fresh Attendee', email: 'fresh-attendee@example.test', password: 'fresh-account-secret', role: 'organizer' });
+    assert.equal(registered.status, 201, JSON.stringify(registered.body));
+    assert.equal(registered.body.user.role, 'attendee');
+    assert.equal((await attendee.get('/api/auth/me')).body.user.role, 'attendee');
+    assert.equal((await attendee.post('/api/events').set('X-CSRF-Token', registered.body.csrfToken).send(eventPayload)).status, 403);
+    assert.equal((await request(app).post('/api/auth/user-login').send({ email: 'fresh-attendee@example.test', password: 'fresh-account-secret' })).status, 200);
+    await pool.query("UPDATE users SET role = 'venue_manager' WHERE email = 'fresh-attendee@example.test'");
+    const venueManager = request.agent(app);
+    const managerLogin = await venueManager.post('/api/auth/user-login').send({ email: 'fresh-attendee@example.test', password: 'fresh-account-secret' });
+    assert.equal(managerLogin.status, 200);
+    const managed = await venueManager.post('/api/venues').set('X-CSRF-Token', managerLogin.body.csrfToken).send({ name: 'Managed test venue', capacity: 50 });
+    assert.equal(managed.status, 201, JSON.stringify(managed.body));
+    assert.equal(managed.body.data.manager_id, registered.body.user.id);
+    assert.equal((await venueManager.post('/api/events').set('X-CSRF-Token', managerLogin.body.csrfToken).send(eventPayload)).status, 403);
+    const organizerRegistration = await request(app).post('/api/auth/register').send({ name: 'Fresh Organizer', email: 'fresh-organizer@example.test', password: 'fresh-organizer-secret' });
+    assert.equal(organizerRegistration.status, 201);
+    await pool.query("UPDATE users SET role = 'organizer' WHERE email = 'fresh-organizer@example.test'");
+    const organizer = request.agent(app);
+    const organizerLogin = await organizer.post('/api/auth/user-login').send({ email: 'fresh-organizer@example.test', password: 'fresh-organizer-secret' });
+    const privateEvent = await organizer.post('/api/events').set('X-CSRF-Token', organizerLogin.body.csrfToken).send({ ...eventPayload, title: 'Owned private event', is_private: true, event_type: 'private', organizer_id: registered.body.user.id });
+    assert.equal(privateEvent.status, 201, JSON.stringify(privateEvent.body));
+    assert.equal(privateEvent.body.data.organizer_id, organizerRegistration.body.user.id);
+    assert.equal((await organizer.get(`/api/events/${privateEvent.body.data.id}`)).status, 200);
+    assert.equal((await organizer.get('/api/events')).body.data.some(row => row.id === privateEvent.body.data.id), true);
+    assert.equal((await venueManager.get(`/api/events/${privateEvent.body.data.id}`)).status, 404);
+    assert.equal((await request(app).get(`/api/events/${privateEvent.body.data.id}`)).status, 404);
   } finally {
+    await pool.query("DELETE FROM events WHERE title = 'Owned private event'");
+    await pool.query("DELETE FROM venues WHERE name = 'Managed test venue'");
+    await pool.query("DELETE FROM users WHERE email = 'fresh-attendee@example.test'");
+    await pool.query("DELETE FROM users WHERE email = 'fresh-organizer@example.test'");
     await pool.query("DELETE FROM events WHERE title IN ('Synthetic staging event', 'Spoofed organizer test')");
     await pool.query("DELETE FROM venues WHERE id = 'test-venue'");
     await pool.end();

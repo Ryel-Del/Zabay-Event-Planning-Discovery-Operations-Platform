@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { randomUUID } from 'node:crypto';
 import { pool, query } from '../config/db';
-import { optionalOperator } from '../middleware/auth';
+import { optionalOperator, trustedUserId } from '../middleware/auth';
 
 export async function getVenues(_req: Request, res: Response, next: NextFunction) {
   try {
@@ -182,9 +182,9 @@ export async function createVenue(req: Request, res: Response, next: NextFunctio
         INSERT INTO venues (
           id, name, city, address, lat, lng, capacity, hourly_rate,
           facilities, power_kw_capacity, is_indoor, operating_hours_open, operating_hours_close,
-          image_url, contact_email, contact_phone, created_at
+          image_url, contact_email, contact_phone, manager_id, created_at
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW()
         ) RETURNING *;
       `;
       const venueResult = await client.query(insertVenueSql, [
@@ -204,6 +204,7 @@ export async function createVenue(req: Request, res: Response, next: NextFunctio
         image_url || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop&q=80',
         contact_email || 'venue@zabay.ph',
         contact_phone || '+63 (38) 411-0000',
+        trustedUserId(req),
       ]);
 
       const insertedHalls: any[] = [];

@@ -159,7 +159,7 @@ const minutesToTime = (mins: number) => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    if (typeof window !== 'undefined') {
+    if (!import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true') {
       const saved = localStorage.getItem('zabay-user');
       if (saved) {
         try {
@@ -173,7 +173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [currentRole, setCurrentRole] = useState<UserRole>(() => {
-    if (typeof window !== 'undefined') {
+    if (!import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true') {
       const savedRole = localStorage.getItem('zabay-role') as UserRole;
       if (savedRole) return savedRole;
     }
@@ -193,6 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const setRoleWithUser = (role: UserRole) => {
+    if (!isDemoMode && role !== currentUser.role) return;
     setCurrentRole(role);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-role', role);
@@ -200,8 +201,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Multi-role capability in one account:
     // Update the active session role while preserving user account identity & profile
     setCurrentUser((prevUser) => {
-      const existingRoles = prevUser.roles || ['organizer', 'venue_manager', 'staff', 'attendee'];
-      const updatedRoles = existingRoles.includes(role) ? existingRoles : [...existingRoles, role];
+      const existingRoles = prevUser.roles || [prevUser.role];
+      const updatedRoles = existingRoles.includes(role) ? existingRoles : [prevUser.role];
       const updatedUser = {
         ...prevUser,
         role,
@@ -246,6 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+    if (import.meta.env.PROD) return false;
     if (typeof window !== 'undefined') {
       const devUnlocked = sessionStorage.getItem('zabay-dev-unlocked') === 'true';
       return devUnlocked && sessionStorage.getItem('zabay-demo-mode') === 'true';
@@ -254,6 +256,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
+    if (import.meta.env.PROD) return false;
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('zabay-dev-unlocked') === 'true';
     }
@@ -261,6 +264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
+    if (import.meta.env.PROD) return null;
     if (typeof window !== 'undefined') {
       if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') {
         return sessionStorage.getItem('zabay-dev-code') || 'AUTHORIZED';
@@ -399,11 +403,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
   const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
 
+  useEffect(() => {
+    if (isDemoMode) return;
+    let active = true;
+    api.auth.getMe().then((response) => {
+      if (!active) return;
+      const user = response.data?.user;
+      if (response.success && user) {
+        setCurrentUser({ ...user, roles: [user.role] });
+        setCurrentRole(user.role);
+      } else {
+        setCurrentUser(guestUser);
+        setCurrentRole('attendee');
+        localStorage.removeItem('zabay-user');
+        localStorage.removeItem('zabay-role');
+      }
+    });
+    return () => { active = false; };
+  }, [isDemoMode, currentUser.id]);
+
   const refreshBackendStatus = async () => {
     try {
       const res = await api.health.check();
       setBackendHealth(res.success ? res.data || null : null);
-      if (!res.success || localStorage.getItem('zabay-demo-mode') === 'true') { setIsLiveBackend(false); return; }
+      if (!res.success || (!import.meta.env.PROD && localStorage.getItem('zabay-demo-mode') === 'true')) { setIsLiveBackend(false); return; }
       const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
       if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
@@ -414,7 +437,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLiveBackend(false);
         return;
       }
-      if (localStorage.getItem('zabay-demo-mode') === 'true') return;
+      if (!import.meta.env.PROD && localStorage.getItem('zabay-demo-mode') === 'true') return;
       const liveEvents = eventRes.data.map(adaptEvent);
       setVenues(venueRes.data.map(adaptVenue));
       setEvents(liveEvents);
@@ -509,6 +532,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loadDemoData = () => {
+    if (import.meta.env.PROD) return;
     setIsLiveBackend(false);
     setVenues(mockVenues);
     setEvents(mockEvents);
@@ -533,6 +557,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loadRole2DemoData = () => {
+    if (import.meta.env.PROD) return;
     setIsLiveBackend(false);
     setVenues(mockVenues);
     setEvents(mockEvents);
@@ -638,6 +663,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const unlockDevMode = async (code: string): Promise<{ success: boolean; message: string; devCode?: string }> => {
+    if (import.meta.env.PROD) return { success: false, message: 'Demo access is unavailable in production.' };
     const raw = (code || '').trim();
     if (!raw) {
       return {
@@ -776,7 +802,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const signOut = () => {
-    lockDevMode();
+    void api.auth.logout().then((result) => {
+      if (result.success) lockDevMode();
+    });
   };
 
   const clearToCleanSlate = () => {
@@ -798,6 +826,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
+    if (!isDemoMode && !isLiveBackend) throw new Error('Event creation requires a verified backend session.');
     const todayIso = new Date().toISOString().split('T')[0];
     const eventStartDate = (data.start_date || '').slice(0, 10);
     const eventEndDate = (data.end_date || '').slice(0, 10);

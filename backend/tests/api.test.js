@@ -452,6 +452,7 @@ test('readiness reports database failure without infrastructure details', async 
 });
 
 test('verify-key validates developer authorization and rejects invalid keys', async () => {
+  process.env.DEV_ACCESS_KEY = 'isolated-local-demo-key';
   const denied = await request(app).post('/api/auth/verify-key').send({ devKey: 'wrong-key' });
   assert.equal(denied.status, 401);
   assert.equal(denied.body.success, false);
@@ -459,8 +460,12 @@ test('verify-key validates developer authorization and rejects invalid keys', as
   const missing = await request(app).post('/api/auth/verify-key').send({});
   assert.equal(missing.status, 400);
 
-  const allowed = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.OPERATOR_PASSWORD });
+  const operatorPassword = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.OPERATOR_PASSWORD });
+  assert.equal(operatorPassword.status, 401);
+  const allowed = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.DEV_ACCESS_KEY });
   assert.equal(allowed.status, 200);
   assert.equal(allowed.body.success, true);
-  assert.ok(allowed.body.csrfToken);
+  assert.equal(allowed.body.csrfToken, undefined);
+  assert.equal(allowed.headers['set-cookie'], undefined);
+  delete process.env.DEV_ACCESS_KEY;
 });

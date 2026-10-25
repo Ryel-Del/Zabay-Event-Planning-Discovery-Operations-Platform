@@ -85,3 +85,26 @@ runs the API checks. Operator authentication is implemented; payments and the pr
 - `POST /api/attendees/checkin` — Operator: validate QR pass & prevent duplicate turnstile entries
 
 See [deployment setup](../DEPLOYMENT.md) for production variables, TLS, and initialization.
+
+### Authentication setup (security boundary)
+
+Set `FIREBASE_PROJECT_ID` on the Express backend to the Firebase project used by the
+frontend's `VITE_FIREBASE_PROJECT_ID`. The Firebase Admin SDK verifies ID tokens
+against this project; Google sign-in is unavailable when the backend variable is
+absent. Keep Firebase Admin credentials, if required by the hosting environment,
+server-side only. Do not put service account JSON or private keys in frontend
+variables or the repository. The browser supplies only a Firebase ID token to
+`POST /api/auth/firebase-login`; the backend creates or resumes an attendee session
+bound to `users.firebase_uid`. An existing email account is never linked by email
+alone. Account linking and password activation for legacy passwordless accounts
+require an administrator-controlled, independently verified process. No public
+endpoint sets a legacy password or elevates a role.
+
+`OPERATOR_USERNAME` and `OPERATOR_PASSWORD` retain the existing deployment operator
+login. `DEV_ACCESS_KEY` is optional and works only outside production; it authorizes
+local demo UI state and does not create an operator session. If the frontend and
+backend use distinct origins, set `CLIENT_URL` on the backend to the exact frontend
+origin for origin checks. Public registration always creates an attendee account.
+Organizers and venue managers must be assigned through a trusted administrative
+process before their server privileges are available. Browser staff invitations
+remain local workflow data and do not alter database roles.

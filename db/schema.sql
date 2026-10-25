@@ -17,8 +17,16 @@ CREATE TABLE IF NOT EXISTS users (
     organization VARCHAR(255),
     location VARCHAR(255),
     bio TEXT,
+    password_hash VARCHAR(128),
+    password_salt VARCHAR(64),
+    firebase_uid VARCHAR(128),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(128);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_salt VARCHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128);
+CREATE UNIQUE INDEX IF NOT EXISTS users_firebase_uid_unique ON users (firebase_uid);
 
 -- Single deployment operator used for event ownership. The session is still
 -- authenticated by OPERATOR_USERNAME/OPERATOR_PASSWORD, never by this row.
