@@ -33,6 +33,10 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
   const [selectedEventDetail, setSelectedEventDetail] = useState<ZabayEvent | null>(null);
   const [pendingEvent, setPendingEvent] = useState<ZabayEvent | null>(null);
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const closeAuthPrompt = () => {
+    setAuthPromptOpen(false);
+    setPendingEvent(null);
+  };
   const signedIn = currentUser.id !== 'usr-guest' && currentUser.id !== 'zabay-operator';
   const requestRegistration = (event: ZabayEvent) => {
     if (isDemoMode || signedIn) setSelectedEventForCheckout(event);
@@ -96,7 +100,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           }}
         />
 
-        <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={() => setAuthPromptOpen(false)} />
+        <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={closeAuthPrompt} />
 
         {/* Stripe Checkout Modal */}
         {selectedEventForCheckout && (
@@ -356,7 +360,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
         <AttendeePassView onScanPass={onOpenScannerWithPass} />
       )}
 
-      <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={() => setAuthPromptOpen(false)} />
+      <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={closeAuthPrompt} />
 
       {/* Stripe Checkout Modal */}
       {selectedEventForCheckout && (
