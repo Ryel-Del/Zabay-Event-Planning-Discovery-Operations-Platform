@@ -48,59 +48,29 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     try {
       setIsSubmitting(true);
       const credential = await signInWithGooglePopup();
-      let userObj: User;
-
-      try {
-        const idToken = await credential.user.getIdToken();
-        const response = await api.auth.firebaseLogin(idToken);
-        if (response.success && response.data?.user) {
-          const gUser = response.data.user;
-          userObj = {
-            id: gUser.id,
-            name: gUser.name || credential.user.displayName || 'Google User',
-            email: gUser.email || credential.user.email || '',
-            role: (gUser.role as UserRole) || 'organizer',
-            roles: [(gUser.role as UserRole) || 'organizer'],
-            avatar: gUser.avatar || credential.user.photoURL || '',
-            organization: gUser.organization || 'Zabay Platform User',
-            location: '',
-            bio: '',
-          };
-        } else {
-          // Backend offline or unreachable: fall back to authenticated Firebase profile
-          userObj = {
-            id: credential.user.uid || `usr-${Date.now()}`,
-            name: credential.user.displayName || 'Google User',
-            email: credential.user.email || '',
-            role: 'organizer',
-            roles: ['organizer'],
-            avatar: credential.user.photoURL || '',
-            organization: 'Zabay Platform User',
-            location: 'Tagbilaran City, Bohol',
-            bio: 'Authenticated via Google account.',
-          };
-        }
-      } catch {
-        // Network failure reaching backend: fall back to authenticated Firebase profile
-        userObj = {
-          id: credential.user.uid || `usr-${Date.now()}`,
-          name: credential.user.displayName || 'Google User',
-          email: credential.user.email || '',
-          role: 'organizer',
-          roles: ['organizer'],
-          avatar: credential.user.photoURL || '',
-          organization: 'Zabay Platform User',
-          location: 'Tagbilaran City, Bohol',
-          bio: 'Authenticated via Google account.',
-        };
+      const idToken = await credential.user.getIdToken();
+      const response = await api.auth.firebaseLogin(idToken);
+      if (!response.success || !response.data?.user) {
+        setErrorMessage(response.error || 'Google sign-in succeeded, but Zabay could not establish a session. Please retry.');
+        return;
       }
 
+      const gUser = response.data.user;
+      const userObj: User = {
+        id: gUser.id,
+        name: gUser.name || credential.user.displayName || 'Google User',
+        email: gUser.email || credential.user.email || '',
+        role: (gUser.role as UserRole) || 'attendee',
+        roles: [(gUser.role as UserRole) || 'attendee'],
+        avatar: gUser.avatar || credential.user.photoURL || '',
+        organization: gUser.organization || 'Zabay Platform User',
+        location: '',
+        bio: '',
+      };
       setCurrentUser(userObj);
       setCurrentRole(userObj.role);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('zabay-user', JSON.stringify(userObj));
-        localStorage.setItem('zabay-role', userObj.role);
-      }
+      localStorage.setItem('zabay-user', JSON.stringify(userObj));
+      localStorage.setItem('zabay-role', userObj.role);
       setSuccessMessage(`Welcome back, ${userObj.name}! Signed in via Google.`);
       setTimeout(() => {
         setSuccessMessage(null);
@@ -110,14 +80,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       if (err.code === 'auth/popup-closed-by-user') {
         setErrorMessage('Google sign-in popup was closed before completing.');
       } else if (err.code === 'auth/unauthorized-domain') {
-        setErrorMessage(
-          'Firebase domain unauthorized. Please add this domain to Firebase Console > Authentication > Settings > Authorized domains.'
-        );
+        setErrorMessage('Firebase domain unauthorized. Add this domain to the Firebase authorized domains.');
       } else if (err.code === 'auth/popup-blocked') {
         setErrorMessage('Popup blocked by browser. Please allow popups for this site.');
       } else {
-        console.error('Firebase Google sign-in error:', err);
-        setErrorMessage(err.message || 'Failed to sign in with Google. Please try again.');
+        setErrorMessage('Could not finish Google sign-in with Zabay. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
