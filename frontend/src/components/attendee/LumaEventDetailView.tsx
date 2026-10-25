@@ -50,15 +50,6 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
     }
   };
 
-  // Mock community attendee avatars
-  const attendeeAvatars = [
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
-  ];
-
   const occupancyPercent = Math.round((event.tickets_sold / event.max_capacity) * 100);
 
   return (
@@ -131,11 +122,6 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
           {/* Host / Organizer Card (Signature Luma Layout) */}
           <div className="bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80"
-                alt="Mark Bautista"
-                className="w-12 h-12 rounded-full object-cover ring-2 ring-[#3E6CB5]/30"
-              />
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -146,11 +132,8 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                   </span>
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">
-                  Mark Bautista
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
                   Event organizer
-                </p>
+                </h3>
               </div>
             </div>
 
@@ -242,16 +225,6 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
           {/* Social Proof: Who's Coming */}
           <div className="bg-white dark:bg-[#171E2B] border border-slate-200/90 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex -space-x-2">
-                {attendeeAvatars.map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt="Attendee"
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-[#171E2B]"
-                  />
-                ))}
-              </div>
               <div>
                 <p className="text-xs font-bold text-slate-900 dark:text-slate-100">
                   {event.tickets_sold} Attendees Registered
