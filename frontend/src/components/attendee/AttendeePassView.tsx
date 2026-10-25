@@ -17,8 +17,17 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues, notifications, isDemoMode } = useApp();
+  const { registrations, events, venues, notifications, isDemoMode, currentUser } = useApp();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  // Filter confirmed passes strictly belonging to the currently active evaluation persona
+  const userPasses = registrations.filter((reg) => {
+    if (!reg) return false;
+    if (reg.attendee_id && currentUser.id && reg.attendee_id === currentUser.id) return true;
+    if (reg.attendee_email && currentUser.email && reg.attendee_email.toLowerCase() === currentUser.email.toLowerCase()) return true;
+    if (reg.attendee_name && currentUser.name && reg.attendee_name.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    return false;
+  });
 
   const handleDownloadImage = async (reg: any, event: any, venue: any) => {
     setDownloadingId(reg.id);
@@ -35,18 +44,18 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
         <div>
           <h2 className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
             <Ticket className="w-5 h-5 text-[#B68366] dark:text-[#D4A58C]" />
-            My Digital QR Event Passes ({registrations.length})
+            My Digital QR Event Passes ({userPasses.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Your confirmed event tickets. Present your QR pass at gate check-in or download for offline access.
+            Confirmed passes for <span className="font-semibold text-stone-800 dark:text-stone-200">{currentUser.name}</span> ({currentUser.email}). Present your QR pass at gate check-in or download for offline access.
           </p>
         </div>
 
-        {registrations.length > 0 && (
+        {userPasses.length > 0 && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                const first = registrations[0];
+                const first = userPasses[0];
                 const ev = events.find((e) => e.id === first.event_id);
                 const vn = venues.find((v) => v.id === ev?.venue_id);
                 printPassSlip({ registration: first, event: ev, venue: vn });
@@ -61,8 +70,23 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {registrations.map((reg) => {
+      {userPasses.length === 0 ? (
+        <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-10 text-center space-y-4 shadow-xs">
+          <div className="w-14 h-14 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto">
+            <Ticket className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
+              No Registered Passes for {currentUser.name}
+            </h3>
+            <p className="text-xs text-stone-500 max-w-md mx-auto">
+              You are currently viewing as <strong className="text-stone-700 dark:text-stone-300">{currentUser.name}</strong> ({currentUser.email}). You can register for any upcoming Bohol event on the Discovery page to receive an instant scannable digital QR pass.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {userPasses.map((reg) => {
           const event = events.find((e) => e.id === reg.event_id);
           const venue = venues.find((v) => v.id === event?.venue_id);
           const isCheckedIn = reg.status === 'checked_in';
@@ -219,6 +243,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           );
         })}
       </div>
+      )}
     </div>
   );
 };
