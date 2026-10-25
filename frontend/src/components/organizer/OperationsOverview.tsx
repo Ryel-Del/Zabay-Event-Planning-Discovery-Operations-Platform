@@ -174,10 +174,10 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             ) : (
               <div className="flex items-center gap-1.5 text-[#2B6149] dark:text-[#81B89B] font-bold text-sm">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>DAG Timeline Feasible</span>
+                <span>Schedule & Planning Feasible</span>
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-1">Finish-to-start constraints satisfied</p>
+            <p className="text-[11px] text-slate-400 mt-1">Task dependencies and timing in sync</p>
           </div>
         </div>
       </div>
@@ -370,7 +370,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
                 Recent Audit Trail
               </h3>
-              <span className="text-[10px] text-stone-400 font-mono">Live DB Stream</span>
+              <span className="text-[10px] text-stone-400">Live Activity Stream</span>
             </div>
 
             <div className="space-y-2.5">

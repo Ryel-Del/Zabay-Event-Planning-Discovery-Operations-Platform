@@ -6,14 +6,16 @@ import {
   Filter,
   Phone,
   Mail,
-  DollarSign,
   Briefcase,
   CheckCircle2,
   Eye,
   Trash2,
   AlertCircle,
+  QrCode,
+  Lock,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { canPersonnelScanTickets } from '../../types';
 
 interface PersonnelDirectoryProps {
   onSwitchToStaffView?: () => void;
@@ -56,6 +58,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
   const [phone, setPhone] = useState('+63 (917) ');
   const [email, setEmail] = useState('');
   const [skillsInput, setSkillsInput] = useState('Event Staging, Floor Coordination');
+  const [canScanTickets, setCanScanTickets] = useState(false);
   const [formError, setFormError] = useState('');
 
   // Filter personnel
@@ -112,6 +115,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       email: email.trim(),
       skills: skillsList.length > 0 ? skillsList : ['General Crew Support'],
       is_available: true,
+      can_scan_tickets: canScanTickets,
     });
 
     // Reset Form
@@ -122,6 +126,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
     setPhone('+63 (917) ');
     setEmail('');
     setSkillsInput('Event Staging, Floor Coordination');
+    setCanScanTickets(false);
     setFormError('');
     setIsAddModalOpen(false);
   };
@@ -168,7 +173,35 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Real-World Operational Workflow Explainer */}
+      <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-4 shadow-xs">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider">
+                💡 Real-World Event Personnel Workflow
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
+                Roster → Tasks → Shift Portal
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              <strong>1. Directory Roster:</strong> Manage certified crew rates and contact information. 
+              <strong> 2. Task Allocation:</strong> Assign crew leads to run-of-show duties on the Kanban board. 
+              <strong> 3. Staff Portal Execution:</strong> Crew members switch to Staff View to access mobile duty checklists and gate ticket scanners.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => handlePreviewStaff('per-3')}
+              className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#171E2B] hover:bg-slate-50 dark:hover:bg-slate-800 border border-[#C8DCF7] dark:border-[#2D4160] text-xs font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Simulate Shift Portal</span>
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
@@ -205,7 +238,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs">
             <span>Avg Hourly Rate</span>
-            <DollarSign className="w-4 h-4 text-[#3E6CB5]" />
+            <span className="font-bold text-xs text-[#3E6CB5]">₱</span>
           </div>
           <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-2">
             ₱{avgHourlyRate.toLocaleString()}
@@ -372,7 +405,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
               {/* Bottom Actions */}
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={() => updatePersonnel(person.id, { is_available: !person.is_available })}
                     className={`px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
@@ -382,6 +415,31 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                     }`}
                   >
                     {person.is_available ? '✓ Ready' : '○ Standby'}
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      updatePersonnel(person.id, {
+                        can_scan_tickets: !canPersonnelScanTickets(person),
+                      })
+                    }
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold border transition-colors cursor-pointer ${
+                      canPersonnelScanTickets(person)
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                        : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                    }`}
+                    title={
+                      canPersonnelScanTickets(person)
+                        ? 'Gate Ticket Scanner Authorized (Click to Revoke)'
+                        : 'Duty Operations Only (Click to Grant Scanner Access)'
+                    }
+                  >
+                    {canPersonnelScanTickets(person) ? (
+                      <QrCode className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Lock className="w-3 h-3 text-slate-400" />
+                    )}
+                    <span>{canPersonnelScanTickets(person) ? 'Scanner' : 'No Scanner'}</span>
                   </button>
 
                   <button
@@ -450,8 +508,8 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
       {/* Modal: Add New Personnel */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-[#171E2B] rounded-2xl max-w-lg w-full border border-slate-200/80 dark:border-slate-800 shadow-xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-[#171E2B] rounded-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto border border-slate-200/80 dark:border-slate-800 shadow-xl p-4 sm:p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-[#EBF3FC] dark:bg-[#1E293B] flex items-center justify-center text-[#3E6CB5] dark:text-[#7EA6E0]">
@@ -582,6 +640,27 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                   onChange={(e) => setSkillsInput(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
                 />
+              </div>
+
+              {/* Turnstile Ticket Scanner Clearance Option */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#111722] border border-slate-200 dark:border-slate-800">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={canScanTickets}
+                    onChange={(e) => setCanScanTickets(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-[#3E6CB5] focus:ring-[#3E6CB5]"
+                  />
+                  <div>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                      <QrCode className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                      Grant Gate Turnstile Scanner Clearance
+                    </span>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Check this for Security and Registration staff. Technical AV, stage hands, and catering crew should leave this unchecked.
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">

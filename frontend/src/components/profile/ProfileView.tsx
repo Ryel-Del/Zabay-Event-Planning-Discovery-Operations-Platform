@@ -147,8 +147,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       {currentUser.name}
                     </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
-                      {currentRole.replace('_', ' ')}
+                      Active: {currentRole.replace('_', ' ')}
                     </span>
+                    {currentUser.roles && currentUser.roles.length > 1 && (
+                      <div className="flex items-center gap-1">
+                        {currentUser.roles.map((r) => (
+                          <span
+                            key={r}
+                            className={`text-[9px] font-semibold px-2 py-0.5 rounded-md ${
+                              r === currentRole
+                                ? 'bg-[#3E6CB5] text-white'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                            }`}
+                          >
+                            {r.replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">

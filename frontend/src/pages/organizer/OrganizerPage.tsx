@@ -4,7 +4,7 @@ import { OperationsOverview } from '../../components/organizer/OperationsOvervie
 import { TaskKanbanBoard } from '../../components/organizer/TaskKanbanBoard';
 import { TopDownCalendarView } from '../../components/organizer/TopDownCalendarView';
 import { VenueMasterDetail } from '../../components/organizer/VenueMasterDetail';
-import { PersonnelDirectory } from '../../components/organizer/PersonnelDirectory';
+import { EventPeopleAssignments } from '../../components/organizer/EventPeopleAssignments';
 import { ChangeImpactSimulator } from '../../components/organizer/ChangeImpactSimulator';
 import { TaskGanttView } from '../../components/organizer/TaskGanttView';
 import { AttendeeDirectoryDatagrid } from '../../components/organizer/AttendeeDirectoryDatagrid';
@@ -30,10 +30,15 @@ export const OrganizerPage: React.FC<OrganizerPageProps> = ({
   return (
     <div className="space-y-6">
       {currentView === 'overview' && <OperationsOverview onNavigate={onSelectView} />}
-      {currentView === 'kanban' && <TaskKanbanBoard />}
+      {currentView === 'kanban' && <TaskKanbanBoard onNavigateToPeople={() => onSelectView('personnel')} />}
       {currentView === 'top_calendar' && <TopDownCalendarView />}
       {currentView === 'venues' && <VenueMasterDetail />}
-      {currentView === 'personnel' && <PersonnelDirectory onSwitchToStaffView={onSwitchToStaff} />}
+      {currentView === 'personnel' && (
+        <EventPeopleAssignments
+          onSwitchToStaffView={onSwitchToStaff}
+          onNavigateToKanban={() => onSelectView('kanban')}
+        />
+      )}
       {currentView === 'impact' && <ChangeImpactSimulator />}
       {currentView === 'schedule' && <TaskGanttView />}
       {currentView === 'attendees' && <AttendeeDirectoryDatagrid onScanPassModal={onScanPass} />}

@@ -46,14 +46,16 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
 }
 
 export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
-  const { qr_pass_code, verified_by_id } = req.body || {};
+  const { qr_pass_code, verified_by_id, event_id } = req.body || {};
   if (typeof qr_pass_code !== 'string' || !qr_pass_code.trim() || qr_pass_code.trim().length > 64) {
     return res.status(400).json({ success: false, error: 'qr_pass_code is required' });
   }
   if (verified_by_id !== undefined && (typeof verified_by_id !== 'string' || !verified_by_id.trim())) {
     return res.status(400).json({ success: false, error: 'verified_by_id must be a non-empty string' });
   }
-
+  if (event_id !== undefined && (typeof event_id !== 'string' || !event_id.trim())) {
+    return res.status(400).json({ success: false, error: 'event_id must be a non-empty string' });
+  }
 
   let client: PoolClient | undefined;
   try {
@@ -69,6 +71,18 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
     }
 
     const registration = regResult.rows[0];
+
+    // Enforce Event Match: Reject ticket if scanned for the wrong event
+    if (event_id && registration.event_id !== event_id.trim()) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        code: 'WRONG_EVENT',
+        isWrongEvent: true,
+        error: `WRONG EVENT PASS: Ticket is registered for event '${registration.event_id}', not '${event_id.trim()}'. Admission denied.`,
+      });
+    }
+
     if (registration.status === 'cancelled') {
       await client.query('ROLLBACK');
       return res.status(409).json({ success: false, code: 'CANCELLED_REGISTRATION', error: 'This registration was cancelled.' });

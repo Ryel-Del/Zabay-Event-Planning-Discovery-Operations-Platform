@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Ticket,
   MapPin,
   AlertTriangle,
+  Printer,
+  Download,
+  QrCode,
+  Check,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useApp } from '../../context/AppContext';
+import { downloadPassAsImage, printPassSlip } from '../../services/passExportService';
 
 interface AttendeePassViewProps {
   onScanPass?: (code: string) => void;
@@ -13,6 +18,16 @@ interface AttendeePassViewProps {
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
   const { registrations, events, venues, notifications, isDemoMode } = useApp();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownloadImage = async (reg: any, event: any, venue: any) => {
+    setDownloadingId(reg.id);
+    try {
+      await downloadPassAsImage({ registration: reg, event, venue });
+    } finally {
+      setTimeout(() => setDownloadingId(null), 1000);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -23,9 +38,27 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
             My Digital QR Event Passes ({registrations.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            {isDemoMode ? 'Sample passes for the local demo.' : 'QR passes returned by PostgreSQL during this session.'}
+            Your confirmed event tickets. Present your QR pass at gate check-in or download for offline access.
           </p>
         </div>
+
+        {registrations.length > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const first = registrations[0];
+                const ev = events.find((e) => e.id === first.event_id);
+                const vn = venues.find((v) => v.id === ev?.venue_id);
+                printPassSlip({ registration: first, event: ev, venue: vn });
+              }}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A1815] hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              title="Print active ticket slip"
+            >
+              <Printer className="w-3.5 h-3.5 text-[#3E6CB5]" />
+              <span>Print Ticket Slip</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -106,7 +139,8 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   {/* Real Scannable QR Code */}
                   <div className="bg-white p-2.5 rounded-xl shadow-xs border border-slate-200 flex flex-col items-center justify-center shrink-0">
                     <div className="bg-white p-1 rounded-lg">
-                      <QRCodeSVG
+                      <QRCodeCanvas
+                        data-qr={reg.qr_pass_code}
                         value={reg.qr_pass_code}
                         size={88}
                         level="M"
@@ -126,21 +160,59 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                   <div className="absolute -right-7 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#F8FAFD] dark:bg-[#0E131C] border border-slate-200 dark:border-slate-800" />
                 </div>
 
-                {/* Gate Instructions & Quick Test Scanner trigger */}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-stone-400 font-mono">
-                    Pass Serial: {reg.id} • Registered: {new Date(reg.registered_at).toLocaleDateString()}
-                  </span>
+                {/* Pass Actions: Print, Save Image, Open Scanner */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+                  <div className="text-[10px] text-stone-400 font-mono">
+                    Pass Serial: <span className="font-bold text-stone-600 dark:text-stone-300">{reg.id}</span> • Registered: {new Date(reg.registered_at).toLocaleDateString()}
+                  </div>
 
-                  {onScanPass && (
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    {/* Save as PNG Button */}
                     <button
-                      onClick={() => onScanPass(reg.qr_pass_code)}
-                      data-cy="open-pass-scanner"
-                      className="px-2.5 py-1 bg-stone-200/70 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-lg text-xs font-medium transition-colors"
+                      type="button"
+                      disabled={downloadingId === reg.id}
+                      onClick={() => handleDownloadImage(reg, event, venue)}
+                      className="flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A1815] hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      title="Download Pass Card as PNG Image"
                     >
-                      Open Scanner
+                      {downloadingId === reg.id ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
+                          <span>Saved!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                          <span>Save PNG</span>
+                        </>
+                      )}
                     </button>
-                  )}
+
+                    {/* Print Pass Button */}
+                    <button
+                      type="button"
+                      onClick={() => printPassSlip({ registration: reg, event, venue })}
+                      className="flex-1 sm:flex-initial px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1A1815] hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      title="Print Official Ticket Slip"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Print</span>
+                    </button>
+
+                    {/* Open Scanner Shortcut */}
+                    {onScanPass && (
+                      <button
+                        type="button"
+                        onClick={() => onScanPass(reg.qr_pass_code)}
+                        data-cy="open-pass-scanner"
+                        className="px-2.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+                        title="Simulate scanning this pass at turnstile"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>Scan</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

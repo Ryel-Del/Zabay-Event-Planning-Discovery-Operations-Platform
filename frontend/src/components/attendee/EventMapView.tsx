@@ -10,30 +10,69 @@ interface EventMapViewProps {
   onSelectEvent: (event: ZabayEvent) => void;
 }
 
-// Custom modern marker icon for Leaflet venues
-const createCustomIcon = (_category?: string) => {
+// Custom modern marker icon for Leaflet venues with category-specific glyphs
+const createCustomIcon = (category?: string) => {
+  const cat = (category || '').toLowerCase();
+
+  let glyphSvg = '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>';
+  let accentColor = '#3E6CB5';
+  let bgColor = '#1E293B';
+
+  if (cat.includes('sport') || cat.includes('athletic')) {
+    // Trophy
+    glyphSvg = '<path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>';
+    accentColor = '#F59E0B';
+    bgColor = '#291804';
+  } else if (cat.includes('tech') || cat.includes('hackathon') || cat.includes('code')) {
+    // Laptop / Tech
+    glyphSvg = '<path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/>';
+    accentColor = '#38BDF8';
+    bgColor = '#082538';
+  } else if (cat.includes('school') || cat.includes('youth') || cat.includes('academic') || cat.includes('student')) {
+    // Graduation Cap
+    glyphSvg = '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/>';
+    accentColor = '#34D399';
+    bgColor = '#062619';
+  } else if (cat.includes('outreach') || cat.includes('community') || cat.includes('medical') || cat.includes('relief')) {
+    // Heart
+    glyphSvg = '<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>';
+    accentColor = '#FB7185';
+    bgColor = '#2B0810';
+  } else if (cat.includes('festival') || cat.includes('cultural') || cat.includes('showcase')) {
+    // Sparkles
+    glyphSvg = '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>';
+    accentColor = '#A78BFA';
+    bgColor = '#201035';
+  } else if (cat.includes('conference') || cat.includes('seminar') || cat.includes('workshop')) {
+    // Briefcase
+    glyphSvg = '<rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>';
+    accentColor = '#60A5FA';
+    bgColor = '#0C1C38';
+  }
+
   return L.divIcon({
     className: 'custom-leaflet-marker',
     html: `
       <div style="
-        background: #1E293B;
+        background: ${bgColor};
         color: #F8FAFD;
         padding: 6px;
         border-radius: 50%;
-        width: 34px;
-        height: 34px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 14px rgba(30, 41, 59, 0.4);
-        border: 2px solid #86ABDF;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+        border: 2px solid ${accentColor};
+        transition: transform 0.2s ease;
       ">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#86ABDF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${accentColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${glyphSvg}</svg>
       </div>
     `,
-    iconSize: [34, 34],
-    iconAnchor: [17, 34],
-    popupAnchor: [0, -34],
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+    popupAnchor: [0, -36],
   });
 };
 

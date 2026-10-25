@@ -98,15 +98,15 @@ export function translateDbError(errData: any): string {
 
   switch (code) {
     case '23P01': // exclusion_violation
-      return 'Double-Booking Collision Detected: This hall has already been reserved for the selected date and time window. The PostgreSQL temporal constraint prevented an overlap.';
+      return 'Schedule Conflict: This venue or hall has already been reserved for the selected date and time window.';
     case '23505': // unique_violation
       return 'Conflict: A record with this unique identifier or email already exists.';
     case '23503': // foreign_key_violation
-      return 'Referential Integrity Error: Associated venue, hall, or user record was not found.';
+      return 'Unable to find associated venue, hall, or user record.';
     case '23514': // check_violation
-      return 'Validation Error: Values violated database business rules (e.g., negative capacity or invalid time range).';
+      return 'Validation Error: Please check input values (e.g., capacity or date/time range).';
     default:
-      return message || 'A database operation failed.';
+      return message || 'Operation could not be completed. Please try again.';
   }
 }
 
@@ -214,6 +214,11 @@ export const api = {
   venues: {
     getAll: () => request<DbVenue[]>('/api/venues'),
     getById: (id: string) => request<DbVenue>(`/api/venues/${id}`),
+    create: (venueData: Partial<Venue>) =>
+      request<DbVenue>('/api/venues', {
+        method: 'POST',
+        body: JSON.stringify(venueData),
+      }),
     book: (venueId: string, booking: VenueBookingRequest) =>
       request<{ id: string; venue_id: string; hall_id?: string; status: string }>(
         `/api/venues/${venueId}/book`,
@@ -252,12 +257,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }),
-    checkIn: (qrPassCode: string) =>
+    checkIn: (qrPassCode: string, eventId?: string) =>
       request<DbRegistration>(
         '/api/attendees/checkin',
         {
           method: 'POST',
-          body: JSON.stringify({ qr_pass_code: qrPassCode }),
+          body: JSON.stringify({ qr_pass_code: qrPassCode, event_id: eventId }),
         }
       ),
   },

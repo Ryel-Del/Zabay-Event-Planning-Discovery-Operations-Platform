@@ -14,10 +14,10 @@ import type {
   VenueMatchResult,
   WorkflowTemplateKit,
   AppNotification,
+  EventCommitteeRoleMap,
 } from '../types';
 import {
   mockCurrentUser,
-  mockUsers,
   mockEvents,
   mockVenues,
   mockVenueBookings,
@@ -42,6 +42,13 @@ interface AppContextType {
   isDemoMode: boolean;
   loadDemoData: () => void;
   clearToCleanSlate: () => void;
+
+  // Developer & Evaluation DevCode System
+  isDevModeUnlocked: boolean;
+  unlockedDevCode: string | null;
+  unlockDevMode: (code: string) => { success: boolean; message: string; devCode?: string };
+  lockDevMode: () => void;
+  loadRole2DemoData: () => void;
 
   // Live Database & API Status (Member 3 Connector)
   isLiveBackend: boolean;
@@ -68,6 +75,7 @@ interface AppContextType {
   createEvent: (eventData: Partial<ZabayEvent>) => Promise<ZabayEvent>;
 
   venues: Venue[];
+  addVenue: (venueData: Omit<Venue, 'id'>) => Promise<Venue>;
   venueBookings: VenueBooking[];
   resources: Resource[];
   personnel: Personnel[];
@@ -86,9 +94,23 @@ interface AppContextType {
   applyTaskDelay: (taskId: string, delayMinutes: number, reason: string) => void;
   resetTasksToDefault: () => void;
   addTask: (task: Omit<Task, 'id'>) => void;
+  updateTask: (taskId: string, updates: Partial<Task>) => void;
+  deleteTask: (taskId: string) => void;
   updateTaskStatus: (taskId: string, status: TaskStatus) => void;
   loadTaskTemplate: (kitId: string) => void;
-  checkInAttendee: (qrCode: string) => Promise<{ success: boolean; message: string; registration?: Registration; isDuplicate?: boolean }>;
+  committeeRoles: EventCommitteeRoleMap;
+  setCommitteeRoles: React.Dispatch<React.SetStateAction<EventCommitteeRoleMap>>;
+  propagateCommitteeRoles: (newRoles: EventCommitteeRoleMap, preserveOverrides?: boolean) => { updatedCount: number };
+  checkInAttendee: (
+    qrCode: string,
+    targetEventId?: string
+  ) => Promise<{
+    success: boolean;
+    message: string;
+    registration?: Registration;
+    isDuplicate?: boolean;
+    isWrongEvent?: boolean;
+  }>;
   bookVenue: (
     venueId: string,
     eventId: string,
@@ -133,37 +155,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const previewStaffPortal = (staffId?: string) => {
     const targetStaffId = staffId || activeStaffId || 'per-3';
     setActiveStaffId(targetStaffId);
-    const targetPerson = personnel.find((p) => p.id === targetStaffId) || personnel[0];
-    if (targetPerson) {
-      setCurrentUser({
-        id: `usr-stf-${targetPerson.id}`,
-        name: targetPerson.name,
-        email: targetPerson.email,
-        role: 'staff',
-        phone: targetPerson.phone,
-        organization: 'Zabay Stage Crew & Operations',
-        location: 'Downtown District, Tagbilaran City',
-        bio: `${targetPerson.role} active on shift in event run-of-show.`,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-      });
-    }
-    setCurrentRole('staff');
+    setRoleWithUser('staff');
   };
 
   const exitStaffPreview = () => {
-    setCurrentRole('organizer');
-    const orgUser = mockUsers.find((u) => u.role === 'organizer') || mockCurrentUser;
-    setCurrentUser(orgUser);
+    setRoleWithUser('organizer');
   };
 
   const setRoleWithUser = (role: UserRole) => {
     setCurrentRole(role);
-    if (role === 'staff') {
-      previewStaffPortal();
-      return;
-    }
-    const user = mockUsers.find((u) => u.role === role);
-    if (user) setCurrentUser(user);
+    // Multi-role capability in one account:
+    // Update the active session role while preserving user account identity & profile (Mark Bautista stays Mark Bautista!)
+    setCurrentUser((prevUser) => {
+      const existingRoles = prevUser.roles || ['organizer', 'venue_manager', 'staff', 'attendee'];
+      const updatedRoles = existingRoles.includes(role) ? existingRoles : [...existingRoles, role];
+      return {
+        ...prevUser,
+        role,
+        roles: updatedRoles,
+      };
+    });
   };
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -193,27 +204,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   });
 
-  const [events, setEvents] = useState<ZabayEvent[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockEvents;
+  const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zabay-dev-unlocked') === 'true';
     }
-    return [];
+    return false;
   });
-  const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockEvents[0] || null;
+
+  const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zabay-dev-code');
     }
     return null;
   });
 
-  const [venues, setVenues] = useState<Venue[]>(() =>
-    typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true' ? mockVenues : []
-  );
-  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockVenueBookings;
+  const [events, setEvents] = useState<ZabayEvent[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockEvents;
+  });
+  const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return null;
+    }
+    return mockEvents[0] || null;
+  });
+
+  const [venues, setVenues] = useState<Venue[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
+    }
+    return mockVenues;
+  });
+  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
+    }
+    return mockVenueBookings;
   });
   const [resources] = useState<Resource[]>(mockResources);
   const [personnel, setPersonnel] = useState<Personnel[]>(() => {
@@ -230,23 +258,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mockPersonnel;
   });
   const [tasks, setTasks] = useState<Task[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockTasks;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockTasks;
   });
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockRegistrations;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockRegistrations;
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-demo-mode') === 'true') {
-      return mockAuditLogs;
+    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
+      return [];
     }
-    return [];
+    return mockAuditLogs;
   });
+
+  const [committeeRoles, setCommitteeRoles] = useState<EventCommitteeRoleMap>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay_committee_roles');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return {
+      event_head: mockCurrentUser.name,
+      secretary: '',
+      letters_head: '',
+      finance_head: '',
+      logistics_head: '',
+      documentation_head: '',
+      publicity_head: '',
+      program_head: '',
+    };
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay_committee_roles', JSON.stringify(committeeRoles));
+    }
+  }, [committeeRoles]);
 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
@@ -341,9 +398,175 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRegistrations(mockRegistrations);
     setAuditLogs(mockAuditLogs);
     setIsDemoMode(true);
+    setIsDevModeUnlocked(true);
+    setUnlockedDevCode((prev) => prev || 'ZABAY2026');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('zabay-clean-slate');
+      localStorage.setItem('zabay-demo-mode', 'true');
+      localStorage.setItem('zabay-dev-unlocked', 'true');
+      if (!localStorage.getItem('zabay-dev-code')) {
+        localStorage.setItem('zabay-dev-code', 'ZABAY2026');
+      }
+      localStorage.removeItem('zabay_custom_personnel');
+    }
+  };
+
+  const loadRole2DemoData = () => {
+    setIsLiveBackend(false);
+    setVenues(mockVenues);
+    setEvents(mockEvents);
+    setSelectedEvent(mockEvents[0]);
+    setVenueBookings(mockVenueBookings);
+    setTasks(mockTasks);
+    setPersonnel(mockPersonnel);
+
+    // Seed specialized Role 2 registrations with tested duplicate check-in target
+    const role2Registrations: Registration[] = [
+      {
+        id: 'reg-r2-01',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-1',
+        attendee_name: 'Sofia Ramos',
+        attendee_email: 'sofia.ramos@bisu.edu.ph',
+        status: 'confirmed',
+        ticket_type: 'Courtside Reserved',
+        qr_pass_code: 'ZABAY-PASS-9042-SOFIA',
+        registered_at: '2026-10-01T14:22:10Z',
+        amount_paid: 150,
+      },
+      {
+        id: 'reg-r2-02',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-2',
+        attendee_name: 'Liam Mendoza',
+        attendee_email: 'liam.mendoza@hnu.edu.ph',
+        status: 'checked_in', // Already checked in -> duplicate check-in test target
+        ticket_type: 'General Bleachers',
+        qr_pass_code: 'ZABAY-PASS-3108-LIAM',
+        registered_at: '2026-10-02T11:15:00Z',
+        amount_paid: 50,
+      },
+      {
+        id: 'reg-r2-03',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-3',
+        attendee_name: 'Amara Torres',
+        attendee_email: 'amara.torres@gmail.com',
+        status: 'confirmed',
+        ticket_type: 'General Bleachers',
+        qr_pass_code: 'ZABAY-PASS-5821-AMARA',
+        registered_at: '2026-10-04T09:40:00Z',
+        amount_paid: 50,
+      },
+      {
+        id: 'reg-r2-04',
+        event_id: 'evt-1',
+        event_title: 'Tagbilaran Inter-Barangay & School Basketball Championship 2026',
+        attendee_id: 'usr-att-4',
+        attendee_name: 'Kenji Tan',
+        attendee_email: 'kenji.tan@outlook.ph',
+        status: 'confirmed',
+        ticket_type: 'Courtside Reserved',
+        qr_pass_code: 'ZABAY-PASS-1029-KENJI',
+        registered_at: '2026-10-05T16:04:12Z',
+        amount_paid: 150,
+      },
+    ];
+    setRegistrations(role2Registrations);
+
+    const role2AuditLogs: AuditLog[] = [
+      {
+        id: `aud-r2-init-${Date.now()}`,
+        user_id: 'usr-org-1',
+        user_name: 'Engr. David Soriano (Operations Lead)',
+        action: 'RESOURCE_ASSIGNMENT',
+        entity_type: 'resource',
+        entity_id: 'pg-triggers-v16',
+        change_summary: 'Verification testbed loaded: schedule collision prevention, verified gate check-in, and audit logging active.',
+        created_at: new Date().toISOString(),
+      },
+      ...mockAuditLogs,
+    ];
+    setAuditLogs(role2AuditLogs);
+
+    setIsDemoMode(true);
+    setIsDevModeUnlocked(true);
+    setUnlockedDevCode('ROLE2-SEED');
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-demo-mode', 'true');
+      localStorage.setItem('zabay-dev-unlocked', 'true');
+      localStorage.setItem('zabay-dev-code', 'ROLE2-SEED');
       localStorage.removeItem('zabay_custom_personnel');
+    }
+
+    const testbedNotice: AppNotification = {
+      id: `notif-r2-${Date.now()}`,
+      title: 'Verification Testbed Active',
+      message: 'Collision checks and single-admission rules loaded: test duplicate check-in with Liam Mendoza (ZABAY-PASS-3108-LIAM) or schedule overlap.',
+      type: 'info',
+      timestamp: new Date().toISOString(),
+      targetRole: 'all',
+      read: false,
+    };
+    setNotifications((prev) => [testbedNotice, ...prev]);
+  };
+
+  const unlockDevMode = (code: string): { success: boolean; message: string; devCode?: string } => {
+    const normalized = (code || '').trim().toUpperCase();
+    if (normalized === 'ZABAY2026' || normalized === 'DEV-BOHOL') {
+      loadDemoData();
+      setIsDevModeUnlocked(true);
+      setUnlockedDevCode(normalized);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-dev-unlocked', 'true');
+        localStorage.setItem('zabay-dev-code', normalized);
+      }
+      return {
+        success: true,
+        message: `DevCode "${normalized}" verified! Bohol Master dataset loaded.`,
+        devCode: normalized,
+      };
+    }
+
+    if (normalized === 'ROLE2-SEED') {
+      loadRole2DemoData();
+      return {
+        success: true,
+        message: 'DevCode "ROLE2-SEED" verified! Collision check and single-admission testbed loaded.',
+        devCode: 'ROLE2-SEED',
+      };
+    }
+
+    if (normalized === 'CLEAN-SLATE') {
+      clearToCleanSlate();
+      setIsDevModeUnlocked(true);
+      setUnlockedDevCode('CLEAN-SLATE');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-dev-unlocked', 'true');
+        localStorage.setItem('zabay-dev-code', 'CLEAN-SLATE');
+      }
+      return {
+        success: true,
+        message: 'DevCode "CLEAN-SLATE" executed. Workspace wiped to clean slate.',
+        devCode: 'CLEAN-SLATE',
+      };
+    }
+
+    return {
+      success: false,
+      message: 'Invalid devcode. Try "ZABAY2026" or "ROLE2-SEED".',
+    };
+  };
+
+  const lockDevMode = () => {
+    setIsDevModeUnlocked(false);
+    setUnlockedDevCode(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('zabay-dev-unlocked');
+      localStorage.removeItem('zabay-dev-code');
     }
   };
 
@@ -358,6 +581,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs([]);
     setIsDemoMode(false);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-clean-slate', 'true');
       localStorage.setItem('zabay-demo-mode', 'false');
       localStorage.removeItem('zabay_custom_personnel');
     }
@@ -366,7 +590,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createEvent = async (data: Partial<ZabayEvent>): Promise<ZabayEvent> => {
     if (!isDemoMode) {
-      if (!isLiveBackend) throw new Error('PostgreSQL is unavailable. Connect the database or choose Sample Data mode.');
+      if (!isLiveBackend) throw new Error('Live server is unavailable. Please check your connection or continue in local mode.');
       const response = await api.events.create({
         ...data,
         organizer_id: undefined,
@@ -683,22 +907,144 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: taskId,
+      change_summary: `Modified operational task details (${Object.keys(updates).join(', ')})`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
+  const deleteTask = (taskId: string) => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'SCHEDULE_REBALANCED',
+      entity_type: 'task',
+      entity_id: taskId,
+      change_summary: `Removed operational task`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+  };
+
   const updateTaskStatus = (taskId: string, status: TaskStatus) => {
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status } : t))
     );
   };
 
+  const propagateCommitteeRoles = (newRoles: EventCommitteeRoleMap, preserveOverrides: boolean = true) => {
+    setCommitteeRoles(newRoles);
+
+    const roleMapping: Record<string, { name: string; title: string }> = {
+      letters: { name: newRoles.letters_head || '', title: 'Letters Committee Head' },
+      finance: { name: newRoles.finance_head || '', title: 'Finance Head' },
+      logistics: { name: newRoles.logistics_head || '', title: 'Logistics Head' },
+      documentation: { name: newRoles.documentation_head || '', title: 'Documentation Head' },
+      publicity: { name: newRoles.publicity_head || '', title: 'Publicity Head' },
+      program: { name: newRoles.program_head || '', title: 'Program Head' },
+      secretary: { name: newRoles.secretary || '', title: 'Secretary' },
+    };
+
+    let updatedCount = 0;
+
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => {
+        const comm = task.committee ? String(task.committee).toLowerCase() : '';
+        const mapped = roleMapping[comm];
+
+        // If preserving manual overrides and this task already has an assigned owner, keep it
+        if (preserveOverrides && task.personnel_assignments && task.personnel_assignments.length > 0) {
+          return task;
+        }
+
+        if (mapped && mapped.name.trim()) {
+          updatedCount++;
+          return {
+            ...task,
+            personnel_assignments: [
+              {
+                personnel_id: `per-${mapped.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                personnel_name: mapped.name.trim(),
+                role: mapped.title,
+              },
+            ],
+          };
+        } else if (mapped && !mapped.name.trim()) {
+          return {
+            ...task,
+            personnel_assignments: [],
+          };
+        }
+
+        return task;
+      })
+    );
+
+    const newLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'ROLE_PROPAGATED' as any,
+      entity_type: 'task',
+      entity_id: 'all',
+      change_summary: `Propagated committee role assignments across relevant event tasks.`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [newLog, ...prev]);
+
+    return { updatedCount };
+  };
+
   const loadTaskTemplate = (kitId: string) => {
     const kit = mockWorkflowKits.find((k) => k.id === kitId);
     if (!kit) return;
 
-    const newTasks: Task[] = kit.tasks.map((t, idx) => ({
-      ...t,
-      id: `task-${Date.now()}-${idx + 1}`,
-      event_id: selectedEvent ? selectedEvent.id : 'evt-draft',
-      downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
-    }));
+    const roleMapping: Record<string, { name: string; title: string }> = {
+      letters: { name: committeeRoles.letters_head || '', title: 'Letters Committee Head' },
+      finance: { name: committeeRoles.finance_head || '', title: 'Finance Head' },
+      logistics: { name: committeeRoles.logistics_head || '', title: 'Logistics Head' },
+      documentation: { name: committeeRoles.documentation_head || '', title: 'Documentation Head' },
+      publicity: { name: committeeRoles.publicity_head || '', title: 'Publicity Head' },
+      program: { name: committeeRoles.program_head || '', title: 'Program Head' },
+      secretary: { name: committeeRoles.secretary || '', title: 'Secretary' },
+    };
+
+    const newTasks: Task[] = kit.tasks.map((t, idx) => {
+      const comm = t.committee ? String(t.committee).toLowerCase() : '';
+      const mapped = roleMapping[comm];
+      const initialAssignments = (mapped && mapped.name.trim())
+        ? [
+            {
+              personnel_id: `per-${mapped.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+              personnel_name: mapped.name.trim(),
+              role: mapped.title,
+            },
+          ]
+        : [];
+
+      return {
+        ...t,
+        id: `task-${Date.now()}-${idx + 1}`,
+        event_id: selectedEvent ? selectedEvent.id : 'evt-draft',
+        status: 'todo' as TaskStatus, // ALL generated tasks strictly in To Do state!
+        personnel_assignments: initialAssignments,
+        downstream_impact_count: kit.tasks.filter((other) => other.dependencies.includes(t.title)).length,
+      };
+    });
 
     setTasks(newTasks);
 
@@ -709,20 +1055,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'SCHEDULE_REBALANCED',
       entity_type: 'task',
       entity_id: 'all',
-      change_summary: `Loaded 1-Click Workflow Kit: "${kit.name}" with ${newTasks.length} pre-configured tasks & dependencies.`,
+      change_summary: `Loaded 1-Click Workflow Kit: "${kit.name}" with ${newTasks.length} tasks initialized in To Do state.`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [newLog, ...prev]);
   };
 
-  // Check-In Attendee with Database Duplicate Prevention
-  const checkInAttendee = async (qrCode: string) => {
+  // Check-In Attendee with Database Duplicate Prevention & Wrong-Event Enforcement
+  const checkInAttendee = async (qrCode: string, targetEventId?: string) => {
+    const expectedEventId = targetEventId || selectedEvent?.id;
+
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No attendee was checked in.' };
-      const response = await api.attendees.checkIn(qrCode);
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No attendee was checked in.' };
+      const response = await api.attendees.checkIn(qrCode, expectedEventId);
       if (!response.success || !response.data) {
         if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN', message: response.error || 'Check-in failed.' };
+        return {
+          success: false,
+          isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN',
+          isWrongEvent: (response as any).isWrongEvent || response.code === 'WRONG_EVENT',
+          message: response.error || 'Check-in failed.',
+        };
       }
       const known = registrations.find((registration) => registration.id === response.data?.id);
       const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
@@ -732,6 +1085,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         : [checkedIn, ...previous]);
       return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
     }
+
     const reg = registrations.find(
       (r) => r.qr_pass_code.toUpperCase() === qrCode.trim().toUpperCase()
     );
@@ -739,12 +1093,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!reg) {
       return {
         success: false,
-        message: 'Invalid sample QR pass code.',
+        message: 'Invalid QR pass code: No registration record found in database.',
+      };
+    }
+
+    // Wrong-Event Validation: Pass must belong to the active gate event
+    if (expectedEventId && reg.event_id !== expectedEventId) {
+      const ticketEvent = events.find((e) => e.id === reg.event_id);
+      const currentEvent = events.find((e) => e.id === expectedEventId) || selectedEvent;
+      const ticketTitle = reg.event_title || ticketEvent?.title || reg.event_id;
+      const currentTitle = currentEvent?.title || expectedEventId;
+      return {
+        success: false,
+        isWrongEvent: true,
+        registration: reg,
+        message: `WRONG EVENT PASS: This ticket was issued for "${ticketTitle}", NOT for "${currentTitle}". Turnstile admission rejected!`,
       };
     }
 
     if (reg.status === 'cancelled') {
-      return { success: false, message: 'This sample registration was cancelled.' };
+      return { success: false, message: 'This registration was cancelled.' };
     }
 
     if (reg.status === 'checked_in') {
@@ -768,7 +1136,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       action: 'CHECK_IN',
       entity_type: 'registration',
       entity_id: reg.id,
-      change_summary: `Sample check-in for ${reg.attendee_name} (${reg.ticket_type}).`,
+      change_summary: `Gate turnstile checked in ${reg.attendee_name} (${reg.ticket_type}) for ${reg.event_title}.`,
       created_at: new Date().toISOString(),
     };
     setAuditLogs((prev) => [checkInLog, ...prev]);
@@ -797,11 +1165,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const event = events.find((e) => e.id === eventId) || selectedEvent;
 
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No booking was made.' };
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No booking was made.' };
       const savedEvent = await api.events.getById(eventId);
       if (!savedEvent.success || !savedEvent.data?.id) {
         if (savedEvent.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'PostgreSQL is unavailable. No booking was made.' : 'Select a saved event before booking.' };
+        return { success: false, message: savedEvent.code === 'NETWORK_ERROR' ? 'Server is currently offline. No booking was made.' : 'Select a saved event before booking.' };
       }
       const apiRes = await api.venues.book(venueId, {
         event_id: eventId,
@@ -870,6 +1238,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   };
 
+  const addVenue = async (venueData: Omit<Venue, 'id'>): Promise<Venue> => {
+    let newVenue: Venue;
+
+    if (!isDemoMode && isLiveBackend) {
+      try {
+        const res = await api.venues.create(venueData);
+        if (res.success && res.data) {
+          newVenue = adaptVenue(res.data);
+        } else {
+          const newId = `ven-${Date.now().toString(36)}`;
+          newVenue = {
+            ...venueData,
+            id: newId,
+          };
+        }
+      } catch {
+        const newId = `ven-${Date.now().toString(36)}`;
+        newVenue = {
+          ...venueData,
+          id: newId,
+        };
+      }
+    } else {
+      const newId = `ven-${Date.now().toString(36)}`;
+      newVenue = {
+        ...venueData,
+        id: newId,
+      };
+    }
+
+    setVenues((prev) => [newVenue, ...prev]);
+
+    const auditLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      action: 'VENUE_CHANGE',
+      entity_type: 'venue',
+      entity_id: newVenue.id,
+      change_summary: `Registered facility: "${newVenue.name}" in ${newVenue.city} (Capacity: ${newVenue.capacity.toLocaleString()}, Rate: ₱${newVenue.hourly_rate.toLocaleString()}/hr).`,
+      created_at: new Date().toISOString(),
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+
+    return newVenue;
+  };
+
+
   // Register for an event and retain the returned QR pass in this workspace.
   const registerForEvent = async (
     eventId: string,
@@ -883,7 +1299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'PostgreSQL is unavailable. No registration was saved.' };
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No registration was saved.' };
       const response = await api.attendees.register({
         event_id: eventId,
         attendee_name: attendeeName,
@@ -996,6 +1412,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDemoMode,
       loadDemoData,
       clearToCleanSlate,
+      isDevModeUnlocked,
+      unlockedDevCode,
+      unlockDevMode,
+      lockDevMode,
+      loadRole2DemoData,
       isLiveBackend,
       backendHealth,
       refreshBackendStatus,
@@ -1008,6 +1429,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedEvent,
       setSelectedEvent,
       venues,
+      addVenue,
       venueBookings,
       resources,
       personnel,
@@ -1021,8 +1443,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       applyTaskDelay,
       resetTasksToDefault,
       addTask,
+      updateTask,
+      deleteTask,
       updateTaskStatus,
       loadTaskTemplate,
+      committeeRoles,
+      setCommitteeRoles,
+      propagateCommitteeRoles,
       checkInAttendee,
       bookVenue,
       registerForEvent,
@@ -1038,8 +1465,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentUser,
       currentRole,
       activeStaffId,
+      committeeRoles,
       theme,
       isDemoMode,
+      isDevModeUnlocked,
+      unlockedDevCode,
       isLiveBackend,
       backendHealth,
       notifications,

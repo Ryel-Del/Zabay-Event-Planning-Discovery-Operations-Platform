@@ -21,7 +21,7 @@ export const TaskGanttView: React.FC = () => {
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">No Scheduled Tasks in Workspace</h2>
           <p className="text-xs text-stone-500 max-w-md mx-auto">
-            The Gantt timeline visualizes task durations, setup windows, and finish-to-start sequences. Add tasks in the Kanban board or load the Bohol sample plan.
+            The schedule timeline visualizes task durations, setup windows, and activity sequences. Add tasks in the Kanban board or load the Bohol sample plan.
           </p>
         </div>
         <button
@@ -56,10 +56,10 @@ export const TaskGanttView: React.FC = () => {
         <div>
           <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
             <CalendarRange className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
-            Operational Gantt Timeline & Finish-to-Start DAG
+            Operational Schedule Timeline & Activity Flow
           </h2>
           <p className="text-xs text-stone-500">
-            Interactive horizontal schedule showing task durations, sequencing, and overlap feasibility.
+            Interactive schedule showing task durations, sequencing, and overlap feasibility.
           </p>
         </div>
 
@@ -201,7 +201,7 @@ export const TaskGanttView: React.FC = () => {
 
           {/* Predecessors */}
           <div className="space-y-1 text-xs pt-2 border-t border-stone-200/80 dark:border-stone-800/80">
-            <span className="text-stone-500 font-semibold">Finish-to-Start Predecessors:</span>
+            <span className="text-stone-500 font-semibold">Prerequisite Tasks:</span>
             <p className="text-[11px] text-stone-600 dark:text-stone-400 font-mono">
               {selectedTask.dependencies.length > 0 ? selectedTask.dependencies.join(', ') : 'None (Independent)'}
             </p>

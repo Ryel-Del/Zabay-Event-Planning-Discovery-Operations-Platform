@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
+import { canPersonnelScanTickets } from '../../types';
 
 export const PersonnelPortal: React.FC = () => {
   const {
@@ -32,20 +33,28 @@ export const PersonnelPortal: React.FC = () => {
     notifications,
     activeStaffId,
     exitStaffPreview,
+    isDevModeUnlocked,
   } = useApp();
 
-  // Find staff member by activeStaffId or match by email/name; default to Carlos Mendoza (per-3)
-  const defaultPersonnel =
-    (activeStaffId ? personnel.find((p) => p.id === activeStaffId) : null) ||
-    personnel.find(
-      (p) =>
-        p.email === currentUser.email ||
-        p.name.toLowerCase() === currentUser.name.toLowerCase() ||
-        p.name.includes('Carlos')
-    ) || personnel[0];
+  // In normal mode, identify the logged-in staff member; in dev mode allow selecting another personnel
+  const loggedInStaffPersonnel = personnel.find(
+    (p) =>
+      p.email === currentUser.email ||
+      p.name.toLowerCase() === currentUser.name.toLowerCase()
+  ) || {
+    id: currentUser.id,
+    name: currentUser.name,
+    role: 'Event Coordinator',
+    phone: currentUser.phone || '+63 (917) 389-1029',
+    email: currentUser.email,
+    hourly_rate: 0,
+    skills: ['Event Operations', 'Gate Access', 'Logistics'],
+    is_available: true,
+    can_scan_tickets: true,
+  };
 
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>(
-    defaultPersonnel ? defaultPersonnel.id : 'all'
+    activeStaffId || 'current'
   );
   const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'venue_contacts'>('my_tasks');
   const [searchRunOfShow, setSearchRunOfShow] = useState('');
@@ -58,23 +67,42 @@ export const PersonnelPortal: React.FC = () => {
     }
   }, [activeStaffId]);
 
-  const currentPerson = personnel.find((p) => p.id === selectedPersonnelId) || defaultPersonnel;
+  const isSupervisorMode = isDevModeUnlocked && selectedPersonnelId === 'all';
+  const currentPerson = isDevModeUnlocked && selectedPersonnelId !== 'all' && selectedPersonnelId !== 'current'
+    ? (personnel.find((p) => p.id === selectedPersonnelId) || loggedInStaffPersonnel)
+    : isSupervisorMode
+    ? null
+    : loggedInStaffPersonnel;
 
-  // Active venue details
+  const hasScannerPermission = isSupervisorMode || canPersonnelScanTickets(currentPerson);
+
+  // Active venue details (with robust fallback for empty workspace or clean slate)
   const activeVenue =
     venues.find(
       (v) =>
         v.id === selectedEvent?.venue_id ||
         v.name.toLowerCase().includes('wisdom') ||
         v.id === 'ven-3'
-    ) || venues[0];
+    ) || venues[0] || {
+      id: 'ven-default',
+      name: selectedEvent?.hall_name || 'Designated Event Venue',
+      address: 'Tagbilaran City, Bohol',
+      city: 'Tagbilaran City',
+      operating_hours: { open: '08:00', close: '22:00' },
+      contact_phone: '+63 (38) 411-2000',
+      facilities: ['Main Hall', 'Staff Staging Area', 'First Aid Station'],
+    };
 
   // Tasks assigned to this specific personnel member
-  const myTasks = tasks.filter((t) =>
-    selectedPersonnelId === 'all'
-      ? true
-      : t.personnel_assignments?.some((pa) => pa.personnel_id === selectedPersonnelId)
-  );
+  const myTasks = tasks.filter((t) => {
+    if (isSupervisorMode) return true;
+    if (!currentPerson) return false;
+    return t.personnel_assignments?.some(
+      (pa) =>
+        pa.personnel_id === currentPerson.id ||
+        pa.personnel_name.toLowerCase() === currentPerson.name.toLowerCase()
+    );
+  });
 
   // Calculate shift statistics
   const totalMyTasks = myTasks.length;
@@ -87,7 +115,7 @@ export const PersonnelPortal: React.FC = () => {
     .map((t) => ({ start: t.start_time, end: t.end_time }));
 
   const earliestStart = shiftTimes.length > 0 ? shiftTimes[0].start : '08:00';
-  const latestEnd = shiftTimes.length > 0 ? shiftTimes[shiftTimes.length - 1].end : '17:00';
+  const latestEnd = shiftTimes.length > 0 ? shiftTimes[shiftTimes.length - 1].end : '18:00';
 
   // Filter full run-of-show
   const filteredAllTasks = tasks.filter(
@@ -99,37 +127,53 @@ export const PersonnelPortal: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Organizer Staff-Preview Mode Banner */}
-      <div className="bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#3E6CB5] text-white flex items-center justify-center shrink-0">
-            <Eye className="w-5 h-5" />
+      {/* Discreet Organizer Studio Return Bar (Only visible when navigated via Studio preview) */}
+      {activeStaffId && (
+        <div className="bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] px-4 py-2.5 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-[#244A85] dark:text-[#8BB0E8]">
+            <Eye className="w-4 h-4 shrink-0" />
+            <span className="font-semibold">Viewing Staff Portal in Preview Mode</span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#244A85] dark:text-[#8BB0E8]">
-                Staff Shift Preview Mode
-              </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#171E2B] text-[#244A85] dark:text-[#8BB0E8] font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
-                Active Persona: {currentPerson?.name || 'Field Crew'}
-              </span>
-            </div>
-            <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
-              You are testing how staff members view assigned tasks, duty checklists, and camera gate check-in.
-            </p>
+          <button
+            onClick={exitStaffPreview}
+            className="px-3 py-1.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Return to Organizer Studio</span>
+          </button>
+        </div>
+      )}
+
+      {/* Developer Mode Crew Switcher (Hidden in normal mode; only accessible when dev mode unlocked) */}
+      {isDevModeUnlocked && (
+        <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in">
+          <div className="flex items-center gap-2 text-indigo-900 dark:text-indigo-200">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0" />
+            <span className="font-bold">Dev Testbed: Staff Emulator</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400">
+              Test staff clearances, task views, and QR turnstile check-in
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Switch Persona:</span>
+            <select
+              value={selectedPersonnelId}
+              onChange={(e) => setSelectedPersonnelId(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-[#111722] text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+            >
+              <option value="current">👤 Current User ({currentUser.name})</option>
+              <option value="all">👥 All Crew (Supervisor Run-of-Show)</option>
+              {personnel.map((p) => (
+                <option key={p.id} value={p.id}>
+                  👤 {p.name} ({p.role}) {canPersonnelScanTickets(p) ? '• 🎟️ Scanner' : ''}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+      )}
 
-        <button
-          onClick={exitStaffPreview}
-          className="px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-2 shadow-xs cursor-pointer transition-colors shrink-0"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Return to Organizer Studio</span>
-        </button>
-      </div>
-
-      {/* Real-Time Operational Change Alerts */}
+      {/* Real-Time Operational Alerts */}
       {notifications.length > 0 && (
         <div className="bg-amber-500 text-white p-4 rounded-2xl flex items-center justify-between gap-3 shadow-xs animate-in slide-in-from-top-1">
           <div className="flex items-center gap-3">
@@ -143,54 +187,54 @@ export const PersonnelPortal: React.FC = () => {
         </div>
       )}
 
-      {/* 1. Active Shift Status Banner & Gate Scanner Button */}
+      {/* 1. Active Shift Status & Gate Scanner Trigger */}
       <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center shrink-0">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                Staff Shift Active • On Duty
+                Event Staff On Duty
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono">
-                {currentPerson ? `${currentPerson.name} (${currentPerson.role})` : 'Master Crew View'}
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-semibold">
+                {currentPerson ? `${currentPerson.name} • ${currentPerson.role}` : 'All Crew Supervisor Overview'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Welcome to your personal shift portal. Mark assigned duties as you complete them and scan attendee tickets at the gate.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Active Workspace: <strong className="text-slate-800 dark:text-slate-200">{selectedEvent?.title || 'Active Event'}</strong> at {activeVenue.name}
             </p>
           </div>
         </div>
 
-        {/* Action Controls: Gate Scanner + Supervisor Switcher */}
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <button
-            onClick={() => setIsScannerOpen(true)}
-            className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <QrCode className="w-4 h-4 text-[#D4E4F7]" />
-            <span>Open Gate Ticket Scanner</span>
-          </button>
-
-          {/* Supervisor / Testing Mode Switcher */}
-          <div className="flex items-center gap-1.5 bg-[#F8FAFD] dark:bg-[#111722] p-1 rounded-xl border border-slate-200 dark:border-slate-800">
-            <span className="text-[10px] text-slate-400 px-2 font-medium">Switch Crew:</span>
-            <select
-              value={selectedPersonnelId}
-              onChange={(e) => setSelectedPersonnelId(e.target.value)}
-              className="px-2 py-1.5 rounded-lg border-0 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+        {/* Action Controls: 1-Tap Gate Scanner */}
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
+          {hasScannerPermission ? (
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              title="Authorized Gate Check-in Operator"
             >
-              <option value="all">👥 All Crew (Supervisor)</option>
-              {personnel.map((p) => (
-                <option key={p.id} value={p.id}>
-                  👤 {p.name} ({p.role})
-                </option>
-              ))}
-            </select>
-          </div>
+              <QrCode className="w-4 h-4 text-[#D4E4F7]" />
+              <span>Launch Gate Ticket Scanner</span>
+              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/20 text-white font-mono font-bold">
+                Clearance
+              </span>
+            </button>
+          ) : (
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 text-xs select-none"
+              title="Ticket scanner access is restricted to Gate Security and Registration personnel"
+            >
+              <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
+              <div>
+                <span className="font-semibold text-slate-700 dark:text-slate-300 block text-[11px]">Scanner Restricted</span>
+                <span className="text-[10px] block text-slate-400">Run-of-Show Duties Focus</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -232,10 +276,11 @@ export const PersonnelPortal: React.FC = () => {
             <div className="flex items-center gap-4 bg-[#F8FAFD] dark:bg-[#111722] p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 text-xs">
               <div>
                 <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                  Compensation Rate
+                  Gate Clearance
                 </span>
-                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">
-                  ₱{currentPerson.hourly_rate.toLocaleString()}/hr
+                <p className="font-bold text-[#3E6CB5] dark:text-[#7EA6E0] text-sm flex items-center gap-1">
+                  <QrCode className="w-3.5 h-3.5" />
+                  {hasScannerPermission ? 'Scanner Active' : 'Run-of-Show'}
                 </p>
               </div>
               <div className="w-px h-7 bg-slate-200 dark:bg-slate-700" />
@@ -494,7 +539,7 @@ export const PersonnelPortal: React.FC = () => {
                   No Active Shift Tasks Assigned
                 </h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  You currently have no tasks assigned for this event. Check with the lead organizer or select another staff member above.
+                  You currently have no specific duties assigned to your account for this event. You can monitor the schedule in the <strong>Full Event Run-of-Show</strong> tab or coordinate with the Lead Organizer.
                 </p>
               </div>
             )}
@@ -707,6 +752,7 @@ export const PersonnelPortal: React.FC = () => {
       <QRCheckInScanner
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
+        eventId={selectedEvent?.id}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import {
   ExternalLink,
   CheckSquare,
   Calendar,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -24,6 +25,8 @@ interface AppSidebarProps {
   onSelectView: (view: any) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  isMobileDrawer?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -31,6 +34,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   onSelectView,
   isCollapsed,
   onToggleCollapse,
+  isMobileDrawer,
+  onCloseMobile,
 }) => {
   const { currentRole, setCurrentRole, tasks, registrations, personnel } = useApp();
 
@@ -123,14 +128,14 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   return (
     <aside
-      className={`bg-white dark:bg-[#1E1C19] border-r border-stone-200/80 dark:border-stone-800/80 flex flex-col justify-between shrink-0 transition-all duration-200 z-30 ${
-        isCollapsed ? 'w-16' : 'w-64'
+      className={`bg-white dark:bg-[#1E1C19] border-r border-stone-200/80 dark:border-stone-800/80 flex flex-col justify-between shrink-0 transition-all duration-200 z-20 ${
+        isMobileDrawer ? 'w-full h-full border-r-0' : isCollapsed ? 'w-16' : 'w-64'
       }`}
     >
       {/* Top Header in Sidebar */}
       <div>
         <div className="h-16 px-4 flex items-center justify-between border-b border-stone-200/80 dark:border-stone-800/80">
-          {!isCollapsed && (
+          {(!isCollapsed || isMobileDrawer) && (
             <div className="flex items-center gap-2.5">
               <div className="h-8 w-8 rounded-lg bg-stone-900 dark:bg-stone-100 flex items-center justify-center shadow-sm">
                 <CalendarDays className="w-4 h-4 text-stone-100 dark:text-stone-900" />
@@ -146,19 +151,29 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             </div>
           )}
 
-          <button
-            onClick={onToggleCollapse}
-            className={`p-1.5 rounded-lg text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors ${
-              isCollapsed ? 'mx-auto' : ''
-            }`}
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
+          {isMobileDrawer ? (
+            <button
+              onClick={onCloseMobile}
+              className="p-1.5 rounded-lg text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+              title="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={onToggleCollapse}
+              className={`p-1.5 rounded-lg text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors ${
+                isCollapsed ? 'mx-auto' : ''
+              }`}
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+          )}
         </div>
 
         {/* Section Label */}
-        {!isCollapsed && (
+        {(!isCollapsed || isMobileDrawer) && (
           <div className="px-4 pt-5 pb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">
             {currentRole === 'venue_manager' ? 'Venue Operations' : 'Planning & Operations'}
           </div>
@@ -171,19 +186,22 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectView(item.id)}
+                onClick={() => {
+                  onSelectView(item.id);
+                  if (onCloseMobile) onCloseMobile();
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
                   isActive
                     ? 'bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-bold border border-[#C8DCF7] dark:border-[#2D4160] shadow-xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                } ${isCollapsed ? 'justify-center px-2' : ''}`}
+                } ${isCollapsed && !isMobileDrawer ? 'justify-center px-2' : ''}`}
                 title={item.label}
               >
                 <span className={isActive ? 'text-[#3E6CB5] dark:text-[#7EA6E0]' : 'text-slate-400'}>
                   {item.icon}
                 </span>
 
-                {!isCollapsed && (
+                {(!isCollapsed || isMobileDrawer) && (
                   <div className="flex-1 flex items-center justify-between text-left truncate">
                     <span className="truncate">{item.label}</span>
                     {item.badge && (
@@ -219,16 +237,16 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
         {!isCollapsed ? (
           <div className="bg-[#FAF9F5] dark:bg-[#171513] p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-800/80 text-[11px] space-y-1">
             <div className="flex items-center justify-between font-medium">
-              <span className="text-stone-500">Database Engine</span>
+              <span className="text-stone-500">System Status</span>
               <span className="text-[#5F7D5B] dark:text-[#97B394] font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#5F7D5B] dark:bg-[#97B394] animate-pulse" />
-                Active
+                Live Sync
               </span>
             </div>
-            <p className="text-[10px] text-stone-400 font-mono">PostgreSQL 16 • 20 Tables</p>
+            <p className="text-[10px] text-stone-400">All services operational</p>
           </div>
         ) : (
-          <div className="flex justify-center" title="PostgreSQL Database Connected">
+          <div className="flex justify-center" title="System Online & Synchronized">
             <span className="w-2.5 h-2.5 rounded-full bg-[#5F7D5B] dark:bg-[#97B394]" />
           </div>
         )}

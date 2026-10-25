@@ -18,8 +18,8 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({ isOpen, onClose 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-200 dark:border-stone-800 rounded-2xl w-full max-w-2xl max-h-[85vh] p-6 shadow-2xl relative flex flex-col transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-stone-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#FAF9F5] dark:bg-[#1E1C19] border border-stone-200 dark:border-stone-800 rounded-2xl w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] p-4 sm:p-6 shadow-2xl relative flex flex-col transition-colors">
         {/* Close Button */}
         <button
           onClick={onClose}

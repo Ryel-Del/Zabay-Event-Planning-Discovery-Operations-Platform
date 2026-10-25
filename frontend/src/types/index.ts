@@ -10,6 +10,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  roles?: UserRole[];
   phone?: string;
   avatar: string;
   bio?: string;
@@ -144,11 +145,35 @@ export interface Personnel {
   email: string;
   hourly_rate: number;
   is_available: boolean;
+  can_scan_tickets?: boolean;
 }
 
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'completed' | 'blocked';
+/**
+ * Determines whether an event staff member has gate turnstile scanner clearance.
+ * In real-world event operations, ticket scanning is restricted to Security,
+ * Registration desk, and Event Coordinator staff, while AV technicians and referees
+ * only receive task and run-of-show access.
+ */
+export const canPersonnelScanTickets = (person?: Personnel | null): boolean => {
+  if (!person) return true; // Supervisor / All Crew view
+  if (typeof person.can_scan_tickets === 'boolean') {
+    return person.can_scan_tickets;
+  }
+  return ['Security Lead', 'Registration Staff', 'Event Coordinator'].includes(person.role);
+};
+
+export type TaskStatus = 'todo' | 'in_progress' | 'for_review' | 'completed' | 'blocked' | 'backlog';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TaskTrack = 'venue_logistics' | 'technical_av' | 'marketing_tickets' | 'day_of_ops';
+export type TaskCommittee =
+  | 'letters'
+  | 'finance'
+  | 'logistics'
+  | 'documentation'
+  | 'publicity'
+  | 'program'
+  | 'security'
+  | 'general';
 
 export interface TaskAssignment {
   personnel_id: string;
@@ -173,12 +198,27 @@ export interface Task {
   end_time: string;
   due_date?: string;
   track?: TaskTrack;
+  committee?: TaskCommittee | string;
+  milestone?: string;
+  category?: string;
+  target_role?: string;
   dependencies: string[]; // finish-to-start predecessor task IDs
   personnel_assignments: TaskAssignment[];
   resource_assignments: ResourceAssignment[];
   has_conflict?: boolean;
   conflict_reason?: string;
   downstream_impact_count?: number;
+}
+
+export interface EventCommitteeRoleMap {
+  event_head?: string;
+  secretary?: string;
+  letters_head?: string;
+  finance_head?: string;
+  logistics_head?: string;
+  documentation_head?: string;
+  publicity_head?: string;
+  program_head?: string;
 }
 
 export interface Registration {
@@ -249,6 +289,8 @@ export interface WorkflowTemplateKit {
   category: string;
   icon: string;
   task_count: number;
+  milestones?: string[];
+  tags?: string[];
   tasks: Omit<Task, 'id' | 'event_id'>[];
 }
 

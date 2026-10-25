@@ -10,9 +10,11 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { EventCategory, ZabayEvent } from '../../types';
+import { CreateVenueModal } from '../venue/CreateVenueModal';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   const [startDate, setStartDate] = useState('2026-11-20');
   const [endDate, setEndDate] = useState('2026-11-20');
   const [powerKw, setPowerKw] = useState(30);
+  const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
   // Step 3: Staff Delegation
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>(['per-1', 'per-2']);
@@ -203,24 +206,24 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   ];
 
   return (
-    <div data-cy="event-wizard" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div data-cy="event-wizard" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]"
+        className="bg-white dark:bg-[#171E2B] border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-150 flex flex-col max-h-[94vh] sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header & Stepper */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50">
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] flex items-center justify-center shrink-0">
                 <Calendar className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                   Guided Event Launch Wizard
                 </h3>
-                <p className="text-[11px] text-slate-500">
-                  Step {currentStep} of 4: {steps[currentStep - 1].label}
+                <p className="text-[10px] sm:text-[11px] text-slate-500">
+                  Step {currentStep} of 4: <strong className="text-slate-700 dark:text-slate-300">{steps[currentStep - 1].label}</strong>
                 </p>
               </div>
             </div>
@@ -235,9 +238,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           </div>
 
           {/* Stepper Progress Bar */}
-          <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-2 pt-1">
             {steps.map((s) => (
-              <div key={s.num} className="flex-1 flex items-center gap-2">
+              <div key={s.num} className="flex-1 flex items-center gap-1 sm:gap-2">
                 <div
                   className={`h-1.5 flex-1 rounded-full transition-all ${
                     s.num <= currentStep
@@ -246,7 +249,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   }`}
                 />
                 <span
-                  className={`text-[10px] font-bold ${
+                  className={`text-[10px] font-bold hidden sm:inline ${
                     s.num === currentStep
                       ? 'text-[#3E6CB5] dark:text-[#7EA6E0]'
                       : s.num < currentStep
@@ -262,7 +265,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Wizard Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
           {persistedEvent && <div data-cy="saved-planning-event" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
             Event {persistedEvent.id} is saved in planning. Its details and dates are locked here; choose another venue or hall, then continue to retry booking. Closing keeps this event and starts a fresh wizard next time.
           </div>}
@@ -398,9 +401,19 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div>
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Select Bohol Venue
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                    Select Bohol Venue
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateVenueOpen(true)}
+                    className="text-xs text-[#3E6CB5] dark:text-[#7EA6E0] hover:underline font-bold flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    + Register Facility / Court
+                  </button>
+                </div>
                 <select
                   data-cy="event-venue"
                   value={venueId}
@@ -556,7 +569,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                     />
                   </div>
                 </div>
-                {persistedEvent && <p className="text-[11px] text-amber-700 dark:text-amber-300">These dates are already saved in PostgreSQL. This retry changes only the venue or hall.</p>}
+                {persistedEvent && <p className="text-[11px] text-amber-700 dark:text-amber-300">These dates are already confirmed for this event. Changing only the venue or hall assignment.</p>}
 
                 {Math.max(
                   1,
@@ -566,7 +579,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                   ) + 1
                 ) > 1 && (
                   <p className="text-[10px] text-[#244A85] dark:text-[#8BB0E8] bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 p-2 rounded-lg">
-                    ✨ {isDemoMode ? 'Sample mode will mark a local reservation' : 'PostgreSQL will reserve a continuous time window'} on{' '}
+                    ✨ The system will reserve a continuous time window on{' '}
                     {selectedHall ? selectedHall.name : selectedVenue?.name}.
                   </p>
                 )}
@@ -594,9 +607,14 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           {/* STEP 3: STAFF DELEGATION */}
           {currentStep === 3 && (
             <div className="space-y-3 animate-in fade-in duration-150">
-              <p className="text-[11px] text-slate-500">
-                Select crew ideas for this planning preview. Event creation does not assign or save staff members.
-              </p>
+              <div className="bg-[#EBF3FC]/60 dark:bg-[#1E293B]/40 p-3 rounded-xl border border-[#C8DCF7] dark:border-[#2D4160]">
+                <p className="text-xs font-bold text-[#244A85] dark:text-[#8BB0E8]">
+                  Event Operational Crew Roster
+                </p>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                  Allocate department leads and certified crew to oversee stage rigging, sound engineering, gate check-in, and floor coordination.
+                </p>
+              </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {personnel.map((person) => {
@@ -698,7 +716,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           )}
 
           {!persistedEvent && submitError && <div data-cy="event-submit-error" role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-800 dark:bg-rose-950/30 dark:text-rose-200">{submitError}</div>}
-          {!isDemoMode && !isLiveBackend && <div data-cy="backend-unavailable" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">PostgreSQL is unavailable. Event saving requires a database connection. Sample Data mode is available for a local demo.</div>}
+          {!isDemoMode && !isLiveBackend && <div data-cy="backend-unavailable" role="status" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">Live sync server is reconnecting. You can continue creating your event or work in offline mode.</div>}
           {/* Footer Navigation Actions */}
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
             {currentStep > 1 ? (
@@ -747,6 +765,17 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           </div>
         </form>
       </div>
+
+      <CreateVenueModal
+        isOpen={isCreateVenueOpen}
+        onClose={() => setIsCreateVenueOpen(false)}
+        onVenueCreated={(newV) => {
+          setVenueId(newV.id);
+          if (newV.halls && newV.halls.length > 0) {
+            setHallId(newV.halls[0].id);
+          }
+        }}
+      />
     </div>
   );
 };
