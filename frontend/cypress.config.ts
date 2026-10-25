@@ -63,12 +63,24 @@ export default defineConfig({
           max_capacity: 100,
           ticket_price: 10,
         });
-        const registration = await post('/api/attendees/register', {
+        const account = await fetch(`${api}/api/auth/register`, {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ name: 'Cypress Camera Attendee', email: `camera-${randomUUID()}@example.test`, password: 'camera-test-secret' }),
+        });
+        if (!account.ok) throw new Error(`Camera fixture account: HTTP ${account.status}`);
+        const accountCsrf = (await account.json()).csrfToken;
+        const accountCookie = account.headers.get('set-cookie')?.split(';')[0] || '';
+        const registerResponse = await fetch(`${api}/api/attendees/register`, {
+          method: 'POST', headers: { 'content-type': 'application/json', cookie: accountCookie, 'x-csrf-token': accountCsrf },
+          body: JSON.stringify({
           event_id: event.id,
           attendee_name: 'Cypress Camera Attendee',
           attendee_email: `camera-${randomUUID()}@example.test`,
           ticket_type: 'General Admission',
+          }),
         });
+        if (!registerResponse.ok) throw new Error(`Camera fixture registration: HTTP ${registerResponse.status}`);
+        const registration = (await registerResponse.json()).data;
         cameraRegistration = { ...registration, event_title: event.title };
         writeQrVideo(videoPath, cameraRegistration.qr_pass_code);
       });
