@@ -98,11 +98,11 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#F1F5FB] dark:bg-[#111722] p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="grid grid-cols-2 sm:flex items-center gap-1.5 sm:gap-2 bg-[#F1F5FB] dark:bg-[#111722] p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <button
             onClick={() => setActiveTab('browse')}
             data-cy="browse-events"
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center ${
               activeTab === 'browse'
                 ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/60 dark:border-slate-700/60'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -113,7 +113,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           <button
             onClick={() => setActiveTab('passes')}
             data-cy="my-digital-passes"
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center ${
               activeTab === 'passes'
                 ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs border border-slate-200/60 dark:border-slate-700/60'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -142,47 +142,50 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
               />
             </div>
 
-            {/* Category Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-[#3E6CB5] text-white font-semibold shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            {/* Category Chips and Grid/Map Toggle Row */}
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              {/* Category Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 no-scrollbar flex-1 min-w-0">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0 ${
+                      selectedCategory === cat
+                        ? 'bg-[#3E6CB5] text-white font-semibold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
 
-            {/* Grid / Map Toggle */}
-            <div className="flex items-center bg-[#F1F5FB] dark:bg-[#111722] p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shrink-0">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-                  viewMode === 'grid'
-                    ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="Grid Cards View"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`p-1.5 rounded-lg text-xs font-medium cursor-pointer ${
-                  viewMode === 'map'
-                    ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-                }`}
-                title="OpenStreetMap Map View"
-              >
-                <Map className="w-4 h-4" />
-              </button>
+              {/* Grid / Map Toggle */}
+              <div className="flex items-center bg-[#F1F5FB] dark:bg-[#111722] p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 shrink-0">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg text-xs font-medium cursor-pointer ${
+                    viewMode === 'grid'
+                      ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="Grid Cards View"
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`p-1.5 rounded-lg text-xs font-medium cursor-pointer ${
+                    viewMode === 'map'
+                      ? 'bg-white dark:bg-[#1E293B] text-slate-900 dark:text-slate-100 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                  title="OpenStreetMap Map View"
+                >
+                  <Map className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 

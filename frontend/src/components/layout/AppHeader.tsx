@@ -137,18 +137,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Brand Logo & Site Name */}
         <div
           onClick={() => setCurrentRole('attendee')}
-          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group"
+          className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group shrink-0"
           title="Zabay - Go to Public Explore Feed"
         >
           <img
             src={zabayWordmark}
             alt="Zabay"
-            className="h-7 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden"
+            className="h-6 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform dark:hidden shrink-0"
           />
           <img
             src={zabayWordmarkWhite}
             alt="Zabay"
-            className="h-7 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block"
+            className="h-6 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block shrink-0"
           />
           {currentRole === 'organizer' && (
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
@@ -343,13 +343,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       {/* Right: Actions, Studio CTA & Account Menu */}
-      {/* Right: Actions, Studio CTA & Account Menu */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Creator / Host Studio CTA (When viewing the Public Feed) */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on tablet/desktop; mobile has bottom nav) */}
         {currentRole === 'attendee' && (
           <button
             onClick={() => setCurrentRole('organizer')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="hidden sm:flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
           >
             <Layers className="w-3.5 h-3.5 text-[#D4E4F7]" />
             <span>Organizer Studio</span>
@@ -360,10 +359,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {currentRole === 'staff' && (
           <button
             onClick={exitStaffPreview}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-[#D4E4F7]" />
-            <span>Back to Studio</span>
+            <span className="hidden xs:inline">Back to Studio</span>
           </button>
         )}
 
@@ -399,7 +398,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <div className="relative" ref={notifRef}>
           <button
             onClick={() => setIsNotifOpen(!isNotifOpen)}
-            className="relative p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+            className="relative p-1.5 sm:p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer shrink-0"
             title="Event Schedule & Broadcast Notifications"
           >
             <Bell className="w-4 h-4" />
@@ -470,17 +469,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         {/* Theme Toggle (Sun / Moon) */}
         <button
           onClick={toggleTheme}
-          className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+          className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer shrink-0"
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
           {isDark ? <Sun className="w-4 h-4 text-[#7EA6E0]" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
 
-        {/* Sign In CTA (Only shown when not signed in) */}
+        {/* Sign In CTA (Shown on tablet/desktop; on mobile, Sign In is already in the bottom nav bar) */}
         {currentUser.id === 'usr-guest' && (
           <button
             onClick={() => (onOpenAuth ? onOpenAuth() : setIsAuthModalOpen(true))}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] rounded-xl transition-all shadow-xs cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] rounded-xl transition-all shadow-xs cursor-pointer shrink-0"
             title="Sign In with Google or Email"
           >
             <Lock className="w-3.5 h-3.5" />
@@ -489,10 +488,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         )}
 
         {/* User Account & Workspace Dropdown Menu */}
-        <div className="relative" ref={menuRef}>
+        <div className="relative shrink-0" ref={menuRef}>
           <button
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-            className="flex items-center gap-2 p-1 pl-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+            className="flex items-center gap-1.5 sm:gap-2 p-1 pl-1.5 sm:pl-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
           >
             {currentUser.avatar ? (
               <img
