@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { requireEventCreator } from '../middleware/auth';
-import { getEvents, getEventById, createEvent, updateEvent, deleteEvent } from '../controllers/eventsController';
+import { getEvents, getEventById, createEvent, updateEvent, deleteEvent, getEventAnalytics } from '../controllers/eventsController';
 
 const router = Router();
 
 router.get('/', getEvents);
+router.get('/:id/analytics', getEventAnalytics);
 router.get('/:id', getEventById);
 router.post('/', requireEventCreator, createEvent);
 router.patch('/:id', requireEventCreator, updateEvent);

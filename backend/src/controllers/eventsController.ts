@@ -250,3 +250,124 @@ export async function deleteEvent(req: Request, res: Response, next: NextFunctio
     next(err);
   }
 }
+
+export async function getEventAnalytics(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+
+    const eventResult = await query(
+      `SELECT e.*, v.name AS venue_name, v.capacity AS venue_capacity, v.power_kw_capacity
+       FROM events e
+       LEFT JOIN venues v ON v.id = e.venue_id
+       WHERE e.id = $1`,
+      [id]
+    );
+
+    if (!eventResult.rows.length) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+    const event = eventResult.rows[0];
+
+    // Registrations by tier and revenue
+    const regResult = await query(
+      `SELECT 
+         ticket_type,
+         COUNT(*)::int AS tier_count,
+         COALESCE(SUM(amount_paid), 0)::numeric AS tier_revenue,
+         COUNT(*) FILTER (WHERE status = 'checked_in')::int AS tier_checked_in
+       FROM registrations
+       WHERE event_id = $1 AND status <> 'cancelled'
+       GROUP BY ticket_type`,
+      [id]
+    );
+
+    // Tasks & Readiness
+    const tasksResult = await query(
+      `SELECT 
+         COUNT(*)::int AS total_tasks,
+         COUNT(*) FILTER (WHERE status = 'completed')::int AS completed_tasks,
+         COUNT(*) FILTER (WHERE status = 'in_progress')::int AS in_progress_tasks,
+         COUNT(*) FILTER (WHERE status = 'blocked')::int AS blocked_tasks
+       FROM tasks
+       WHERE event_id = $1`,
+      [id]
+    );
+
+    // Hourly check-in flow from attendance_records (if available) or registrations
+    let hourlyFlowResult: { rows: any[] } = { rows: [] };
+    try {
+      hourlyFlowResult = await query(
+        `SELECT 
+           TO_CHAR(check_in_time, 'HH24:00') AS hour,
+           COUNT(*)::int AS arrivals
+         FROM attendance_records
+         WHERE event_id = $1
+         GROUP BY TO_CHAR(check_in_time, 'HH24:00')
+         ORDER BY hour`,
+        [id]
+      );
+    } catch {
+      hourlyFlowResult = { rows: [] };
+    }
+
+    let totalSold = 0;
+    let checkedInCount = 0;
+    let totalRevenue = 0;
+    const tiers: Array<{ name: string; count: number; value: number }> = [];
+
+    regResult.rows.forEach((row: any) => {
+      const count = Number(row.tier_count) || 0;
+      const revenue = Number(row.tier_revenue) || 0;
+      const checkedIn = Number(row.tier_checked_in) || 0;
+
+      totalSold += count;
+      totalRevenue += revenue;
+      checkedInCount += checkedIn;
+
+      tiers.push({
+        name: row.ticket_type || 'General Admission',
+        count,
+        value: revenue,
+      });
+    });
+
+    const tasksRow = tasksResult.rows[0] || {};
+    const totalTasks = Number(tasksRow.total_tasks) || 0;
+    const completedTasks = Number(tasksRow.completed_tasks) || 0;
+    const inProgressTasks = Number(tasksRow.in_progress_tasks) || 0;
+    const blockedTasks = Number(tasksRow.blocked_tasks) || 0;
+
+    const maxCapacity = Number(event.max_capacity) || 200;
+    const capacityPercent = maxCapacity > 0 ? Math.round((totalSold / maxCapacity) * 100) : 0;
+    const readinessPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    const attendanceRate = totalSold > 0 ? Math.round((checkedInCount / totalSold) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        event_id: event.id,
+        event_title: event.title,
+        ticket_price: Number(event.ticket_price) || 0,
+        currency: 'PHP',
+        max_capacity: maxCapacity,
+        expected_attendance: Number(event.expected_attendance) || 100,
+        tickets_sold: totalSold,
+        capacity_percent: capacityPercent,
+        gross_revenue: totalRevenue,
+        checked_in_count: checkedInCount,
+        attendance_rate: attendanceRate,
+        task_metrics: {
+          total_tasks: totalTasks,
+          completed_tasks: completedTasks,
+          in_progress_tasks: inProgressTasks,
+          blocked_tasks: blockedTasks,
+          readiness_percent: readinessPercent,
+        },
+        revenue_tiers: tiers,
+        hourly_arrivals: hourlyFlowResult.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}

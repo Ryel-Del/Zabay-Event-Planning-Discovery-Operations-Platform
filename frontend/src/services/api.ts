@@ -285,6 +285,8 @@ export const api = {
       request<{ message: string }>(`/api/events/${id}`, {
         method: 'DELETE',
       }),
+    getAnalytics: (id: string) =>
+      request<any>(`/api/events/${id}/analytics`),
   },
 
   // Task Operations
