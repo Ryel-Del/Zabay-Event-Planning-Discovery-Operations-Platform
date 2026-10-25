@@ -20,6 +20,7 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
   const tag = randomUUID();
   const ownerId = `usr-roster-${tag}`;
   const outsiderId = `usr-roster-other-${tag}`;
+  const attendeeId = `usr-roster-attendee-${tag}`;
   const eventId = `evt-roster-${tag}`;
   const otherId = `evt-roster-other-${tag}`;
   const salt = 'unique-roster-test-salt';
@@ -191,9 +192,24 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       assert.ok(response.body.data.registrations.some(row => row.id === cancelledId && row.status === 'cancelled'));
     });
 
+    await t.test('ordinary attendee wallet sessions cannot open organizer rosters', async () => {
+      const email = `attendee-roster-${tag}@example.test`;
+      await pool.query(
+        `INSERT INTO users (id, name, email, role, password_hash, password_salt)
+         VALUES ($1, 'Roster Wallet', $2, 'attendee', $3, $4)`,
+        [attendeeId, email, hash, salt]
+      );
+      const wallet = request.agent(app);
+      assert.equal((await wallet.post('/api/auth/user-login').send({ email, password })).status, 200);
+      const response = await wallet.get(path);
+      assert.equal(response.status, 403);
+      assert.equal(JSON.stringify(response.body).includes('Owned Attendee'), false);
+      assert.equal(JSON.stringify(response.body).includes('PASS-'), false);
+    });
+
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
-    await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
+    await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId, attendeeId]]);
     await pool.end();
   }
 });
