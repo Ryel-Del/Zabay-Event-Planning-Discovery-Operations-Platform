@@ -18,6 +18,7 @@ import api from '../../services/api';
 import { useApp } from '../../context/AppContext';
 import { mockUsers } from '../../mock/mockData';
 import type { User, UserRole } from '../../types';
+import { GoogleSignInModal } from './GoogleSignInModal';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -88,36 +89,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
   const handleGoogleSignIn = () => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    setTimeout(() => {
-      const googleUser: User = {
-        id: 'usr-att-1',
-        name: 'Sofia Ramos',
-        email: 'sofia.ramos@bisu.edu.ph',
-        role: 'attendee',
-        roles: ['attendee'],
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-        organization: 'Bohol Island State University (BISU)',
-        location: 'Tagbilaran City, Bohol',
-        bio: 'BISU student attendee participating in sports, academic conferences, and cultural summits.',
-      };
-      setCurrentUser(googleUser);
-      setCurrentRole('attendee');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('zabay-user', JSON.stringify(googleUser));
-        localStorage.setItem('zabay-role', 'attendee');
-      }
-      setSuccessMessage('Signed in successfully with Google (sofia.ramos@bisu.edu.ph)!');
-      setTimeout(() => {
-        setIsSubmitting(false);
-        onClose();
-      }, 600);
-    }, 450);
+    setIsGoogleModalOpen(true);
   };
 
   const handleSelectPersona = (persona: (typeof DEMO_PERSONAS)[0]) => {
@@ -510,6 +487,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </div>
         </form>
       </div>
+
+      <GoogleSignInModal
+        isOpen={isGoogleModalOpen}
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(user) => {
+          setSuccessMessage(`Signed in as ${user.name} with Google!`);
+          setTimeout(() => {
+            setSuccessMessage(null);
+            onClose();
+          }, 600);
+        }}
+      />
     </div>
   );
 };
