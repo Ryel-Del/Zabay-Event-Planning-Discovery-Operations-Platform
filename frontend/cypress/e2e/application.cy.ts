@@ -46,4 +46,26 @@ describe('application startup', () => {
     cy.get('[data-cy="event-card"]').should('not.exist');
     cy.contains('Sample Mode').should('not.exist');
   });
+
+  it('shows an event API failure and reloads real events when retried', () => {
+    cy.intercept({ method: 'GET', url: '/api/events', times: 1 }, { statusCode: 503, body: { success: false, error: 'Unavailable' } }).as('failedEvents');
+    cy.visit('/');
+    cy.wait('@failedEvents');
+    cy.get('[data-cy="attendee-mode"]').click();
+    cy.get('[data-cy="event-load-error"]').should('be.visible');
+    cy.get('[data-cy="event-card"]').should('not.exist');
+    cy.contains('button', 'Retry').click();
+    cy.get('[data-cy="event-load-error"]').should('not.exist');
+    cy.get('[data-cy="event-card"]').should('have.length.greaterThan', 0);
+  });
+
+  it('shows a genuine empty state without production sample events', () => {
+    cy.intercept('GET', '/api/events', { statusCode: 200, body: { success: true, data: [] } }).as('emptyEvents');
+    cy.visit('/');
+    cy.wait('@emptyEvents');
+    cy.get('[data-cy="attendee-mode"]').click();
+    cy.contains('No public events are scheduled right now.').should('be.visible');
+    cy.contains('Load Bohol Sample Events').should('not.exist');
+    cy.get('[data-cy="event-load-error"]').should('not.exist');
+  });
 });
