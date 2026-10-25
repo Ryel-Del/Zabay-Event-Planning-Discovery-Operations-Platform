@@ -4,13 +4,14 @@ describe('organizer event roster', () => {
   let passCode = '';
   let registrationId = '';
   const attendeeEmail = `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`;
-  const password = 'roster-test-secret-long';
-  // One account per suite avoids triggering the shared public signup rate limit.
-  before(() => {
+  // Cypress restores this independently authenticated account cookie for each
+  // case without repeated logins (the real API has a shared IP rate limit).
+  const attendeeSession = () => cy.session('event-roster-account', () => {
     cy.request('POST', '/api/auth/register', {
-      name: 'Roster Fixture Guest', email: attendeeEmail, password,
+      name: 'Roster Fixture Guest', email: attendeeEmail, password: 'roster-test-secret-long',
     }).its('status').should('eq', 201);
   });
+  before(() => { attendeeSession(); });
   beforeEach(() => {
     eventTitle = `Organizer roster E2E ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     cy.get<string>('@csrfToken').then(csrfToken => cy.request({
@@ -20,8 +21,8 @@ describe('organizer event roster', () => {
     })).then(({ status, body }) => {
       expect(status).to.eq(201);
       eventId = body.data.id;
-      return cy.request('POST', '/api/auth/user-login', { email: attendeeEmail, password });
-    }).then(({ status }) => { expect(status).to.eq(200); return cy.request('/api/auth/session'); })
+      return attendeeSession();
+    }).then(() => cy.request('/api/auth/session'))
       .then(({ body: session }) => {
       return cy.request({
         method: 'POST', url: '/api/attendees/register',
