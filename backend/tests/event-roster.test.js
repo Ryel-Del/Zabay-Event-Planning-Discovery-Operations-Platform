@@ -90,6 +90,19 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       const foreign = await other.get(`/api/events/${otherId}/registrations`);
       assert.equal(foreign.body.data.registrations[0].attendee_name, 'Foreign Attendee');
     });
+    await t.test('bounded pagination rejects abusive input and returns stable slices', async () => {
+      const first = await owner.get(`${path}?page=1&limit=1`);
+      assert.equal(first.status, 200);
+      assert.equal(first.body.data.total, 1);
+      assert.equal(first.body.data.page, 1);
+      assert.equal(first.body.data.limit, 1);
+      assert.equal(first.body.data.has_next, false);
+      assert.equal((await owner.get(`${path}?page=2&limit=1`)).body.data.registrations.length, 0);
+      for (const suffix of ['page=0', 'page=-1', 'page=x', 'page=9999999999', 'limit=0', 'limit=101', 'limit=nope']) {
+        const response = await owner.get(`${path}?${suffix}`);
+        assert.equal(response.status, 400, suffix);
+      }
+    });
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
     await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
