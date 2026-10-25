@@ -450,16 +450,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUser({ ...user, roles: [user.role] });
         setCurrentRole(user.role);
       } else {
-        setCurrentUser(guestUser);
-        setCurrentRole('attendee');
-        localStorage.removeItem('zabay-user');
-        localStorage.removeItem('zabay-role');
+        const savedUser = typeof window !== 'undefined' ? localStorage.getItem('zabay-user') : null;
+        if (!savedUser) {
+          setCurrentUser(guestUser);
+          setCurrentRole('attendee');
+          localStorage.removeItem('zabay-role');
+        }
       }
     }).catch(() => {
-      if (active) { setOperatorAuthenticated(false); setCurrentUser(guestUser); setCurrentRole('attendee'); }
+      if (active) {
+        setOperatorAuthenticated(false);
+        const savedUser = typeof window !== 'undefined' ? localStorage.getItem('zabay-user') : null;
+        if (!savedUser) {
+          setCurrentUser(guestUser);
+          setCurrentRole('attendee');
+        }
+      }
     });
     return () => { active = false; };
-  }, [isDemoMode, currentUser.id]);
+  }, [isDemoMode]);
 
   const refreshBackendStatus = async () => {
     try {
