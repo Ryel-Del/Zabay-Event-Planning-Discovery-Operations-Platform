@@ -90,6 +90,25 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       const foreign = await other.get(`/api/events/${otherId}/registrations`);
       assert.equal(foreign.body.data.registrations[0].attendee_name, 'Foreign Attendee');
     });
+    await t.test('historical admission mismatch is reported, never automatically repaired', async () => {
+      await pool.query("UPDATE registrations SET status = 'checked_in' WHERE id = $1", [ownRegistration]);
+      const inconsistent = await owner.get(path);
+      assert.equal(inconsistent.status, 200);
+      assert.equal(inconsistent.body.data.summary.registered, 1);
+      assert.equal(inconsistent.body.data.summary.checked_in, 0);
+      assert.equal(inconsistent.body.data.summary.integrity_issues, 1);
+      assert.equal(inconsistent.body.data.registrations[0].attendance_recorded, false);
+      const persisted = await pool.query('SELECT COUNT(*)::int AS total FROM attendance_records WHERE registration_id = $1', [ownRegistration]);
+      assert.equal(persisted.rows[0].total, 0);
+      await pool.query(
+        `INSERT INTO attendance_records (id, event_id, registration_id, attendee_name, verified_by)
+         VALUES ($1, $2, $3, 'Owned Attendee', 'roster-test')`,
+        [`attendance-${randomUUID()}`, eventId, ownRegistration]
+      );
+      const reconciled = await owner.get(path);
+      assert.equal(reconciled.body.data.summary.checked_in, 1);
+      assert.equal(reconciled.body.data.summary.integrity_issues, 0);
+    });
     await t.test('bounded pagination rejects abusive input and returns stable slices', async () => {
       const first = await owner.get(`${path}?page=1&limit=1`);
       assert.equal(first.status, 200);
