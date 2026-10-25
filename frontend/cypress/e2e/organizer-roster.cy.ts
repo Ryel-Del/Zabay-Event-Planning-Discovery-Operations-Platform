@@ -2,6 +2,7 @@ describe('organizer event roster', () => {
   let eventId = '';
   let eventTitle = '';
   let passCode = '';
+  let registrationId = '';
   beforeEach(() => {
     eventTitle = `Organizer roster E2E ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     cy.get<string>('@csrfToken').then(csrfToken => cy.request({
@@ -20,6 +21,7 @@ describe('organizer event roster', () => {
     }).then(({ status, body }) => {
       expect(status).to.eq(201);
       passCode = body.data.qr_pass_code;
+      registrationId = body.data.id;
     });
   });
 
@@ -59,5 +61,20 @@ describe('organizer event roster', () => {
     cy.contains('button', 'Retry').click();
     cy.wait('@rosterFetch').its('response.statusCode').should('eq', 200);
     cy.contains('Roster Fixture Guest').should('be.visible');
+  });
+
+  it('quick admission updates the database and re-fetches the event roster', () => {
+    cy.intercept('GET', '/api/events/*/registrations*').as('rosterRead');
+    cy.intercept('POST', '/api/attendees/checkin').as('admission');
+    openRoster();
+    cy.wait('@rosterRead');
+    cy.contains('tr', 'Roster Fixture Guest').contains('button', 'Admit').click();
+    cy.wait('@admission').its('response.statusCode').should('eq', 200);
+    cy.wait('@rosterRead').its('response.statusCode').should('eq', 200);
+    cy.contains('tr', 'Roster Fixture Guest').should('contain.text', 'Checked in');
+    cy.contains('tr', 'Roster Fixture Guest').contains('button', 'Admit').should('not.exist');
+    cy.task('db:registrationState', { registrationId }).then(state => {
+      expect(state).to.include({ status: 'checked_in', attendance_count: 1 });
+    });
   });
 });
