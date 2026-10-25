@@ -119,12 +119,12 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
 
       {/* Top Venue Hub Header */}
       <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-[#EDF7F2] dark:bg-[#17271F] border border-[#BDE3CF] dark:border-[#234232] rounded-xl text-[#2B6149] dark:text-[#81B89B]">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
+          <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+            <div className="p-2.5 bg-[#EDF7F2] dark:bg-[#17271F] border border-[#BDE3CF] dark:border-[#234232] rounded-xl text-[#2B6149] dark:text-[#81B89B] shrink-0 mt-0.5 sm:mt-0">
               <Building2 className="w-5 h-5" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   {selectedVenue.name}
@@ -190,7 +190,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
           </div>
 
           {/* Venue Selector & Register Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0 w-full xl:w-auto justify-start sm:justify-end">
             <select
               value={selectedVenue.id}
               onChange={(e) => {
@@ -200,7 +200,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
                   setTestHallId('');
                 }
               }}
-              className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5] transition-all cursor-pointer"
+              className="flex-1 sm:flex-initial w-full sm:w-auto max-w-full sm:max-w-[240px] md:max-w-[280px] truncate bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#3E6CB5] transition-all cursor-pointer"
             >
               {venues.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -211,9 +211,9 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
 
             <button
               onClick={() => setIsCreateVenueOpen(true)}
-              className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer whitespace-nowrap"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5 shrink-0" />
               <span>Register Facility</span>
             </button>
           </div>
