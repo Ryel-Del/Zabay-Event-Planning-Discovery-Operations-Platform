@@ -279,7 +279,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
 
               <div className="pt-1 flex items-center justify-center gap-1.5 text-[10px] text-slate-400 text-center">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                <span>To enable live 1-click Google OAuth popups, configure VITE_GOOGLE_CLIENT_ID.</span>
+                <span>To enable live 1-click Google OAuth, ensure your Firebase environment variables are configured.</span>
               </div>
             </form>
           </div>
