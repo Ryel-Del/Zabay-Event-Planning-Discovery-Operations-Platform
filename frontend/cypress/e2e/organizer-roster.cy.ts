@@ -44,4 +44,20 @@ describe('organizer event roster', () => {
     cy.contains('button', 'Guest List & Check-In').click();
     cy.contains('Roster Fixture Guest').should('be.visible');
   });
+
+  it('shows a genuine error and retries instead of displaying wallet rows as a roster', () => {
+    let blocked = true;
+    cy.intercept('GET', '/api/events/*/registrations*', req => {
+      if (blocked) req.reply({ statusCode: 503, body: { success: false, error: 'Simulated roster outage' } });
+      else req.continue();
+    }).as('rosterFetch');
+    openRoster();
+    cy.wait('@rosterFetch').its('response.statusCode').should('eq', 503);
+    cy.contains('Simulated roster outage').should('be.visible');
+    cy.contains('Roster Fixture Guest').should('not.exist');
+    cy.then(() => { blocked = false; });
+    cy.contains('button', 'Retry').click();
+    cy.wait('@rosterFetch').its('response.statusCode').should('eq', 200);
+    cy.contains('Roster Fixture Guest').should('be.visible');
+  });
 });
