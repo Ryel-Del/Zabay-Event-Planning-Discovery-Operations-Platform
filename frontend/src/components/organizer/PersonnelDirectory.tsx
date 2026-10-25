@@ -20,6 +20,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { canPersonnelScanTickets } from '../../types';
 import { api } from '../../services/api';
+import { mockUsers } from '../../mock/mockData';
 
 interface PersonnelDirectoryProps {
   onSwitchToStaffView?: () => void;
@@ -41,6 +42,7 @@ const ROLE_OPTIONS = [
 
 export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitchToStaffView }) => {
   const {
+    currentUser,
     personnel,
     tasks,
     selectedEvent,
@@ -84,26 +86,62 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [inviteSuccessToast, setInviteSuccessToast] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
 
-  // Search registered users
+  // Search registered users (API first with instant local account fallback)
   useEffect(() => {
-    if (!userSearchTerm.trim()) {
+    const term = userSearchTerm.trim().toLowerCase();
+    if (!term) {
       setMatchedUsers([]);
       return;
     }
     const timer = setTimeout(async () => {
       setIsSearchingUsers(true);
       try {
-        const res = await api.auth.searchUsers(userSearchTerm.trim());
-        if (res.data?.users) {
+        const res = await api.auth.searchUsers(term);
+        if (res.data?.users && res.data.users.length > 0) {
           setMatchedUsers(res.data.users);
+          setIsSearchingUsers(false);
+          return;
         }
       } catch (err) {
-        console.warn('Failed to search users:', err);
-      } finally {
-        setIsSearchingUsers(false);
+        // Fall back to local accounts
       }
-    }, 250);
+
+      // Local account search across mock users and active session
+      const allLocalUsers = [...mockUsers];
+      if (typeof window !== 'undefined') {
+        const storedUser = localStorage.getItem('zabay-user');
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser);
+            if (!allLocalUsers.some((u) => u.id === parsed.id || u.email === parsed.email)) {
+              allLocalUsers.push(parsed);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      const matches = allLocalUsers
+        .filter(
+          (u) =>
+            u.name.toLowerCase().includes(term) ||
+            u.email.toLowerCase().includes(term) ||
+            (u.organization && u.organization.toLowerCase().includes(term))
+        )
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          phone: u.phone,
+          role: u.role,
+        }));
+
+      setMatchedUsers(matches);
+      setIsSearchingUsers(false);
+    }, 200);
     return () => clearTimeout(timer);
   }, [userSearchTerm]);
 
@@ -116,7 +154,14 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       p.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesRole = selectedRoleFilter === 'All' || p.role === selectedRoleFilter;
-    return matchesSearch && matchesRole;
+    const matchesStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'pending'
+        ? p.invitation_status === 'pending'
+        : p.invitation_status !== 'pending';
+
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   // Calculate statistics
@@ -337,20 +382,59 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
         </div>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-3">
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search personnel by name, role, skill..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-          />
+      {/* Search & Filter Toolbar with Status Tabs */}
+      <div className="bg-white dark:bg-[#171E2B] p-4 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-3">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="relative w-full md:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search personnel by name, role, skill..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+            />
+          </div>
+
+          {/* Status Tabs: All, Confirmed Crew, Pending Invites */}
+          <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                statusFilter === 'all'
+                  ? 'bg-[#3E6CB5] text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              All Crew ({personnel.length})
+            </button>
+            <button
+              onClick={() => setStatusFilter('confirmed')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1 ${
+                statusFilter === 'confirmed'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Confirmed ({personnel.filter((p) => p.invitation_status !== 'pending').length})</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('pending')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors flex items-center gap-1 ${
+                statusFilter === 'pending'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Pending Invites ({personnel.filter((p) => p.invitation_status === 'pending').length})</span>
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+        {/* Role Filters */}
+        <div className="flex items-center gap-2 overflow-x-auto w-full pt-2 border-t border-slate-100 dark:border-slate-800/80">
           <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <span className="text-xs text-slate-400 shrink-0">Role:</span>
           {['All', 'Stage Manager', 'Sound Engineer', 'Lighting Tech', 'Tournament Referee', 'Security Lead'].map(
@@ -721,6 +805,37 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                     >
                       Clear
                     </button>
+                  </div>
+                )}
+
+                {!selectedUserId && !userSearchTerm && (
+                  <div className="pt-1.5 border-t border-blue-200/50 dark:border-blue-900/40">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">
+                      Suggested registered staff (click to invite):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        ...mockUsers.slice(1),
+                        ...(currentUser.email && !mockUsers.some((u) => u.email === currentUser.email)
+                          ? [currentUser]
+                          : []),
+                      ].map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            setName(u.name);
+                            setEmail(u.email);
+                            if (u.phone) setPhone(u.phone);
+                            setSelectedUserId(u.id);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-white dark:bg-[#111722] hover:bg-blue-100 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-[10px] font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <span>👤 {u.name}</span>
+                          <span className="text-[9px] opacity-70">({u.role})</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

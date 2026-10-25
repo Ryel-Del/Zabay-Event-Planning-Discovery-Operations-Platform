@@ -11,13 +11,15 @@ import {
   Users,
   Zap,
   Plus,
+  ShieldCheck,
+  GitBranch,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Venue } from '../../types';
 import { CreateVenueModal } from '../venue/CreateVenueModal';
 
 export const VenueMasterDetail: React.FC = () => {
-  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue } = useApp();
+  const { venues, selectedEvent, fnMatchVenueToEvent, bookVenue, forkVenueLayout } = useApp();
 
   const [isCreateVenueOpen, setIsCreateVenueOpen] = useState(false);
 
@@ -458,6 +460,18 @@ export const VenueMasterDetail: React.FC = () => {
                         <MapPin className="w-3.5 h-3.5 text-slate-400" />
                         {activeVenueMatch.venue.address}, {activeVenueMatch.venue.city}
                       </p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {activeVenueMatch.venue.is_custom_fork ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 font-mono font-bold flex items-center gap-1">
+                            <GitBranch className="w-3 h-3 text-amber-600" /> Custom Event Fork
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 font-mono font-bold flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified Facility Owner:{' '}
+                            {activeVenueMatch.venue.manager_name || 'Provincial Authority'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="text-right">
@@ -606,22 +620,41 @@ export const VenueMasterDetail: React.FC = () => {
                   </div>
 
                   {/* Action Bar */}
-                  <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+                  <div className="pt-2 border-t border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <span className="text-[11px] text-slate-400">
                       Collision-safe reservation guard active
                     </span>
-                    <button
-                      onClick={() => handleBook(activeVenueMatch.venue)}
-                      disabled={!activeVenueMatch.scheduleStatus.available}
-                      className={`py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-                        activeVenueMatch.scheduleStatus.available
-                          ? 'bg-[#3E6CB5] hover:bg-[#325896] text-white'
-                          : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <CalendarCheck className="w-4 h-4" />
-                      Confirm Booking {selectedHall ? `for ${selectedHall.name}` : 'for Entire Venue'}
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const forked = forkVenueLayout(activeVenueMatch.venue.id, selectedEvent?.id || 'evt-athletics-2026');
+                          setSelectedVenueId(forked.id);
+                          setBookingFeedback({
+                            success: true,
+                            message: `✨ Facility layout for "${activeVenueMatch.venue.name}" forked into your event workspace! Master facility ownership remains with ${activeVenueMatch.venue.manager_name || 'verified partner'}.`,
+                          });
+                        }}
+                        className="flex-1 sm:flex-none py-2.5 px-3.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs"
+                        title="Fork this layout to customize booth/stage placement without modifying master facility registry"
+                      >
+                        <GitBranch className="w-3.5 h-3.5 text-[#3E6CB5]" />
+                        <span>Fork Layout</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleBook(activeVenueMatch.venue)}
+                        disabled={!activeVenueMatch.scheduleStatus.available}
+                        className={`flex-1 sm:flex-none py-2.5 px-5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                          activeVenueMatch.scheduleStatus.available
+                            ? 'bg-[#3E6CB5] hover:bg-[#325896] text-white'
+                            : 'bg-slate-300 dark:bg-slate-800 text-slate-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <CalendarCheck className="w-4 h-4" />
+                        Confirm Booking {selectedHall ? `for ${selectedHall.name}` : 'for Entire Venue'}
+                      </button>
+                    </div>
                   </div>
                 </>
               );

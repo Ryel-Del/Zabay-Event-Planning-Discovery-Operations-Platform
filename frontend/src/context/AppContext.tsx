@@ -17,6 +17,7 @@ import type {
   EventCommitteeRoleMap,
   StaffInvitation,
   StaffInvitationStatus,
+  CrewChatMessage,
 } from '../types';
 import {
   guestUser,
@@ -31,6 +32,7 @@ import {
   mockRegistrations,
   mockAuditLogs,
   mockStaffInvitations,
+  mockCrewMessages,
 } from '../mock/mockData';
 import api, { adaptEvent, adaptRegistration, adaptVenue, type HealthStatus } from '../services/api';
 
@@ -133,6 +135,13 @@ interface AppContextType {
   staffInvitations: StaffInvitation[];
   sendStaffInvitation: (invitation: Omit<StaffInvitation, 'id' | 'status' | 'invited_at'>) => StaffInvitation;
   respondToStaffInvitation: (invitationId: string, accept: boolean) => void;
+
+  // Real-time Event Crew Group Chat (GC)
+  crewMessages: CrewChatMessage[];
+  sendCrewMessage: (eventId: string, message: string, isAnnouncement?: boolean) => void;
+
+  // Venue Layout Forking
+  forkVenueLayout: (venueId: string, eventId: string, customName?: string) => Venue;
 
   // Staff Portal Preview & Crew Inspection
   activeStaffId: string | null;
@@ -342,6 +351,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     return mockStaffInvitations;
+  });
+
+  const [crewMessages, setCrewMessages] = useState<CrewChatMessage[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay_crew_messages');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return mockCrewMessages;
   });
 
   const [tasks, setTasks] = useState<Task[]>(() => {
@@ -1746,6 +1769,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const sendCrewMessage = (eventId: string, message: string, isAnnouncement: boolean = false) => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+
+    const newMsg: CrewChatMessage = {
+      id: `cmsg-${Date.now()}`,
+      event_id: eventId,
+      sender_id: currentUser.id,
+      sender_name: currentUser.name || 'Event Staff',
+      sender_avatar: currentUser.avatar,
+      sender_role: currentRole === 'organizer' ? 'Lead Organizer' : currentRole === 'venue_manager' ? 'Venue Manager' : 'Event Crew',
+      message: trimmed,
+      timestamp: new Date().toISOString(),
+      is_announcement: isAnnouncement,
+    };
+
+    setCrewMessages((prev) => {
+      const updated = [...prev, newMsg];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_crew_messages', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (isAnnouncement) {
+      const notif: AppNotification = {
+        id: `notif-${Date.now()}`,
+        title: 'Event Crew Announcement',
+        message: `${newMsg.sender_name} (${newMsg.sender_role}): ${trimmed}`,
+        type: 'info',
+        timestamp: new Date().toISOString(),
+        targetRole: 'staff',
+        eventId,
+        read: false,
+      };
+      setNotifications((prev) => [notif, ...prev]);
+    }
+  };
+
+  const forkVenueLayout = (venueId: string, eventId: string, customName?: string): Venue => {
+    const parentVenue = venues.find((v) => v.id === venueId) || venues[0];
+    const forkedVenue: Venue = {
+      ...parentVenue,
+      id: `ven-fork-${Date.now()}`,
+      name: customName || `${parentVenue.name} (Custom Event Setup)`,
+      is_custom_fork: true,
+      forked_from_id: parentVenue.id,
+      forked_from_name: parentVenue.name,
+      forked_by_user_id: currentUser.id,
+      forked_by_user_name: currentUser.name,
+      forked_for_event_id: eventId,
+      is_verified_partner: false, // Verified partner status stays strictly with the master owner
+      halls: parentVenue.halls ? parentVenue.halls.map((h) => ({ ...h, id: `vh-fork-${Date.now()}-${h.id}` })) : [],
+    };
+
+    setVenues((prev) => [forkedVenue, ...prev]);
+
+    // Automatically assign to current event
+    setEvents((prev) =>
+      prev.map((e) => (e.id === eventId ? { ...e, venue_id: forkedVenue.id } : e))
+    );
+
+    const notif: AppNotification = {
+      id: `notif-${Date.now()}`,
+      title: 'Facility Layout Forked',
+      message: `Forked "${parentVenue.name}" layout for event staging. Master facility ownership remains with ${parentVenue.manager_name || 'verified partner'}.`,
+      type: 'info',
+      timestamp: new Date().toISOString(),
+      targetRole: 'organizer',
+      eventId,
+      read: false,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    return forkedVenue;
+  };
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -1805,6 +1905,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       staffInvitations,
       sendStaffInvitation,
       respondToStaffInvitation,
+      crewMessages,
+      sendCrewMessage,
+      forkVenueLayout,
       activeStaffId,
       setActiveStaffId,
       previewStaffPortal,
@@ -1830,6 +1933,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       resources,
       personnel,
       staffInvitations,
+      crewMessages,
       tasks,
       registrations,
       auditLogs,
