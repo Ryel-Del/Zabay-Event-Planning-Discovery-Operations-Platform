@@ -31,4 +31,16 @@ describe('registration API access', () => {
     }
     cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
   });
+
+  it('rejects an operator-only session even with its CSRF token', () => {
+    cy.get<string>('@csrfToken').then(csrfToken => {
+      for (const mode of ['guest', 'account', undefined]) {
+        cy.request({ method: 'POST', url: '/api/attendees/register', failOnStatusCode: false,
+          headers: { 'X-CSRF-Token': csrfToken },
+          body: { ...registration(), ...(mode ? { registration_mode: mode } : {}) },
+        }).its('status').should('eq', 401);
+      }
+    });
+    cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
+  });
 });
