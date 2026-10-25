@@ -131,6 +131,7 @@ describe('attendee registration and check-in', () => {
     cy.get('[data-cy="registered-pass-code"]').should('not.exist');
     cy.contains('Registration Saved').should('not.exist');
     cy.task('db:registrationCountByEmail', { email }).should('eq', 0);
+    cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
   });
 
   it('admits valid passes once, rejects duplicates and unknown codes, and admits another registration independently', () => {
