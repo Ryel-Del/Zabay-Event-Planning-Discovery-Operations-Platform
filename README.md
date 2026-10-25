@@ -1,85 +1,197 @@
-# ZABAY — Event Planning, Discovery & Operations Platform
+# 🎪 ZABAY — Event Planning, Discovery & Operations Platform
 
-ZABAY is a relational-database-driven platform for planning, running, and analyzing events in Bohol and Tagbilaran City. It models venues, tasks, personnel, and resources as interconnected entities so that organizers can see how a single change ripples across every dependent part of an event, instead of discovering conflicts on the day of the event.
+> **An all-in-one, relational-database-driven event operating system designed for Bohol & Tagbilaran City ecosystems.**  
+> Unifies Public Discovery, Venue Facility Management, Host Operations, and On-Ground Gate Admittance under ACID concurrency and PostgreSQL exclusion constraints.
 
----
-
-## Key Features
-
-- **Tagbilaran & Bohol Venue Directory**: Bundled sample directory of iconic Bohol venues (Bohol Cultural Center, Holy Name University Barder Gymnasium, Bohol Wisdom Gymnasium, Fortridge Pavilion, Bohol Tropics Resort, Plaza Rizal, etc.) with power (kW), seating capacities, and equipment specifications.
-- **Frontend Change-Impact Simulator**: Recursively traces cascading schedule slippages across predecessor-successor task trees.
-- **Frontend Venue Feasibility Matcher**: Automatically evaluates physical specifications, electrical substation requirements, and booking conflicts (`EXCLUDE` constraints).
-- **Interactive Kanban Board with 1-Click Starter Kits**: Pre-configured task templates for Student Organization Assemblies, Esports Tournaments, and Corporate Summits.
-- **Live Camera QR Gate Scanner**: Attendee check-in using your laptop or webcam with instant duplicate ticket prevention.
-- **Luma-Style Event Experience**: Public event discovery, interactive OpenStreetMap venue pins, and simulated digital pass checkout.
-- **Philippine Peso (₱) Ticketing & Budgets**: Fully localized currency for event budgets, hourly rates, and ticket tiers.
+[![Frontend](https://img.shields.io/badge/Frontend-Vercel-black?style=flat&logo=vercel)](https://zabay.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-Render-46E3B7?style=flat&logo=render)](https://zabay-api.onrender.com)
+[![Database](https://img.shields.io/badge/Database-Neon_PostgreSQL_16-00E599?style=flat&logo=postgresql)](https://neon.tech)
+[![Auth](https://img.shields.io/badge/Auth-Firebase_Google_SSO-FFCA28?style=flat&logo=firebase)](https://firebase.google.com)
+[![Tests](https://img.shields.io/badge/E2E-Cypress_Automated-007788?style=flat&logo=cypress)](https://cypress.io)
 
 ---
 
-## Clean Initial Workspace & Demo Environment
+## 📌 Executive Overview & The Problem
 
-For local development and demonstration:
-- **Clean Workspace by Default**: Starts with an empty event ledger, 0 attendee registrations, and a clean task board ready for organizers to create their own events.
-- **1-Click Bohol Sample Environment**: Toggle the **"Load Bohol Sample Data"** button in the header or empty states to instantly populate a full Bohol demonstration event (*Sandugo Tech & AI Youth Summit 2026*) with synthetic passes, tasks, and schedules.
-- **Reset Anytime**: Click **"Clear to Clean Slate"** to return to a blank workspace.
+In regional university and local government ecosystems like Tagbilaran City and Bohol, event operations are notoriously disconnected:
+
+1. **Fragmented Communication**: Sign-ups happen on Google Forms, team tasks are lost in chaotic Facebook Messenger group chats, and equipment logistics are tracked on paper clipboards.
+2. **Double-Booking Collisions**: Cultural centers and campus gymnasiums manage multiple sub-halls across static spreadsheets without storage-level concurrency controls, leading to simultaneous reservations for the same space.
+3. **Gate Admittance Bottlenecks & Pass Fraud**: Event check-in relies on manual highlighter pens on printed attendance sheets, inviting duplicate entries and line delays.
+
+**Zabay** solves this with a unified, role-based platform backed by hard relational database constraints. It coordinates four interconnected stakeholders: **Attendees**, **Venue Facility Managers**, **Event Organizers**, and **On-Ground Crew Staff**.
 
 ---
 
-## Project Structure
+## 🏛️ System Architecture
 
 ```
-zabay/
-├── db/                       # PostgreSQL schema, EXCLUDE constraints, and Bohol seeds
-│   ├── schema.sql            # Relational schema with btree_gist EXCLUDE
-│   ├── seeds/                # Synthetic Bohol venue and hall fixtures
-│   └── README.md
-├── backend/                  # Express.js + TypeScript REST API
-│   ├── src/
-│   │   ├── config/           # PostgreSQL pool configuration (pg)
-│   │   ├── controllers/      # Route handlers (events, venues, tasks, attendees)
-│   │   ├── middleware/       # Centralized error handler (EXCLUDE code 23P01)
-│   │   ├── routes/           # Domain routers (/api/events, /api/venues, etc.)
-│   │   └── server.ts         # Server entry point & CORS
-│   ├── package.json
-│   └── README.md
-├── frontend/                 # React 19 + TypeScript + Vite + Tailwind CSS client
-│   ├── src/
-│   │   ├── pages/            # Dedicated Page views (Organizer, Venue, Staff, Attendee)
-│   │   ├── components/       # Reusable feature blocks, layout & modals
-│   │   ├── services/         # Algorithmic engines (venueMatcher, impactEngine, checkInService)
-│   │   ├── hooks/            # Custom React hooks (useApp)
-│   │   ├── context/          # Reactive application state provider
-│   │   ├── mock/             # Synthetic venue and demo fixtures
-│   │   └── types/            # TypeScript interfaces matching relational schema
-│   ├── package.json
-│   └── vite.config.ts
-└── README.md
+┌────────────────────────────────────────────────────────────────────────┐
+│                        FRONTEND (Vercel Edge)                          │
+│     React 19 + TypeScript + Vite + Tailwind CSS + Lucide Icons         │
+│     • Fast responsive layouts (Desktop Studio + Mobile Run-of-Show)    │
+│     • Hybrid state: Live Neon API Sync + Offline-Resilient Local Cache │
+└──────────────────┬─────────────────────────────────┬───────────────────┘
+                   │ HTTPS API Requests              │ OAuth 2.0 Popup
+                   ▼                                 ▼
+┌────────────────────────────────────┐  ┌────────────────────────────────┐
+│         BACKEND (Render)           │  │      FIREBASE (Google Auth)    │
+│   Node.js + Express + TypeScript   │  │  • Google SSO Identity Provider│
+│   • SameSite Cookie Sessions       │  │  • Cryptographic JWT issuance  │
+│   • CSRF Token Protection          │  │  • Verified by Server SDK      │
+│   • Parameterized SQL (`pg`)       │  └────────────────────────────────┘
+└──────────────────┬─────────────────┘
+                   │ SSL Pooled Connection
+                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                    DATABASE (Neon PostgreSQL 16)                       │
+│     Serverless Cloud PostgreSQL 16 Instance                            │
+│     • ACID Transaction Guarantees & Row-Level Locking (`FOR UPDATE`)   │
+│     • Exclusion Constraints (`tsrange`, GiST) for Zero-Overlap Bookings│
+│     • 8 Live Production Tables + 11 Staged Domain Entities             │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Getting Started
+## 🎭 The 4 Integrated Roles
+
+| Role | Primary Purpose | Key Features |
+| :--- | :--- | :--- |
+| **1. Public Attendee** | Event exploration & pass management | Luma-style event discovery, interactive OpenStreetMap venue pins, Firebase Google 1-click sign-in, instant QR ticket generation, PNG ticket export. |
+| **2. Venue Manager** | Facility oversight & double-booking defense | Hall & sub-venue inventory (e.g., Bohol Cultural Center Main Auditorium vs Gallery), hourly rental rates, real-time schedule conflict engine (`EXCLUDE` GiST check). |
+| **3. Event Organizer** | Full lifecycle operations studio | 4-stage event pipeline (`Organize` ➔ `Prepare` ➔ `Market` ➔ `Execute`), Gantt & Kanban boards, task delay cascading impact simulator, committee roster management, live crew broadcast console. |
+| **4. Event Staff / Crew** | Turnstile check-in & gate admittance | Live webcam / camera QR scanner, fast manual lookup, instant duplicate entry alert, offline-ready check-in records. |
+
+---
+
+## 💾 Relational Database & Concurrency Defense
+
+### 1. Storage-Level Double-Booking Prevention (`EXCLUDE USING gist`)
+Rather than relying on fragile application-level checks, Zabay delegates calendar collision detection to the PostgreSQL engine:
+```sql
+ALTER TABLE venue_bookings 
+ADD CONSTRAINT no_overlapping_hall_bookings 
+EXCLUDE USING gist (
+  hall_id WITH =,
+  tstzrange(start_time, end_time) WITH &&
+) WHERE (status <> 'cancelled');
+```
+If two simultaneous booking requests target the same hall during overlapping timestamps, PostgreSQL atomically rejects the collision with code `23P01` (`exclusion_violation`).
+
+### 2. Zero-Overselling Ticket Checkouts (`SELECT ... FOR UPDATE`)
+When attendees purchase high-demand ticket tiers, the backend wraps the checkout in an ACID transaction:
+```sql
+BEGIN;
+SELECT tickets_sold, capacity FROM ticket_tiers 
+WHERE id = $1 FOR UPDATE;
+-- Verify quota availability under lock
+UPDATE ticket_tiers SET tickets_sold = tickets_sold + 1 WHERE id = $1;
+INSERT INTO registrations (id, event_id, attendee_id, qr_pass_code) VALUES (...);
+COMMIT;
+```
+This eliminates race conditions and guarantees that ticket limits are strictly enforced.
+
+### 3. Idempotent QR Check-In Verification
+Each ticket pass contains a cryptographically unique `qr_pass_code`. Upon scanning at the gate:
+- First scan commits an attendance record with a timestamp.
+- Immediate re-scan triggers a duplicate entry violation, preventing pass re-use.
+
+### 4. 8-Table Production Core vs 19-Table Domain Model
+- **Core Production MVP (8 Tables)**: `users`, `events`, `venues`, `venue_halls`, `venue_bookings`, `tasks`, `registrations`, `attendance_records`.
+- **Staged 3NF Domain Entities (11 Tables)**: Fully modeled in [`db/schema.sql`](file:///c:/Users/Radel/OneDrive/Documents/New%20folder%20%282%29/zabay/db/schema.sql) for Phase 2 expansion (e.g., physical equipment assets, task DAG dependencies, financial ledgers).
+
+---
+
+## 🚀 Quick Start & Local Development
 
 ### 1. Prerequisites
-- **Node.js** (v22 or newer)
+- **Node.js**: v22+ (v24 recommended)
+- **PostgreSQL**: v16+ (or Neon serverless connection string)
 - **npm** or **pnpm**
 
-### 2. Running the Client Application
+### 2. Clone and Install Dependencies
 ```bash
-cd frontend
-npm install
-npm run dev
+git clone https://github.com/db-larpers/Zabay-Event-Planning-Discovery-Operations-Platform.git
+cd Zabay-Event-Planning-Discovery-Operations-Platform
+
+# Install Backend dependencies
+npm install --prefix backend
+
+# Install Frontend dependencies
+npm install --prefix frontend
 ```
 
-Run the backend separately for live API operations. Visit the local Vite development server in your browser (default: `http://localhost:5173`).
+### 3. Environment Configuration
+
+Create `backend/.env`:
+```env
+PORT=5000
+DATABASE_URL=postgresql://user:password@ep-sample-pooler.neon.tech/zabay?sslmode=require
+OPERATOR_USERNAME=operator
+OPERATOR_PASSWORD=zabay-operator-secret-2026
+SESSION_SECRET=zabay-super-secure-production-secret-2026
+FIREBASE_PROJECT_ID=zabay-event-platform
+```
+
+Create `frontend/.env`:
+```env
+VITE_API_URL=http://127.0.0.1:5000
+VITE_FIREBASE_API_KEY=your-firebase-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-firebase-app.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-firebase-project-id
+```
+
+### 4. Run Development Servers
+```bash
+# Terminal 1: Backend API
+npm run dev --prefix backend
+
+# Terminal 2: Frontend Client (Vite)
+npm run dev --prefix frontend
+```
+Visit `http://localhost:5173` in your browser.
 
 ---
 
-## Switching Perspectives
+## 🧪 Testing & Verification
 
-Use the user profile menu in the top-right header to switch between perspectives:
-1. **Organizer / Ops Studio**: 4-stage event planning lifecycle (`1. Organize` ➔ `2. Prepare` ➔ `3. Market` ➔ `4. Execute`), Kanban board, change-impact simulator, and calendar.
-2. **Venue Partner Hub**: Facility capacity oversight, operating rates, and `EXCLUDE` constraint booking logs.
-3. **Public Event Feed**: Luma-style attendee event exploration, interactive map, and pass generator.
+### Backend Automated Unit & Security Suite
+```bash
+npm run test --prefix backend
+```
+Executes 13 automated tests verifying health, rate-limiting, CSRF token validation, passwordless protection, Firebase token bounds, and operator role elevation safeguards.
 
-Deployment preparation and its limits are documented in [DEPLOYMENT.md](./DEPLOYMENT.md). The selected frontend role is a UI preview; operator API access requires login.
+### Cypress End-to-End Suite
+```bash
+npm run test:e2e:local --prefix frontend
+```
+Runs full browser E2E flows against a disposable PostgreSQL 16 container, validating:
+- Session hydration and operator authentication
+- Seeded Bohol venue discovery
+- Venue booking collision enforcement
+- Pass registration and webcam QR gate scanner verification
+
+---
+
+## 🔑 Demo & Evaluation Access
+
+- **Evaluation Dataset**: Toggle **"Try Bohol Demo"** or use shortcut `Ctrl+Shift+D` to instantly load the curated Bohol demonstration dataset (*Sandugo Tech & AI Youth Summit 2026* at Bohol Cultural Center).
+- **Default Operator Credentials**:
+  - **Username**: `operator`
+  - **Password**: `zabay-operator-secret-2026`
+- **One-Click Role Switching**: Switch between Attendee, Venue Manager, Organizer Studio, and Staff Portal directly via the top-right profile menu without re-logging.
+
+---
+
+## 👥 Engineering Team
+
+Developed for the final project defense by **Team Zabay**:
+- **System & Presentation Lead**: Product narrative, attendee experience, and operational validation.
+- **Operations & Full-Stack Engineer**: Organizer studio, venue facility hub, camera scanner, and responsive UI.
+- **Database & Cloud Architect**: Neon PostgreSQL schema, GiST exclusion constraints, ACID checkouts, and Firebase Auth boundary.
+
+---
+
+## 📄 License
+This project is open-source under the MIT License.
