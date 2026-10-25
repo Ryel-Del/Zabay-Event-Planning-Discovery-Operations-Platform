@@ -21,6 +21,42 @@ describe('database-backed registration wallet', () => {
     cy.get('[data-cy="registration-form"]').should('contain.text', title);
   });
 
+  it('does not resume a discarded registration after signing in later', () => {
+    const unique = Date.now();
+    const title = `Discarded registration ${unique}`;
+    const email = `discarded-flow-${unique}@example.test`;
+    const password = 'discarded-flow-secret';
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({
+      method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken },
+      body: { title, category: 'Community & Civic', event_type: 'public', is_private: false,
+        start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100 },
+    }).its('status').should('eq', 201));
+    cy.request('POST', '/api/auth/register', { name: 'Later Sign-In Attendee', email, password });
+    cy.request('/api/auth/session').then(({ body }) => cy.request({
+      method: 'POST', url: '/api/auth/logout', headers: { 'X-CSRF-Token': body.csrfToken },
+    }));
+
+    cy.visit('/');
+    cy.get('[data-cy="event-search"]').type(title);
+    cy.get('[data-cy="event-card"]').contains(title).closest('[data-cy="event-card"]')
+      .find('[data-cy="event-register"]').click();
+    cy.get('[data-cy="registration-signin-prompt"]').should('contain.text', title)
+      .closest('div.fixed').find('button').first().click();
+    cy.get('[data-cy="registration-signin-prompt"]').should('not.exist');
+
+    cy.get('header').contains('button', 'Sign In').click();
+    cy.get('input[placeholder="name@organization.ph"]').type(email);
+    cy.get('input[placeholder="Enter secure password..."]').type(password);
+    cy.contains('button', 'Sign In to Workspace').click();
+    cy.get('[data-cy="registration-form"]').should('not.exist');
+    cy.get('[data-cy="registration-signin-prompt"]').should('not.exist');
+
+    // Registration still opens when this signed-in user explicitly requests it again.
+    cy.get('[data-cy="event-card"]').contains(title).closest('[data-cy="event-card"]')
+      .find('[data-cy="event-register"]').click();
+    cy.get('[data-cy="registration-form"]').should('be.visible');
+  });
+
   it('retrieves a pass in a second browser session and hides it from another account', () => {
     const unique = Date.now();
     const email = `wallet-${unique}@example.test`;
