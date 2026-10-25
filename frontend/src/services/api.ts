@@ -284,6 +284,7 @@ export const api = {
 
   // Attendee & Ticket Operations
   attendees: {
+    myRegistrations: () => request<(DbRegistration & { event_title: string })[]>('/api/attendees/registrations/me'),
     register: (payload: AttendeeRegistrationRequest) =>
       request<DbRegistration>(`/api/attendees/register`, {
         method: 'POST',

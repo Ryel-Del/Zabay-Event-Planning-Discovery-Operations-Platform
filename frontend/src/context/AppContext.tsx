@@ -169,7 +169,7 @@ const minutesToTime = (mins: number) => {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('zabay-dev-unlocked') === 'true') {
       const saved = localStorage.getItem('zabay-user');
       if (saved) {
         try {
@@ -265,9 +265,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return false;
-      return true;
+      return sessionStorage.getItem('zabay-dev-unlocked') === 'true' && localStorage.getItem('zabay-demo-mode') === 'true';
     }
-    return true;
+    return false;
   });
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
@@ -450,25 +450,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCurrentUser({ ...user, roles: [user.role] });
         setCurrentRole(user.role);
       } else {
-        const savedUser = typeof window !== 'undefined' ? localStorage.getItem('zabay-user') : null;
-        if (!savedUser) {
-          setCurrentUser(guestUser);
-          setCurrentRole('attendee');
-          localStorage.removeItem('zabay-role');
-        }
+        setCurrentUser(guestUser);
+        setCurrentRole('attendee');
+        localStorage.removeItem('zabay-role');
       }
     }).catch(() => {
       if (active) {
         setOperatorAuthenticated(false);
-        const savedUser = typeof window !== 'undefined' ? localStorage.getItem('zabay-user') : null;
-        if (!savedUser) {
-          setCurrentUser(guestUser);
-          setCurrentRole('attendee');
-        }
+        setCurrentUser(guestUser);
+        setCurrentRole('attendee');
       }
     });
     return () => { active = false; };
   }, [isDemoMode]);
+
+  useEffect(() => {
+    if (isDevModeUnlocked || currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') return;
+    let active = true;
+    const accountId = currentUser.id;
+    setRegistrations([]);
+    api.attendees.myRegistrations().then((response) => {
+      if (!active) return;
+      if (response.success && response.data) {
+        const saved = response.data.filter(row => row.attendee_id === accountId)
+          .map(row => adaptRegistration(row, row.event_title));
+        setRegistrations(previous => {
+          const savedIds = new Set(saved.map(registration => registration.id));
+          return [...previous.filter(registration => registration.attendee_id === accountId && !savedIds.has(registration.id)), ...saved];
+        });
+      }
+    });
+    return () => { active = false; };
+  }, [currentUser.id, isDevModeUnlocked]);
 
   const refreshBackendStatus = async () => {
     try {
@@ -834,6 +847,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks([]);
     setPersonnel([]);
     setRegistrations([]);
+    sessionStorage.removeItem('zabay-session-pass-ids');
     setVenueBookings([]);
     setAuditLogs([]);
     if (typeof window !== 'undefined') {
@@ -1609,21 +1623,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType });
         if (response.success && response.data?.qr_pass_code) {
           const saved = adaptRegistration(response.data, event.title);
+          if (saved.attendee_id && saved.attendee_id !== currentUser.id) {
+            return { success: false, message: 'Your account session changed. Sign in again to view your saved pass.' };
+          }
+          if (!saved.attendee_id && currentUser.id !== 'usr-guest') {
+            return { success: false, message: 'Your account session expired. Sign in again to register an account pass.' };
+          }
           setRegistrations((previous) => [saved, ...previous]);
-          let sessionPassIds: string[] = [];
-          try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* reset malformed browser state */ }
-          sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...sessionPassIds, saved.id])]));
           return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
         }
-        if (response.code === 'NETWORK_ERROR') {
-          setIsLiveBackend(false);
-        } else {
-          return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
-        }
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
       } catch {
-        // Fall back to client pass generation
+        return { success: false, message: 'Registration could not be saved. No pass was issued.' };
       }
     }
+
+    if (!isDevModeUnlocked) return { success: false, message: 'Registration is unavailable until the database connection returns.' };
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const qrCode = `ZABAY-PASS-${randomSuffix}-${(attendeeName || 'GUEST').split(' ')[0].toUpperCase()}`;
@@ -1632,7 +1648,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `reg-${Date.now()}`,
       event_id: event.id,
       event_title: event.title,
-      attendee_id: currentUser.id,
+      attendee_id: currentUser.id === 'usr-guest' ? '' : currentUser.id,
       attendee_name: attendeeName,
       attendee_email: attendeeEmail,
       status: 'confirmed',

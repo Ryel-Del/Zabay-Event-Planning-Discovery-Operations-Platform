@@ -35,7 +35,7 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
   onRegister,
   onViewPass,
 }) => {
-  const { registrations } = useApp();
+  const { registrations, currentUser } = useApp();
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [isNotified, setIsNotified] = useState(false);
@@ -45,7 +45,8 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
   const [inviteSent, setInviteSent] = useState(false);
 
   // Check if current user is registered for this event
-  const userRegistration = registrations.find((r) => r.event_id === event.id);
+  const userRegistration = registrations.find((r) => r.event_id === event.id &&
+    (currentUser.id === 'usr-guest' ? !r.attendee_id : r.attendee_id === currentUser.id));
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

@@ -38,6 +38,14 @@ function session(req: Request) {
   if (found && found.expires <= Date.now()) { sessions.delete(raw); return undefined; }
   return found;
 }
+export function authenticatedUserId(req: Request): string | null {
+  const found = session(req);
+  return found?.identity === 'user' ? found.userId || null : null;
+}
+export function requireUser(req: Request, res: Response, next: NextFunction) {
+  if (!authenticatedUserId(req)) return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
+  next();
+}
 function sameOrigin(req: Request) {
   const origin = req.get('origin');
   if (!origin) return true;
