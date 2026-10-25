@@ -150,6 +150,16 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           </div>
         </div>
 
+        {!roster.isDemo && roster.loading &&
+          <p role="status" className="text-xs text-slate-500 mt-4">Loading this event's PostgreSQL admission counts…</p>}
+        {roster.error && <div role="alert" className="mt-4 rounded-lg bg-rose-50 text-rose-900 text-xs p-3">
+          Registration and gate metrics are unavailable: {roster.error}
+          <button className="underline font-semibold ml-2" onClick={roster.refresh}>Retry</button>
+        </div>}
+        {roster.data && roster.data.summary.integrity_issues > 0 && <p role="alert" className="mt-4 text-xs text-amber-700">
+          {roster.data.summary.integrity_issues} admission record inconsistency detected; counts exclude unverified admissions.
+        </p>}
+
         {/* Operational Pulse Metrics Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-800 text-xs">
           <div>
