@@ -152,6 +152,29 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       assert.equal(refreshed.body.data.summary.integrity_issues, 0);
     });
 
+    await t.test('attendance without a checked-in status is surfaced as a discrepancy', async () => {
+      const registrationId = `reg-${randomUUID()}`;
+      await pool.query(
+        `INSERT INTO registrations (id, event_id, attendee_name, attendee_email, qr_pass_code)
+         VALUES ($1, $2, 'Unreconciled Attendee', 'unreconciled@example.test', $3)`,
+        [registrationId, eventId, `PASS-${randomUUID()}`]
+      );
+      await pool.query(
+        `INSERT INTO attendance_records (id, event_id, registration_id, attendee_name, verified_by)
+         VALUES ($1, $2, $3, 'Unreconciled Attendee', 'historical-import')`,
+        [`attendance-${randomUUID()}`, eventId, registrationId]
+      );
+      const response = await owner.get(path);
+      assert.equal(response.status, 200);
+      assert.equal(response.body.data.summary.registered, 3);
+      assert.equal(response.body.data.summary.checked_in, 2);
+      assert.equal(response.body.data.summary.integrity_issues, 1);
+      const item = response.body.data.registrations.find(row => row.id === registrationId);
+      assert.equal(item.status, 'confirmed');
+      assert.equal(item.attendance_recorded, true);
+      assert.equal((await pool.query('SELECT status FROM registrations WHERE id = $1', [registrationId])).rows[0].status, 'confirmed');
+    });
+
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
     await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
