@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, Sparkles } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
 import { AppHeader } from './components/layout/AppHeader';
 import { AppSidebar } from './components/layout/AppSidebar';
@@ -22,6 +22,7 @@ const MainContent: React.FC = () => {
     isDevModeUnlocked,
     isLiveBackend,
     operatorAuthenticated,
+    unlockDevMode,
   } = useApp();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'register' | 'operator'>('signin');
@@ -137,10 +138,14 @@ const MainContent: React.FC = () => {
               </div>
               <div className="space-y-1.5">
                 <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Organizer Access Required
+                  {currentRole === 'venue_manager'
+                    ? 'Venue Manager Access Required'
+                    : currentRole === 'staff'
+                    ? 'Staff Portal Access Required'
+                    : 'Organizer Access Required'}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  You are currently browsing as a Guest. Sign in with Google or your organizer account to manage event operations, tasks, and venues.
+                  You are currently browsing as a Guest. Sign in with Google or your account to manage operations, or launch the demo environment to evaluate immediately.
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
@@ -154,10 +159,19 @@ const MainContent: React.FC = () => {
                   Sign In with Google / Email
                 </button>
                 <button
+                  onClick={() => {
+                    unlockDevMode('DEMO');
+                  }}
+                  className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Try Bohol Demo</span>
+                </button>
+                <button
                   onClick={() => setCurrentRole('attendee')}
                   className="py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                 >
-                  Return to Public Feed
+                  Public Feed
                 </button>
               </div>
             </div>
