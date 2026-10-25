@@ -168,7 +168,7 @@ export const api = {
     session: async () => {
       const response = await fetch('/api/auth/session');
       if (!response.ok) throw new Error('Could not check operator session');
-      const data = await response.json() as { authenticated: boolean; csrfToken?: string };
+      const data = await response.json() as { authenticated: boolean; operator: boolean; csrfToken?: string };
       csrfToken = data.authenticated ? data.csrfToken : undefined;
       return data;
     },

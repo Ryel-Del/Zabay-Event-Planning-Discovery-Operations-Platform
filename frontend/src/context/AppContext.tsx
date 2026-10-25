@@ -41,6 +41,7 @@ interface AppContextType {
   setCurrentUser: (user: User) => void;
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
+  operatorAuthenticated: boolean;
   signOut: () => void;
 
   theme: 'light' | 'dark';
@@ -202,7 +203,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const setRoleWithUser = (role: UserRole) => {
-    if (!isDemoMode && role !== currentUser.role) return;
+    if (!isDemoMode) {
+      if (operatorAuthenticated || role === currentUser.role || role === 'attendee') setCurrentRole(role);
+      return;
+    }
     setCurrentRole(role);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-role', role);
@@ -283,10 +287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const [events, setEvents] = useState<ZabayEvent[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
-    }
-    return mockEvents;
+    return !import.meta.env.PROD && typeof window !== 'undefined' && sessionStorage.getItem('zabay-demo-mode') === 'true' ? mockEvents : [];
   });
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
     if (typeof window !== 'undefined') {
@@ -425,11 +426,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
   const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
+  const [operatorAuthenticated, setOperatorAuthenticated] = useState(false);
 
   useEffect(() => {
     if (isDemoMode) return;
     let active = true;
-    api.auth.getMe().then((response) => {
+    api.auth.session().then(async (serverSession) => {
+      if (!active) return;
+      if (serverSession.operator) {
+        setOperatorAuthenticated(true);
+        setCurrentUser({ id: 'zabay-operator', name: 'Zabay Operator', email: '', role: 'organizer', roles: ['organizer'], avatar: '', organization: '', location: '', bio: '' });
+        setCurrentRole('organizer');
+        return;
+      }
+      setOperatorAuthenticated(false);
+      const response = serverSession.authenticated ? await api.auth.getMe() : { success: false, data: undefined };
       if (!active) return;
       const user = response.data?.user;
       if (response.success && user) {
@@ -441,6 +452,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.removeItem('zabay-user');
         localStorage.removeItem('zabay-role');
       }
+    }).catch(() => {
+      if (active) { setOperatorAuthenticated(false); setCurrentUser(guestUser); setCurrentRole('attendee'); }
     });
     return () => { active = false; };
   }, [isDemoMode, currentUser.id]);
@@ -804,6 +817,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const lockDevMode = () => {
+    setOperatorAuthenticated(false);
     setIsDevModeUnlocked(false);
     setUnlockedDevCode(null);
     setCurrentUser(guestUser);
@@ -1571,22 +1585,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Event not found.' };
     }
 
-    if (isLiveBackend) {
-      try {
-        const response = await api.attendees.register({
-          event_id: eventId,
-          attendee_name: attendeeName,
-          attendee_email: attendeeEmail,
-          ticket_type: ticketType,
-        });
-        if (response.success && response.data?.qr_pass_code) {
-          const saved = adaptRegistration(response.data, event.title);
-          setRegistrations((previous) => [saved, ...previous]);
-          return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
-        }
-      } catch {
-        // Smoothly proceed to client pass creation
+    if (!isDemoMode) {
+      if (!isLiveBackend) return { success: false, message: 'Server is offline. No pass was issued.' };
+      const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType });
+      if (!response.success || !response.data?.qr_pass_code) {
+        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
+        return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
       }
+      const saved = adaptRegistration(response.data, event.title);
+      setRegistrations((previous) => [saved, ...previous]);
+      let sessionPassIds: string[] = [];
+      try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* reset malformed browser state */ }
+      sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...sessionPassIds, saved.id])]));
+      return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
     }
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -1881,6 +1892,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser,
       currentRole,
       setCurrentRole: setRoleWithUser,
+      operatorAuthenticated,
       signOut,
       theme,
       toggleTheme,
@@ -1945,6 +1957,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [
       currentUser,
       currentRole,
+      operatorAuthenticated,
       activeStaffId,
       committeeRoles,
       theme,

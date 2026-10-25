@@ -74,15 +74,15 @@ runs the API checks. Operator authentication is implemented; payments and the pr
 ### Venues & Multi-Hall Booking
 - `GET /api/venues` — Retrieve venue and hall records
 - `GET /api/venues/:id` — Venue details, halls, and bookings
-- `POST /api/venues/:id/book` — Operator: reserve a venue or specific hall (validates references and relies on PostgreSQL booking constraints)
+- `POST /api/venues/:id/book` — Operator or owning organizer: reserve a venue or specific hall
 
 ### Operations & Tasks
-- `GET /api/tasks` — Operator tasks for run-of-show
-- `PATCH /api/tasks/:id/status` — Operator: move task across Kanban states
+- `GET /api/tasks` — Operator tasks or an organizer's own event tasks
+- `PATCH /api/tasks/:id/status` — Operator or owning organizer: move task across Kanban states
 
 ### Attendees & Check-In
 - `POST /api/attendees/register` — Generate digital pass & registration
-- `POST /api/attendees/checkin` — Operator: validate QR pass & prevent duplicate turnstile entries
+- `POST /api/attendees/checkin` — Operator or owning organizer: validate QR pass & prevent duplicate entries
 
 See [deployment setup](../DEPLOYMENT.md) for production variables, TLS, and initialization.
 
@@ -108,3 +108,9 @@ origin for origin checks. Public registration always creates an attendee account
 Organizers and venue managers must be assigned through a trusted administrative
 process before their server privileges are available. Browser staff invitations
 remain local workflow data and do not alter database roles.
+Staff sessions cannot perform server check-in or task mutations until an event
+assignment is represented in trusted backend records. Public auth endpoints use
+per-IP, per-route 15-minute attempt limits (10 password or registration attempts,
+20 Firebase token exchanges). Deployments with multiple backend processes need a
+shared limiter before relying on these process-local limits for fleet-wide abuse
+control.

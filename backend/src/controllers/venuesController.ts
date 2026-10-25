@@ -29,8 +29,13 @@ export async function getVenueById(req: Request, res: Response, next: NextFuncti
     }
 
     const hallsResult = await query('SELECT * FROM venue_halls WHERE venue_id = $1', [id]);
+    const actorId = trustedUserId(req);
+    const managerRole = actorId && venueResult.rows[0].manager_id === actorId
+      ? (await query('SELECT role FROM users WHERE id = $1', [actorId])).rows[0]?.role
+      : undefined;
+    const canViewBookings = optionalOperator(req) || managerRole === 'venue_manager';
     const bookingsResult = await query(
-      optionalOperator(req) ? 'SELECT * FROM venue_bookings WHERE venue_id = $1 AND status = $2 ORDER BY start_time ASC' :
+      canViewBookings ? 'SELECT * FROM venue_bookings WHERE venue_id = $1 AND status = $2 ORDER BY start_time ASC' :
       "SELECT b.id, b.venue_id, b.hall_id, b.start_time, b.end_time, b.status FROM venue_bookings b JOIN events e ON e.id = b.event_id WHERE b.venue_id = $1 AND b.status = $2 AND e.is_private = false AND e.event_type = 'public' ORDER BY b.start_time ASC",
       [id, 'confirmed']
     );
@@ -81,9 +86,13 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
       return res.status(404).json({ success: false, error: 'Venue not found' });
     }
 
-    const eventResult = await query('SELECT id FROM events WHERE id = $1', [event_id]);
+    const eventResult = await query('SELECT id, organizer_id FROM events WHERE id = $1', [event_id]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+    const actorId = trustedUserId(req);
+    if (actorId && eventResult.rows[0].organizer_id !== actorId) {
+      return res.status(403).json({ success: false, error: 'Event owner access required' });
     }
 
     if (hall_id !== undefined && hall_id !== null) {

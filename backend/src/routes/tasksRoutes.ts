@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { requireOperator } from '../middleware/auth';
+import { requireOrganizerOrOperator } from '../middleware/auth';
 import { getTasks, updateTaskStatus } from '../controllers/tasksController';
 
 const router = Router();
 
-router.get('/', requireOperator, getTasks);
-router.patch('/:id/status', requireOperator, updateTaskStatus);
+router.get('/', requireOrganizerOrOperator, getTasks);
+router.patch('/:id/status', requireOrganizerOrOperator, updateTaskStatus);
 
 export default router;

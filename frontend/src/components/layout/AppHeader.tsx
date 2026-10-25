@@ -33,6 +33,7 @@ import zabayWordmark from '../../assets/zabay-wordmark.png';
 import zabayWordmarkWhite from '../../assets/zabay-wordmark-white.png';
 import { CreateEventModal } from '../organizer/CreateEventModal';
 import { AuthModal } from '../auth/AuthModal';
+import api from '../../services/api';
 
 interface AppHeaderProps {
   onOpenAudit: () => void;
@@ -55,6 +56,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     currentRole,
     setCurrentRole,
     currentUser,
+    operatorAuthenticated,
+    isLiveBackend,
     selectedEvent,
     setSelectedEvent,
     events,
@@ -78,6 +81,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isOperatorLoginOpen, setIsOperatorLoginOpen] = useState(false);
+  const [operatorUsername, setOperatorUsername] = useState('');
+  const [operatorPassword, setOperatorPassword] = useState('');
+  const [operatorError, setOperatorError] = useState('');
 
   const menuRef = useRef<HTMLDivElement>(null);
   const eventPickerRef = useRef<HTMLDivElement>(null);
@@ -344,6 +351,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
       {/* Right: Actions, Studio CTA & Account Menu */}
       <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2.5 shrink-0">
+        <span data-cy="backend-status" className="hidden sm:inline text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+          {isLiveBackend ? 'Postgres Live' : 'Offline'}
+        </span>
+        {operatorAuthenticated ? (
+          <button type="button" className="text-[10px] font-semibold text-slate-600 dark:text-slate-300" onClick={async () => {
+            const result = await api.auth.logout();
+            if (result.success) window.location.reload();
+            else setOperatorError(result.error || 'Operator logout failed.');
+          }}>Operator logout</button>
+        ) : currentUser.id === 'usr-guest' ? (
+          <button type="button" className="text-[10px] font-semibold text-slate-600 dark:text-slate-300" onClick={() => setIsOperatorLoginOpen(true)}>Operator login</button>
+        ) : null}
         {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on desktop md+; mobile has bottom nav) */}
         {currentRole === 'attendee' && (
           <button
@@ -786,6 +805,22 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
         />
+      )}
+      {isOperatorLoginOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+          <form className="w-full max-w-sm space-y-3 rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900" onSubmit={async (event) => {
+            event.preventDefault();
+            const result = await api.auth.login(operatorUsername, operatorPassword);
+            if (result.success) window.location.reload();
+            else setOperatorError(result.error || 'Operator login failed.');
+          }}>
+            <h2 className="text-base font-bold">Operator login</h2>
+            <input aria-label="Operator username" autoComplete="username" required value={operatorUsername} onChange={event => setOperatorUsername(event.target.value)} className="w-full rounded-lg border p-2 text-sm" />
+            <input aria-label="Operator password" type="password" autoComplete="current-password" required value={operatorPassword} onChange={event => setOperatorPassword(event.target.value)} className="w-full rounded-lg border p-2 text-sm" />
+            {operatorError && <p role="alert" className="text-xs text-red-600">{operatorError}</p>}
+            <div className="flex justify-end gap-2 text-sm"><button type="button" onClick={() => setIsOperatorLoginOpen(false)}>Cancel</button><button type="submit" className="rounded-lg bg-blue-600 px-3 py-2 text-white">Sign in</button></div>
+          </form>
+        </div>
       )}
     </header>
   );

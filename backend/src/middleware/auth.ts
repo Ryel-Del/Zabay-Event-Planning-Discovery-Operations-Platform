@@ -7,12 +7,29 @@ import { verifyFirebaseIdentity } from '../config/firebase';
 type Session = { csrf: string; expires: number; identity: 'operator' | 'user'; userId?: string };
 const sessions = new Map<string, Session>();
 const attempts = new Map<string, { count: number; until: number }>();
+const publicAuthAttempts = new Map<string, { count: number; until: number }>();
 const lifetime = 8 * 60 * 60 * 1000;
 const cookieName = 'zabay_session';
 const cookieOptions = `HttpOnly; SameSite=Strict; Path=/api; Max-Age=${lifetime / 1000}${production ? '; Secure' : ''}`;
 const digest = (value: string) => createHash('sha256').update(value).digest();
 const equal = (a: string, b: string) => timingSafeEqual(digest(a), digest(b));
 const token = () => randomBytes(32).toString('hex');
+
+function limitPublicAuth(route: string, maximum: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const key = `${route}:${req.ip || 'unknown'}`;
+    const now = Date.now();
+    const previous = publicAuthAttempts.get(key);
+    const count = previous && previous.until > now ? previous.count : 0;
+    if (count >= maximum) return res.status(429).json({ success: false, error: 'Too many authentication attempts. Try again later.' });
+    if (publicAuthAttempts.size >= 10000 && !publicAuthAttempts.has(key)) {
+      for (const [entry, state] of publicAuthAttempts) if (state.until <= now) publicAuthAttempts.delete(entry);
+      if (publicAuthAttempts.size >= 10000) publicAuthAttempts.delete(publicAuthAttempts.keys().next().value!);
+    }
+    publicAuthAttempts.set(key, { count: count + 1, until: count ? previous!.until : now + 15 * 60 * 1000 });
+    next();
+  };
+}
 
 function session(req: Request) {
   const raw = req.headers.cookie?.split(';').map(item => item.trim()).find(item => item.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
@@ -37,10 +54,10 @@ export function requireOperator(req: Request, res: Response, next: NextFunction)
   next();
 }
 export function optionalOperator(req: Request) { return session(req)?.identity === 'operator'; }
-export async function requireEventCreator(req: Request, res: Response, next: NextFunction) {
+export async function requireOrganizerOrOperator(req: Request, res: Response, next: NextFunction) {
   const found = session(req);
   if (!found) return res.status(401).json({ success: false, error: 'Login required', code: 'UNAUTHORIZED' });
-  if (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf) return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf)) return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
   if (found.identity === 'operator') return next();
   try {
     const result = await query('SELECT role FROM users WHERE id = $1', [found.userId]);
@@ -48,6 +65,7 @@ export async function requireEventCreator(req: Request, res: Response, next: Nex
     next();
   } catch (err) { next(err); }
 }
+export const requireEventCreator = requireOrganizerOrOperator;
 export function trustedEventOwner(req: Request) {
   const found = session(req);
   return found?.identity === 'operator' ? 'zabay-operator' : found?.userId;
@@ -115,7 +133,7 @@ authRouter.post('/verify-key', (req, res) => {
 /**
  * 3. User Registration (Real PostgreSQL password hash with salt)
  */
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', limitPublicAuth('register', 10), async (req, res) => {
   if (!sameOrigin(req)) return res.status(403).json({ success: false, error: 'Request verification failed' });
   try {
     const { name, email, password, organization, phone } = req.body || {};
@@ -163,7 +181,7 @@ authRouter.post('/register', async (req, res) => {
 /**
  * 4. User Login (Authenticates against PostgreSQL with salted timing-safe verification)
  */
-authRouter.post('/user-login', async (req, res) => {
+authRouter.post('/user-login', limitPublicAuth('user-login', 10), async (req, res) => {
   if (!sameOrigin(req)) return res.status(403).json({ success: false, error: 'Request verification failed' });
   try {
     const { email, password } = req.body || {};
@@ -212,7 +230,7 @@ authRouter.post('/user-login', async (req, res) => {
   }
 });
 
-authRouter.post('/firebase-login', async (req, res) => {
+authRouter.post('/firebase-login', limitPublicAuth('firebase-login', 20), async (req, res) => {
   if (!sameOrigin(req)) return res.status(403).json({ success: false, error: 'Request verification failed' });
   const idToken = req.body?.idToken;
   if (typeof idToken !== 'string' || !idToken || idToken.length > 8192) return res.status(400).json({ success: false, error: 'Firebase ID token required' });

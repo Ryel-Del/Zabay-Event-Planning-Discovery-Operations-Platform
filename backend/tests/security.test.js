@@ -38,6 +38,7 @@ db.query = async (sql, params = []) => {
     put(user); return { rows: [user] };
   }
   if (sql.startsWith('UPDATE users SET password_hash')) throw new Error('Password takeover attempted');
+  if (sql.startsWith('UPDATE tasks SET status')) return { rows: [] };
   if (sql.startsWith('SELECT id, name, email, role, phone, organization, avatar, created_at')) {
     const user = users.get(params[0]); return { rows: user ? [user] : [] };
   }
@@ -67,7 +68,7 @@ test('valid credentials work and ordinary accounts have no operator access', asy
   const csrf = login.body.csrfToken;
   assert.equal((await agent.get('/api/auth/session')).body.operator, false);
   assert.equal((await agent.post('/api/venues').set('X-CSRF-Token', csrf).send({})).status, 403);
-  assert.equal((await agent.patch('/api/tasks/some-task/status').set('X-CSRF-Token', csrf).send({ status: 'completed' })).status, 403);
+  assert.equal((await agent.patch('/api/tasks/some-task/status').set('X-CSRF-Token', csrf).send({ status: 'completed' })).status, 404);
   const event = await agent.post('/api/events').set('X-CSRF-Token', csrf).send({ ...payload, organizer_id: 'seed-organizer' });
   assert.equal(event.status, 201);
   assert.equal(event.body.data.organizer_id, 'real-organizer');

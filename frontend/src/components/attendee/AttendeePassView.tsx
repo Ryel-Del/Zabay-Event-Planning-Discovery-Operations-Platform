@@ -22,8 +22,11 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Filter confirmed passes strictly belonging to the currently active user or remembered browser session
+  let sessionPassIds: string[] = [];
+  try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* ignore malformed browser state */ }
   const userPasses = registrations.filter((reg) => {
     if (!reg) return false;
+    if (sessionPassIds.includes(reg.id)) return true;
     if (reg.attendee_id && currentUser.id && reg.attendee_id === currentUser.id && currentUser.id !== 'usr-guest') return true;
     if (reg.attendee_email && currentUser.email && reg.attendee_email.toLowerCase() === currentUser.email.toLowerCase()) return true;
     if (reg.attendee_name && currentUser.name && currentUser.name !== 'Guest' && reg.attendee_name.toLowerCase() === currentUser.name.toLowerCase()) return true;
