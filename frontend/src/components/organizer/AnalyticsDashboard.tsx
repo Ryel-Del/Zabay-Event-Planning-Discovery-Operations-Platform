@@ -22,10 +22,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useEventRoster } from '../../services/useEventRoster';
+import { useEventTasks } from '../../services/useEventTasks';
 import { getCurrencySymbol } from '../../utils/currency';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData } = useApp();
+  const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData, isDemoMode, isLiveBackend } = useApp();
+  const roster = useEventRoster(selectedEvent?.id, isDemoMode, isLiveBackend, registrations);
+  const taskStream = useEventTasks(selectedEvent?.id, isDemoMode, isLiveBackend, tasks);
 
   if (!selectedEvent) {
     return (
@@ -53,14 +57,18 @@ export const AnalyticsDashboard: React.FC = () => {
   }
 
   // Metric derivations from views scoped to selectedEvent
-  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
-  const eventRegistrations = registrations.filter((r) => r.event_id === selectedEvent.id);
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
-  const capacityPercent = selectedEvent.max_capacity > 0 ? Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100) : 0;
+  const eventTasks = taskStream.data ?? [];
+  const registered = roster.data?.summary.registered ?? null;
+  const checkedInCount = roster.data?.summary.checked_in ?? null;
+  const totalTicketValue = registered === null ? null : registered * selectedEvent.ticket_price;
+  const validCapacity = Number.isFinite(selectedEvent.max_capacity) && selectedEvent.max_capacity > 0 ? selectedEvent.max_capacity : null;
+  const capacityPercent = registered === null || validCapacity === null ? null
+    : Math.min(100, Math.max(0, Math.round(registered / validCapacity * 100)));
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
-  const taskReadiness = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
-  const checkedInCount = eventRegistrations.filter((r) => r.status === 'checked_in').length;
-  const attendanceRate = eventRegistrations.length > 0 ? Math.round((checkedInCount / eventRegistrations.length) * 100) : 0;
+  const taskReadiness = taskStream.data === null ? null
+    : eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  const attendanceRate = registered === null || checkedInCount === null ? null
+    : registered > 0 ? Math.min(100, Math.round(checkedInCount / registered * 100)) : 0;
 
   // Chart 1: Hourly Check-in Flow (v_attendance_arrival_flow)
   const hourlyFlowData = [
