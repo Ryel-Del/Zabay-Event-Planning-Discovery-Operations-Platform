@@ -6,16 +6,19 @@ import { authenticatedUserId, trustedUserId } from '../middleware/auth';
 
 export async function registerForEvent(req: Request, res: Response, next: NextFunction) {
   try {
-    const { event_id, attendee_name, attendee_email, ticket_type } = req.body || {};
+    const { event_id, ticket_type } = req.body || {};
+    const accountId = authenticatedUserId(req);
+    if (!accountId) return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
     if (typeof event_id !== 'string' || !event_id.trim() ||
-        typeof attendee_name !== 'string' || !attendee_name.trim() || attendee_name.trim().length > 255 ||
-        typeof attendee_email !== 'string' || attendee_email.trim().length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(attendee_email.trim()) ||
         typeof ticket_type !== 'string' || !['General Admission', 'VIP Access'].includes(ticket_type.trim())) {
       return res.status(400).json({
         success: false,
-        error: 'event_id, attendee_name, valid attendee_email, and ticket_type are required',
+        error: 'event_id and ticket_type are required',
       });
     }
+
+    const account = await query('SELECT name, email FROM users WHERE id = $1', [accountId]);
+    if (!account.rows[0]) return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
 
     const event = await query("SELECT id FROM events WHERE id = $1 AND is_private = false AND event_type = 'public' AND status != $2", [event_id.trim(), 'cancelled']);
     if (event.rows.length === 0) {
@@ -30,9 +33,9 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
       [
         `reg-${randomUUID()}`,
         event_id.trim(),
-        req.body?.registration_mode === 'account' ? authenticatedUserId(req) : null,
-        attendee_name.trim(),
-        attendee_email.trim().toLowerCase(),
+        accountId,
+        account.rows[0].name,
+        account.rows[0].email,
         ticket_type.trim(),
         `ZABAY-${randomBytes(18).toString('hex').toUpperCase()}`,
       ]
