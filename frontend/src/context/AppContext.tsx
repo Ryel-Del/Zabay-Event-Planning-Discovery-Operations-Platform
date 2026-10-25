@@ -254,8 +254,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mockEvents;
   });
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return null;
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') {
+        return null;
+      }
+      const isDevUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const savedUserStr = localStorage.getItem('zabay-user');
+      let userId = 'usr-guest';
+      if (savedUserStr) {
+        try {
+          const parsed = JSON.parse(savedUserStr);
+          if (parsed && parsed.id) userId = parsed.id;
+        } catch {
+          // ignore
+        }
+      }
+      // If dev mode is NOT unlocked and user is not Mark Bautista ('usr-org-1'),
+      // start with a clean workspace (no event preselected)
+      if (!isDevUnlocked && userId !== 'usr-org-1') {
+        return null;
+      }
     }
     return mockEvents[0] || null;
   });
@@ -364,7 +382,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setVenues(venueRes.data.map(adaptVenue));
       setEvents(liveEvents);
       setVenueBookings(venueDetails.flatMap((detail) => (detail.data?.bookings || []) as VenueBooking[]));
-      setSelectedEvent((previous) => liveEvents.find((event) => event.id === previous?.id) || liveEvents[0] || null);
+      setSelectedEvent((previous) => {
+        if (previous?.id) {
+          const found = liveEvents.find((event) => event.id === previous.id);
+          if (found) return found;
+        }
+        if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+          return liveEvents[0] || null;
+        }
+        if (currentUser.id && currentUser.id !== 'usr-guest') {
+          return liveEvents.find((event) => event.organizer_id === currentUser.id) || null;
+        }
+        return null;
+      });
       setIsLiveBackend(true);
     } catch {
       setIsLiveBackend(false);
@@ -374,6 +404,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     refreshBackendStatus();
   }, []);
+
+  // Synchronize active workspace (selectedEvent) with currentUser session and devMode state
+  useEffect(() => {
+    if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+      setSelectedEvent((prev) => prev || events[0] || null);
+      return;
+    }
+    if (currentUser.id === 'usr-guest') {
+      setSelectedEvent((prev) => (prev ? null : prev));
+      return;
+    }
+    setSelectedEvent((prev) => {
+      if (prev && prev.organizer_id === currentUser.id) {
+        return prev;
+      }
+      const owned = events.find((e) => e.organizer_id === currentUser.id) || null;
+      return owned;
+    });
+  }, [currentUser.id, isDevModeUnlocked, events]);
 
   // Event Change Notifications & Live Alerts System
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -655,7 +704,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!isLiveBackend) throw new Error('Live server is unavailable. Please check your connection or continue in local mode.');
       const response = await api.events.create({
         ...data,
-        organizer_id: undefined,
+        organizer_id: currentUser.id,
         venue_id: undefined,
         hall_id: undefined,
         hall_name: undefined,
@@ -665,6 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw new Error(response.error || 'Event was not saved.');
       }
       const saved = adaptEvent(response.data);
+      saved.organizer_id = response.data.organizer_id || currentUser.id;
       setEvents((previous) => [saved, ...previous]);
       setSelectedEvent(saved);
       return saved;

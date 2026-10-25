@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Calendar,
   Layers,
@@ -90,6 +90,16 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const isDark = theme === 'dark';
 
   const hasConflicts = tasks.some((t) => t.has_conflict);
+
+  const managedEvents = useMemo(() => {
+    if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+      return events;
+    }
+    if (currentUser.id === 'usr-guest') {
+      return [];
+    }
+    return events.filter((e) => e.organizer_id === currentUser.id);
+  }, [events, currentUser.id, isDevModeUnlocked]);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -231,18 +241,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
                   <span>Switch Managed Event</span>
                   <span className="text-[10px] font-mono text-[#3E6CB5] dark:text-[#7EA6E0] font-normal">
-                    {events.length} Active Records
+                    {managedEvents.length} {managedEvents.length === 1 ? 'Event' : 'Events'}
                   </span>
                 </div>
 
                 <div className="p-1.5 space-y-1 max-h-72 overflow-y-auto">
-                  {events.length === 0 ? (
+                  {managedEvents.length === 0 ? (
                     <div className="p-5 text-center space-y-1.5">
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Clean Workspace</p>
-                      <p className="text-[11px] text-slate-400">No events created yet. Start fresh or load sample data.</p>
+                      <p className="text-[11px] text-slate-400">
+                        You have not created any events yet. Create your first Bohol event to activate this workspace.
+                      </p>
                     </div>
                   ) : (
-                    events.map((evt) => {
+                    managedEvents.map((evt) => {
                       const isSelected = selectedEvent ? evt.id === selectedEvent.id : false;
                       const venue = venues.find((v) => v.id === evt.venue_id);
                       const isEvtPrivate = evt.is_private || evt.event_type === 'private';
@@ -308,7 +320,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   )}
                 </div>
 
-                {/* Footer Controls: Create Event & Demo Toggle */}
+                {/* Footer Controls: Create Event & Dev-only Demo Toggle */}
                 <div className="p-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 bg-slate-50/50 dark:bg-slate-900/30">
                   <button
                     onClick={() => {
@@ -322,28 +334,30 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <span>Create New Event</span>
                   </button>
 
-                  {isDemoMode ? (
-                    <button
-                      onClick={() => {
-                        clearToCleanSlate();
-                        setIsEventPickerOpen(false);
-                      }}
-                      className="w-full py-1.5 px-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      <span>Exit Sample Mode</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        loadDemoData();
-                        setIsEventPickerOpen(false);
-                      }}
-                      className="w-full py-1.5 px-3 bg-[#EBF3FC] hover:bg-[#D4E4F7] dark:bg-[#1E293B] dark:hover:bg-[#283852] text-[#244A85] dark:text-[#8BB0E8] rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                      <span>Load Bohol Sample Data</span>
-                    </button>
+                  {isDevModeUnlocked && (
+                    isDemoMode ? (
+                      <button
+                        onClick={() => {
+                          clearToCleanSlate();
+                          setIsEventPickerOpen(false);
+                        }}
+                        className="w-full py-1.5 px-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Exit Sample Mode</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          loadDemoData();
+                          setIsEventPickerOpen(false);
+                        }}
+                        className="w-full py-1.5 px-3 bg-[#EBF3FC] hover:bg-[#D4E4F7] dark:bg-[#1E293B] dark:hover:bg-[#283852] text-[#244A85] dark:text-[#8BB0E8] rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                        <span>Load Bohol Sample Data</span>
+                      </button>
+                    )
                   )}
                 </div>
               </div>

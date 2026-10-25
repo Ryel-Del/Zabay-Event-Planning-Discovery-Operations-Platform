@@ -9,6 +9,7 @@ import { ChangeImpactSimulator } from '../../components/organizer/ChangeImpactSi
 import { TaskGanttView } from '../../components/organizer/TaskGanttView';
 import { AttendeeDirectoryDatagrid } from '../../components/organizer/AttendeeDirectoryDatagrid';
 import { AnalyticsDashboard } from '../../components/organizer/AnalyticsDashboard';
+import { useApp } from '../../context/AppContext';
 
 interface OrganizerPageProps {
   currentView: OrganizerView;
@@ -27,6 +28,13 @@ export const OrganizerPage: React.FC<OrganizerPageProps> = ({
   onSwitchToStaff,
   onScanPass,
 }) => {
+  const { selectedEvent } = useApp();
+
+  // If no event is selected and not viewing general venues, show overview empty state
+  if (!selectedEvent && currentView !== 'venues') {
+    return <OperationsOverview onNavigate={onSelectView} />;
+  }
+
   return (
     <div className="space-y-6">
       {currentView === 'overview' && <OperationsOverview onNavigate={onSelectView} />}
