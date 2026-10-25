@@ -7,12 +7,10 @@ import {
   Building,
   Shield,
   CheckCircle2,
-  Sparkles,
   ArrowRight,
   Eye,
   EyeOff,
   ShieldCheck,
-  Terminal,
 } from 'lucide-react';
 import api from '../../services/api';
 import { useApp } from '../../context/AppContext';
@@ -25,59 +23,8 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const DEMO_PERSONAS = [
-  {
-    id: 'usr-org-1',
-    name: 'Mark Bautista',
-    email: 'mark.bautista@zabay.ph',
-    role: 'organizer' as UserRole,
-    roles: ['organizer', 'venue_manager', 'staff', 'attendee'] as UserRole[],
-    title: 'Event Organizer',
-    org: 'Tagbilaran Youth & Sports Council',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    badge: 'Planner & Studio Access',
-    color: 'from-blue-600 to-indigo-600',
-  },
-  {
-    id: 'usr-vm-1',
-    name: 'Maria Elena Santos',
-    email: 'elena.santos@boholculturalcenter.ph',
-    role: 'venue_manager' as UserRole,
-    roles: ['venue_manager', 'attendee'] as UserRole[],
-    title: 'Venue Manager',
-    org: 'Bohol Cultural Center Facilities',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    badge: 'Facility & Multi-Hall Operations',
-    color: 'from-emerald-600 to-teal-600',
-  },
-  {
-    id: 'usr-att-1',
-    name: 'Sofia Ramos',
-    email: 'sofia.ramos@bisu.edu.ph',
-    role: 'attendee' as UserRole,
-    roles: ['attendee'] as UserRole[],
-    title: 'Student Attendee',
-    org: 'Bohol Island State University (BISU)',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    badge: 'QR Event Pass & Discovery',
-    color: 'from-amber-600 to-orange-600',
-  },
-  {
-    id: 'per-4',
-    name: 'Rico Tan',
-    email: 'rico.tan@securesentry.ph',
-    role: 'staff' as UserRole,
-    roles: ['staff', 'attendee'] as UserRole[],
-    title: 'Security Lead (Turnstile)',
-    org: 'SecureSentry Bohol Operations',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    badge: 'Gate Scanner Clearance',
-    color: 'from-purple-600 to-pink-600',
-  },
-];
-
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { setCurrentUser, setCurrentRole, previewStaffPortal, isDevModeUnlocked, unlockDevMode, loadDemoData } = useApp();
+  const { setCurrentUser, setCurrentRole, previewStaffPortal, unlockDevMode } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
@@ -97,55 +44,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setIsGoogleModalOpen(true);
   };
 
-  const handleSelectPersona = (persona: (typeof DEMO_PERSONAS)[0]) => {
-    setEmail(persona.email);
-    setPassword('demo-zabay-2026');
-    setSelectedRole(persona.role);
-    setErrorMessage(null);
-
-    // Instant sign-in with selected persona
-    performSignIn(persona.email, persona.role, persona);
-  };
-
-  const performSignIn = (targetEmail: string, targetRole: UserRole, personaOverride?: any) => {
+  const performSignIn = (targetEmail: string, targetRole: UserRole) => {
     setIsSubmitting(true);
     setErrorMessage(null);
 
     setTimeout(() => {
       let userToSet: User;
 
-      if (personaOverride) {
+      const matched = mockUsers.find((u) => u.email.toLowerCase() === targetEmail.toLowerCase());
+      if (matched) {
         userToSet = {
-          id: personaOverride.id,
-          name: personaOverride.name,
-          email: personaOverride.email,
-          role: personaOverride.role,
-          roles: personaOverride.roles || ['organizer', 'venue_manager', 'staff', 'attendee'],
-          avatar: personaOverride.avatar,
-          organization: personaOverride.org,
-          location: 'Tagbilaran City, Bohol',
-          bio: `${personaOverride.title} at ${personaOverride.org}`,
+          ...matched,
+          roles: matched.roles || ['organizer', 'venue_manager', 'staff', 'attendee'],
         };
       } else {
-        const matched = mockUsers.find((u) => u.email.toLowerCase() === targetEmail.toLowerCase());
-        if (matched) {
-          userToSet = {
-            ...matched,
-            roles: matched.roles || ['organizer', 'venue_manager', 'staff', 'attendee'],
-          };
-        } else {
-          userToSet = {
-            id: `usr-${Date.now().toString(36)}`,
-            name: name.trim() || targetEmail.split('@')[0],
-            email: targetEmail.trim(),
-            role: targetRole,
-            roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-            organization: organization.trim() || 'Zabay Platform User',
-            location: 'Tagbilaran City, Bohol',
-            bio: 'Registered participant on Zabay Event Platform.',
-          };
-        }
+        userToSet = {
+          id: `usr-${Date.now().toString(36)}`,
+          name: name.trim() || targetEmail.split('@')[0],
+          email: targetEmail.trim(),
+          role: targetRole,
+          roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim() || targetEmail.split('@')[0])}&background=3E6CB5&color=fff&bold=true`,
+          organization: organization.trim() || 'Zabay Platform User',
+          location: 'Tagbilaran City, Bohol',
+          bio: 'Registered participant on Zabay Event Platform.',
+        };
       }
 
       // If user typed 'operator' or operator password, authenticate operator session
@@ -157,21 +80,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         });
       }
 
-      loadDemoData();
       setCurrentUser(userToSet);
       setCurrentRole(userToSet.role);
 
-      if (userToSet.role === 'staff') {
-        previewStaffPortal(personaOverride?.id || 'per-4');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-user', JSON.stringify(userToSet));
+        localStorage.setItem('zabay-role', userToSet.role);
       }
 
-      setSuccessMessage(`Welcome back, ${userToSet.name}! Signed in as ${userToSet.role.replace('_', ' ').toUpperCase()}.`);
+      if (userToSet.role === 'staff') {
+        previewStaffPortal('per-4');
+      }
+
+      setSuccessMessage(`Welcome back, ${userToSet.name}! Signed in successfully.`);
       setIsSubmitting(false);
 
       setTimeout(() => {
         setSuccessMessage(null);
         onClose();
-      }, 900);
+      }, 700);
     }, 400);
   };
 
@@ -235,44 +162,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* 1-Click Demo Personas Bar (Unlocked exclusively via DevCode / Secret Developer Mode) */}
-        {isDevModeUnlocked && (
-          <div className="p-3 sm:p-4 shrink-0 bg-blue-50/60 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/40 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                1-Click Demo Personas (Evaluation Ready)
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono">Instant Sign-In</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {DEMO_PERSONAS.map((persona) => (
-                <button
-                  key={persona.id}
-                  type="button"
-                  onClick={() => handleSelectPersona(persona)}
-                  className="p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-white/90 dark:bg-[#111722] hover:border-blue-400 hover:shadow-xs transition-all text-left flex items-center gap-2.5 group cursor-pointer"
-                >
-                  <img
-                    src={persona.avatar}
-                    alt={persona.name}
-                    className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-[#3E6CB5]">
-                      {persona.name}
-                    </div>
-                    <div className="text-[10px] text-slate-500 truncate">
-                      {persona.title}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Tab Switcher */}
         <div className="flex shrink-0 border-b border-slate-200/80 dark:border-slate-800">
@@ -459,27 +348,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-
-          {/* Quick Demo Credential Hint */}
-          {isDevModeUnlocked && (
-            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-              <div className="flex items-center gap-1.5">
-                <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                <span>Demo Access: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('operator');
-                  setPassword('zabay-operator-secret-2026');
-                  setSelectedRole('organizer');
-                }}
-                className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-              >
-                Fill Demo Account
-              </button>
-            </div>
-          )}
 
           <div className="pt-1 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-slate-400" />

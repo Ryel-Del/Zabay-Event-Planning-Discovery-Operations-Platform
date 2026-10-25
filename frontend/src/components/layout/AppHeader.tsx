@@ -30,7 +30,6 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { mockUsers } from '../../mock/mockData';
 import type { UserRole } from '../../types';
 import zabayWordmark from '../../assets/zabay-wordmark.png';
 import zabayWordmarkWhite from '../../assets/zabay-wordmark-white.png';
@@ -58,7 +57,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     currentRole,
     setCurrentRole,
     currentUser,
-    setCurrentUser,
     selectedEvent,
     setSelectedEvent,
     events,
@@ -692,37 +690,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 </div>
               )}
 
-              {/* Demo Persona Switcher (Hidden in normal mode; unlocked only in dev/evaluation mode) */}
-              {isDevModeUnlocked && (
-                <div className="p-2 border-t border-slate-100 dark:border-slate-800/80 space-y-1">
-                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Switch Account (Demo Personas)
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {mockUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        onClick={() => {
-                          setCurrentUser(user);
-                          setCurrentRole(user.role);
-                          setIsProfileMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer text-left ${
-                          currentUser.id === user.id
-                            ? 'bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-slate-100'
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                        }`}
-                      >
-                        <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full object-cover" />
-                        <span className="flex-1 truncate">{user.name}</span>
-                        <span className="text-[9px] text-slate-400 capitalize">{user.role.replace('_', ' ')}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               <div className="p-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
                 {currentUser.id !== 'usr-guest' ? (
                   <button
@@ -749,13 +716,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   </button>
                 )}
 
-                {/* Subtle Developer Access Trigger */}
+                {/* Developer Access / Evaluation Tools in dedicated separate menu */}
                 {isDevModeUnlocked ? (
                   <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1.5">
                     <div className="flex items-center justify-between text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider px-1">
                       <span className="flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        Dev Mode ({unlockedDevCode || 'Active'})
+                        Dev Console ({unlockedDevCode || 'Active'})
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
@@ -781,7 +748,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       </button>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      if (onOpenDevConsole) onOpenDevConsole();
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-1 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <Terminal className="w-3 h-3" />
+                    <span>Developer / Evaluation Access</span>
+                  </button>
+                )}
               </div>
             </div>
           )}

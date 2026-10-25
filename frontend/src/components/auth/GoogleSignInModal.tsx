@@ -27,7 +27,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
     {
       name: 'Sofia Ramos',
       email: 'sofia.ramos@bisu.edu.ph',
-      title: 'Student Attendee • BISU',
+      title: 'Signed in',
       avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
       role: 'attendee' as UserRole,
       org: 'Bohol Island State University',
@@ -35,7 +35,7 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
     {
       name: 'Mark Bautista',
       email: 'mark.bautista@zabay.ph',
-      title: 'Event Operations Lead',
+      title: 'Signed in',
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
       role: 'organizer' as UserRole,
       org: 'Tagbilaran Youth & Sports Council',

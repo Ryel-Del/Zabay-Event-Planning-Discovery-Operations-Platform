@@ -25,6 +25,53 @@ interface DevCodeModalProps {
   onOpenScannerWithCode?: (code: string) => void;
 }
 
+const DEMO_PERSONAS = [
+  {
+    id: 'usr-org-1',
+    name: 'Mark Bautista',
+    email: 'mark.bautista@zabay.ph',
+    role: 'organizer' as const,
+    roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
+    title: 'Event Organizer',
+    org: 'Tagbilaran Youth & Sports Council',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    desc: 'Planner studio, schedule, conflict detection',
+  },
+  {
+    id: 'usr-vm-1',
+    name: 'Maria Elena Santos',
+    email: 'elena.santos@boholculturalcenter.ph',
+    role: 'venue_manager' as const,
+    roles: ['venue_manager', 'attendee'],
+    title: 'Venue Manager',
+    org: 'Bohol Cultural Center Facilities',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+    desc: 'Facility & multi-hall calendar, reservations',
+  },
+  {
+    id: 'usr-att-1',
+    name: 'Sofia Ramos',
+    email: 'sofia.ramos@bisu.edu.ph',
+    role: 'attendee' as const,
+    roles: ['attendee'],
+    title: 'Student Attendee',
+    org: 'Bohol Island State University',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    desc: 'Public feed, pass wallet, QR check-in ticket',
+  },
+  {
+    id: 'per-4',
+    name: 'Rico Tan',
+    email: 'rico.tan@securesentry.ph',
+    role: 'staff' as const,
+    roles: ['staff', 'attendee'],
+    title: 'Security Lead (Turnstile)',
+    org: 'SecureSentry Bohol Operations',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    desc: 'Gate camera scanner, rapid verification',
+  },
+];
+
 export const DevCodeModal: React.FC<DevCodeModalProps> = ({
   isOpen,
   onClose,
@@ -39,6 +86,8 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
     isLiveBackend,
     currentRole,
     setCurrentRole,
+    setCurrentUser,
+    loadDemoData,
     events,
     venues,
     tasks,
@@ -276,6 +325,61 @@ export const DevCodeModal: React.FC<DevCodeModalProps> = ({
           {/* Unlocked Developer Tools & Diagnostic Panel */}
           {isDevModeUnlocked && (
             <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+              {/* Evaluation Personas (Safely isolated in Dev Console) */}
+              <div className="p-3.5 bg-slate-50 dark:bg-[#111722] rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span>Evaluation Demo Personas</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">1-Click Role Switch</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {DEMO_PERSONAS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        const userToSet = {
+                          id: p.id,
+                          name: p.name,
+                          email: p.email,
+                          role: p.role,
+                          roles: p.roles as any,
+                          avatar: p.avatar,
+                          organization: p.org,
+                          location: 'Tagbilaran City, Bohol',
+                          bio: `${p.title} at ${p.org}`,
+                        };
+                        loadDemoData();
+                        setCurrentUser(userToSet);
+                        setCurrentRole(p.role);
+                        if (typeof window !== 'undefined') {
+                          localStorage.setItem('zabay-user', JSON.stringify(userToSet));
+                          localStorage.setItem('zabay-role', p.role);
+                        }
+                        setFeedback({ type: 'success', message: `Switched session to ${p.name} (${p.title})` });
+                      }}
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#171E2B] hover:border-indigo-400 dark:hover:border-indigo-500 hover:shadow-xs transition-all text-left flex items-center gap-2.5 cursor-pointer group"
+                    >
+                      <img src={p.avatar} alt={p.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                          {p.name}
+                        </div>
+                        <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                          {p.title}
+                        </div>
+                        <div className="text-[9px] text-slate-400 truncate">
+                          {p.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* QR Scanner Test Codes Harness */}
               <div className="p-3.5 bg-slate-50 dark:bg-[#111722] rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between">
