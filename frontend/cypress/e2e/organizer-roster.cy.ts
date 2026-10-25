@@ -29,7 +29,7 @@ describe('organizer event roster', () => {
     cy.visit('/');
     cy.get('[data-cy="backend-status"]').should('have.text', 'Postgres Live');
     cy.get('[data-cy="event-picker"]').click();
-    cy.contains('button', eventTitle).click();
+    cy.contains('span', 'Switch Managed Event').closest('div.absolute').contains('button', eventTitle).click();
     cy.contains('button', 'Guest List & Check-In').click();
     cy.contains('Event Attendee & Gate Directory').should('be.visible');
   };
@@ -42,7 +42,7 @@ describe('organizer event roster', () => {
     cy.contains(passCode).should('exist');
     cy.reload();
     cy.get('[data-cy="event-picker"]').click();
-    cy.contains('button', eventTitle).click();
+    cy.contains('span', 'Switch Managed Event').closest('div.absolute').contains('button', eventTitle).click();
     cy.contains('button', 'Guest List & Check-In').click();
     cy.contains('Roster Fixture Guest').should('be.visible');
   });
