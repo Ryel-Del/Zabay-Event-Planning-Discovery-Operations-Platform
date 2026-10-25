@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useEventRoster } from '../../services/useEventRoster';
+import { useEventTasks } from '../../services/useEventTasks';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
 import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
@@ -23,6 +24,7 @@ interface OperationsOverviewProps {
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
   const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, isLiveBackend, isDemoMode } = useApp();
   const roster = useEventRoster(selectedEvent?.id, isDemoMode, isLiveBackend, registrations);
+  const taskStream = useEventTasks(selectedEvent?.id, isDemoMode, isLiveBackend, tasks);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   if (!selectedEvent) {
@@ -73,10 +75,10 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   }
 
   const venue = venues.find((v) => v.id === selectedEvent.venue_id);
-  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
+  const eventTasks = taskStream.data ?? [];
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = eventTasks.filter((t) => t.has_conflict);
-  const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  const readinessPercent = taskStream.data === null ? null : eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
   // Only logs linked to this event or one of its tasks belong on this overview.
   // AppContext's audit stream is browser-local, not a persistent server ledger.
   const eventAuditLogs = auditLogs.filter(log =>
@@ -165,11 +167,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           <div>
             <span className="text-slate-500 block mb-1">Operational Readiness</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent}%</span>
-              <span className="text-slate-500">({completedTasks}/{eventTasks.length} tasks ready)</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent === null ? '—' : `${readinessPercent}%`}</span>
+              <span className="text-slate-500">{taskStream.data === null ? 'Persistent tasks not loaded' : `(${completedTasks}/${eventTasks.length} tasks ready)`}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />
+              <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent ?? 0}%` }} />
             </div>
           </div>
 
@@ -205,7 +207,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
           <div>
             <span className="text-slate-500 block mb-1">Schedule Feasibility</span>
-            {conflictTasks.length > 0 ? (
+            {taskStream.data === null ? <span className="text-xs text-slate-500">Task status unavailable</span> : conflictTasks.length > 0 ? (
               <div className="flex items-center gap-1.5 text-[#C45547] dark:text-[#E07D70] font-bold text-sm">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{conflictTasks.length} Conflict Requires Attention</span>
@@ -335,6 +337,8 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             </button>
           </div>
 
+          {taskStream.error && <p role="alert" className="text-xs text-rose-800">{taskStream.error} <button className="underline" onClick={taskStream.refresh}>Retry</button></p>}
+          {taskStream.loading && <p role="status" className="text-xs text-stone-500">Loading persistent event tasks…</p>}
           {/* Clean Dense Task Row List (NOT bulky cards!) */}
           <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
             {eventTasks.map((task) => (
