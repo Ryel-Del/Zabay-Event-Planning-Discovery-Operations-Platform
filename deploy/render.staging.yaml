@@ -1,0 +1,32 @@
+# INACTIVE staging Blueprint. Do not sync until the maintainer approves
+# public backend exposure. The initial Blueprint sync deploys even when
+# autoDeployTrigger is "off"; a Render free web service is publicly reachable.
+services:
+  - type: web
+    name: zabay-api-staging
+    runtime: node
+    plan: free
+    region: singapore
+    repo: https://github.com/db-larpers/Zabay-Event-Planning-Discovery-Operations-Platform
+    branch: main
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    numInstances: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: OPERATOR_USERNAME
+        sync: false
+      - key: OPERATOR_PASSWORD
+        sync: false
+      - key: CLIENT_URL
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
