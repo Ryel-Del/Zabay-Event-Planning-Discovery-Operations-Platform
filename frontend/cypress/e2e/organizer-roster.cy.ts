@@ -12,16 +12,27 @@ describe('organizer event roster', () => {
     })).then(({ status, body }) => {
       expect(status).to.eq(201);
       eventId = body.data.id;
+      return cy.request('POST', '/api/auth/register', {
+        name: 'Roster Fixture Guest',
+        email: `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`,
+        password: 'roster-test-secret-long',
+      }).then(({ status }) => { expect(status).to.eq(201); });
+    }).then(() => cy.request('/api/auth/session')).then(({ body: session }) => {
       return cy.request({
         method: 'POST', url: '/api/attendees/register',
+        headers: { 'X-CSRF-Token': session.csrfToken,
+          Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' },
         body: { event_id: eventId, attendee_name: 'Roster Fixture Guest',
-          attendee_email: 'roster-fixture@example.test', ticket_type: 'General Admission',
-          registration_mode: 'guest' },
+          attendee_email: 'fixture@email.example', ticket_type: 'General Admission',
+          registration_mode: 'account' },
       });
     }).then(({ status, body }) => {
       expect(status).to.eq(201);
       passCode = body.data.qr_pass_code;
       registrationId = body.data.id;
+      return cy.env<{ OPERATOR_USERNAME: string; OPERATOR_PASSWORD: string }>(['OPERATOR_USERNAME', 'OPERATOR_PASSWORD'])
+        .then(({ OPERATOR_USERNAME, OPERATOR_PASSWORD }) => cy.request('POST', '/api/auth/login',
+          { username: OPERATOR_USERNAME, password: OPERATOR_PASSWORD }));
     });
   });
 
