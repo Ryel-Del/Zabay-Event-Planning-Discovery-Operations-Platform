@@ -130,3 +130,123 @@ export async function createEvent(req: Request, res: Response, next: NextFunctio
     next(err);
   }
 }
+
+export async function updateEvent(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const ownerId = trustedEventOwner(req);
+    const isOperator = optionalOperator(req);
+
+    const existing = await query('SELECT organizer_id, status FROM events WHERE id = $1', [id]);
+    if (!existing.rows.length) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+    if (!isOperator && existing.rows[0].organizer_id !== ownerId) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to update this event.' });
+    }
+
+    const {
+      title,
+      description,
+      category,
+      event_type,
+      is_private,
+      status,
+      start_date,
+      end_date,
+      expected_attendance,
+      max_capacity,
+      ticket_price,
+      budget,
+      banner_url,
+    } = req.body || {};
+
+    const updateFields: string[] = [];
+    const params: any[] = [id];
+
+    if (typeof title === 'string' && title.trim()) {
+      params.push(title.trim().slice(0, 255));
+      updateFields.push(`title = $${params.length}`);
+    }
+    if (typeof description === 'string') {
+      params.push(description.slice(0, 10000));
+      updateFields.push(`description = $${params.length}`);
+    }
+    if (typeof category === 'string' && category.trim()) {
+      params.push(category.trim().slice(0, 64));
+      updateFields.push(`category = $${params.length}`);
+    }
+    if (typeof event_type === 'string' && ['public', 'private', 'invite_only'].includes(event_type)) {
+      params.push(event_type);
+      updateFields.push(`event_type = $${params.length}`);
+    }
+    if (typeof is_private === 'boolean') {
+      params.push(is_private);
+      updateFields.push(`is_private = $${params.length}`);
+    }
+    if (typeof status === 'string' && ['planning', 'active', 'completed', 'cancelled'].includes(status)) {
+      params.push(status);
+      updateFields.push(`status = $${params.length}`);
+    }
+    if (typeof start_date === 'string' && Number.isFinite(Date.parse(start_date))) {
+      params.push(start_date);
+      updateFields.push(`start_date = $${params.length}`);
+    }
+    if (typeof end_date === 'string' && Number.isFinite(Date.parse(end_date))) {
+      params.push(end_date);
+      updateFields.push(`end_date = $${params.length}`);
+    }
+    if (typeof expected_attendance === 'number') {
+      params.push(expected_attendance);
+      updateFields.push(`expected_attendance = $${params.length}`);
+    }
+    if (typeof max_capacity === 'number') {
+      params.push(max_capacity);
+      updateFields.push(`max_capacity = $${params.length}`);
+    }
+    if (typeof ticket_price === 'number') {
+      params.push(ticket_price);
+      updateFields.push(`ticket_price = $${params.length}`);
+    }
+    if (typeof budget === 'number') {
+      params.push(budget);
+      updateFields.push(`budget = $${params.length}`);
+    }
+    if (typeof banner_url === 'string') {
+      params.push(banner_url.slice(0, 500));
+      updateFields.push(`banner_url = $${params.length}`);
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: 'No valid fields provided for update.' });
+    }
+
+    const sql = `UPDATE events SET ${updateFields.join(', ')} WHERE id = $1 RETURNING *`;
+    const result = await query(sql, params);
+
+    res.json({ success: true, data: result.rows[0], message: 'Event updated successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteEvent(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const ownerId = trustedEventOwner(req);
+    const isOperator = optionalOperator(req);
+
+    const existing = await query('SELECT organizer_id FROM events WHERE id = $1', [id]);
+    if (!existing.rows.length) {
+      return res.status(404).json({ success: false, error: 'Event not found' });
+    }
+    if (!isOperator && existing.rows[0].organizer_id !== ownerId) {
+      return res.status(403).json({ success: false, error: 'You are not authorized to delete this event.' });
+    }
+
+    await query('DELETE FROM events WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Event deleted successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}

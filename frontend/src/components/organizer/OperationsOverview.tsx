@@ -9,6 +9,8 @@ import {
   GitBranch,
   Sparkles,
   Plus,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
@@ -20,8 +22,36 @@ interface OperationsOverviewProps {
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent } = useApp();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const canManageSelectedEvent = Boolean(
+    selectedEvent && (
+      selectedEvent.organizer_id === currentUser.id ||
+      currentUser.id === 'usr-org-1' ||
+      isDevModeUnlocked
+    )
+  );
+
+  const handleDeleteEvent = async () => {
+    if (!selectedEvent) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${selectedEvent.title}"?\n\nThis will permanently remove the event, its venue bookings, and planning tasks from your workspace.`
+    );
+    if (!confirmed) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteEvent(selectedEvent.id);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Could not delete event.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!selectedEvent) {
     const isNamedUser = currentUser.name && currentUser.id !== 'usr-guest';
@@ -135,7 +165,35 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             >
               Verify Venue Match
             </button>
+
+            {canManageSelectedEvent && (
+              <>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                  title="Edit event details, schedule, or capacity"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  Edit Event
+                </button>
+                <button
+                  onClick={handleDeleteEvent}
+                  disabled={isDeleting}
+                  className="px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/60 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  title="Delete this event and associated data"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                  {isDeleting ? 'Deleting...' : 'Delete Event'}
+                </button>
+              </>
+            )}
           </div>
+          {deleteError && (
+            <div className="w-full mt-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{deleteError}</span>
+            </div>
+          )}
         </div>
 
         {/* Operational Pulse Metrics Row */}
@@ -407,6 +465,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           </div>
         </div>
       </div>
+
+      <CreateEventModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        eventToEdit={selectedEvent}
+      />
     </div>
   );
 };

@@ -276,6 +276,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(eventData),
       }),
+    update: (id: string, eventData: Partial<ZabayEvent>) =>
+      request<any>(`/api/events/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(eventData),
+      }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/api/events/${id}`, {
+        method: 'DELETE',
+      }),
   },
 
   // Task Operations

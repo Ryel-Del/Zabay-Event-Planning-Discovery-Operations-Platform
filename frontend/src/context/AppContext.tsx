@@ -84,6 +84,8 @@ interface AppContextType {
   selectedEvent: ZabayEvent | null;
   setSelectedEvent: (event: ZabayEvent | null) => void;
   createEvent: (eventData: Partial<ZabayEvent>) => Promise<ZabayEvent>;
+  updateEvent: (id: string, updates: Partial<ZabayEvent>) => Promise<ZabayEvent>;
+  deleteEvent: (id: string) => Promise<{ success: boolean; message: string }>;
 
   venues: Venue[];
   addVenue: (venueData: Omit<Venue, 'id'>) => Promise<Venue>;
@@ -1041,6 +1043,105 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     setSelectedEvent(newEvt);
     return newEvt;
+  };
+
+  const updateEvent = async (id: string, updates: Partial<ZabayEvent>): Promise<ZabayEvent> => {
+    if (updates.start_date || updates.end_date) {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const eventStartDate = (updates.start_date || '').slice(0, 10);
+      const eventEndDate = (updates.end_date || '').slice(0, 10);
+      if (eventStartDate && eventStartDate < todayIso) {
+        throw new Error('Events cannot be scheduled in the past. Please select today or a future date.');
+      }
+      if (eventEndDate && eventStartDate && eventEndDate < eventStartDate) {
+        throw new Error('End date cannot precede the event start date.');
+      }
+    }
+
+    if (!(isDemoMode && isDevModeUnlocked)) {
+      if (!isLiveBackend) throw new Error('Server is currently offline. Event changes were not saved.');
+      let response;
+      try {
+        response = await api.events.update(id, updates);
+      } catch {
+        throw new Error('Could not confirm whether the event was updated. Check your events before trying again.');
+      }
+      if (response.code === 'NETWORK_ERROR') {
+        throw new Error('Could not confirm whether the event was updated. Check your events before trying again.');
+      }
+      if (!response.success || !response.data) throw new Error(response.error || 'Event was not updated.');
+      const updated = adaptEvent(response.data);
+      setEvents((prev) => {
+        const next = prev.map((e) => (e.id === id ? { ...e, ...updated } : e));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zabay_events', JSON.stringify(next));
+        }
+        return next;
+      });
+      setSelectedEvent((prev) => (prev?.id === id ? { ...prev, ...updated } : prev));
+      return updated;
+    }
+
+    let updatedEvent: ZabayEvent | null = null;
+    setEvents((prev) => {
+      const next = prev.map((e) => {
+        if (e.id === id) {
+          updatedEvent = { ...e, ...updates };
+          return updatedEvent;
+        }
+        return e;
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_events', JSON.stringify(next));
+      }
+      return next;
+    });
+    if (updatedEvent) {
+      setSelectedEvent((prev) => (prev?.id === id ? updatedEvent : prev));
+      return updatedEvent;
+    }
+    throw new Error('Event not found');
+  };
+
+  const deleteEvent = async (id: string): Promise<{ success: boolean; message: string }> => {
+    if (!(isDemoMode && isDevModeUnlocked)) {
+      if (!isLiveBackend) throw new Error('Server is currently offline. Event could not be deleted.');
+      let response;
+      try {
+        response = await api.events.delete(id);
+      } catch {
+        throw new Error('Could not delete event. Check network connection.');
+      }
+      if (response.code === 'NETWORK_ERROR') {
+        throw new Error('Could not delete event. Check network connection.');
+      }
+      if (!response.success) throw new Error(response.error || 'Event could not be deleted.');
+    }
+
+    setEvents((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_events', JSON.stringify(next));
+      }
+      return next;
+    });
+    setTasks((prev) => prev.filter((t) => t.event_id !== id));
+    setVenueBookings((prev) => prev.filter((b) => b.event_id !== id));
+    setRegistrations((prev) => {
+      const next = prev.filter((r) => r.event_id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_registrations', JSON.stringify(next));
+      }
+      return next;
+    });
+    setSelectedEvent((prev) => {
+      if (prev?.id === id) {
+        return events.find((e) => e.id !== id && (currentUser.id === 'usr-org-1' || e.organizer_id === currentUser.id)) || null;
+      }
+      return prev;
+    });
+
+    return { success: true, message: 'Event deleted successfully.' };
   };
 
   // Recursive Downstream Impact Tracing: mimics PostgreSQL CTE `fn_downstream_impact(task_id)`
@@ -2053,6 +2154,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dismissNotification,
       broadcastEventChange,
       createEvent,
+      updateEvent,
+      deleteEvent,
       events,
       selectedEvent,
       setSelectedEvent,

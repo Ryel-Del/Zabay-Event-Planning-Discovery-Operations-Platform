@@ -20,6 +20,7 @@ interface CreateEventModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreated?: (newEvent: ZabayEvent) => void;
+  eventToEdit?: ZabayEvent | null;
 }
 
 const getTodayIso = () => {
@@ -30,8 +31,8 @@ const getTodayIso = () => {
   return `${year}-${month}-${day}`;
 };
 
-export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated }) => {
-  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, isDemoMode, isLiveBackend } = useApp();
+export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated, eventToEdit }) => {
+  const { venues, personnel, createEvent, updateEvent, bookVenue, broadcastEventChange, isDemoMode, isLiveBackend } = useApp();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -66,7 +67,45 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
   const savingRef = useRef(false);
 
   useEffect(() => {
-    if (!venues.some((venue) => venue.id === venueId)) {
+    if (isOpen) {
+      if (eventToEdit) {
+        setTitle(eventToEdit.title);
+        setDescription(eventToEdit.description || '');
+        setCategory(eventToEdit.category);
+        setIsPrivate(Boolean(eventToEdit.is_private || eventToEdit.event_type === 'private'));
+        setExpectedAttendance(eventToEdit.expected_attendance || 250);
+        setVenueId(eventToEdit.venue_id || venues[0]?.id || '');
+        setHallId(eventToEdit.hall_id || '');
+        setStartDate((eventToEdit.start_date || defaultInitialDate).slice(0, 10));
+        setEndDate((eventToEdit.end_date || defaultInitialDate).slice(0, 10));
+        setPowerKw(eventToEdit.requirements?.power_kw_needed || 30);
+        setTicketPrice(eventToEdit.ticket_price || 0);
+        setCurrency(eventToEdit.currency || 'PHP');
+        setMaxCapacity(eventToEdit.max_capacity || 500);
+      } else {
+        setTitle('');
+        setDescription('');
+        setCategory('Sports & Athletics');
+        setIsPrivate(false);
+        setExpectedAttendance(250);
+        setVenueId(venues[0]?.id || '');
+        setHallId('');
+        setStartDate(defaultInitialDate);
+        setEndDate(defaultInitialDate);
+        setPowerKw(30);
+        setSelectedStaffIds(['per-1', 'per-2']);
+        setTicketPrice(50);
+        setCurrency('PHP');
+        setMaxCapacity(500);
+      }
+      setCurrentStep(1);
+      setSubmitError('');
+      setPersistedEvent(null);
+    }
+  }, [isOpen, eventToEdit]);
+
+  useEffect(() => {
+    if (!venueId && venues.length > 0) {
       setVenueId(venues[0]?.id || '');
       setHallId('');
     }
@@ -177,7 +216,35 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     setSaving(true);
     setSubmitError('');
     try {
-    const newEvent = persistedEvent || await createEvent({
+      if (eventToEdit) {
+        const updated = await updateEvent(eventToEdit.id, {
+          title: title.trim(),
+          description: description.trim() || 'Custom Bohol event workspace.',
+          category,
+          event_type: isPrivate ? 'private' : 'public',
+          is_private: isPrivate,
+          start_date: `${startDate}T08:00:00Z`,
+          end_date: `${endDate}T17:00:00Z`,
+          expected_attendance: Number(expectedAttendance) || 100,
+          max_capacity: Number(maxCapacity) || 200,
+          ticket_price: Number(ticketPrice) || 0,
+          currency,
+          banner_url: getBannerForCategory(category),
+        });
+
+        broadcastEventChange({
+          eventId: updated.id,
+          eventTitle: updated.title,
+          summary: `Event updated: "${updated.title}".`,
+        });
+
+        if (onCreated) onCreated(updated);
+        savingRef.current = false;
+        closeWizard();
+        return;
+      }
+
+      const newEvent = persistedEvent || await createEvent({
       title: title.trim(),
       description: description.trim() || 'Custom Bohol event workspace.',
       category,
@@ -260,7 +327,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
               </div>
               <div>
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Guided Event Launch Wizard
+                  {eventToEdit ? 'Edit Event Workspace' : 'Guided Event Launch Wizard'}
                 </h3>
                 <p className="text-[10px] sm:text-[11px] text-slate-500">
                   Step {currentStep} of 4: <strong className="text-slate-700 dark:text-slate-300">{steps[currentStep - 1].label}</strong>
@@ -834,7 +901,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>{saving ? 'Saving…' : persistedEvent ? 'Retry Venue Booking' : 'Save Event & Book Venue'}</span>
+                <span>{saving ? 'Saving…' : eventToEdit ? 'Save Changes' : persistedEvent ? 'Retry Venue Booking' : 'Save Event & Book Venue'}</span>
               </button>
             )}
           </div>

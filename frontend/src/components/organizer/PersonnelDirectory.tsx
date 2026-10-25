@@ -87,6 +87,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [inviteSuccessToast, setInviteSuccessToast] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending'>('all');
+  const [showAccountLinker, setShowAccountLinker] = useState(false);
 
   // Search registered users (API first with instant local account fallback)
   useEffect(() => {
@@ -176,19 +177,20 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       ? Math.round(personnel.reduce((acc, p) => acc + p.hourly_rate, 0) / totalCrew)
       : 0;
 
-  // Add personnel to the local planning roster.
+  // Add personnel to the event roster (no registered account required)
   const handleAddPersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setFormError('Please provide a full name for the personnel member.');
+      setFormError('Please provide a full name for the crew or contact person.');
       return;
     }
-    if (!email.trim() || !email.includes('@')) {
-      setFormError('Please provide a valid email address.');
+    const cleanEmail = email.trim();
+    if (cleanEmail && !cleanEmail.includes('@')) {
+      setFormError('If entering an email, please provide a valid email address.');
       return;
     }
-    if (hourlyRate <= 0) {
-      setFormError('Hourly rate must be greater than ₱0.');
+    if (hourlyRate < 0) {
+      setFormError('Hourly rate cannot be negative. (Use ₱0 for volunteers)');
       return;
     }
 
@@ -197,6 +199,9 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+
+    const effectiveEmail = cleanEmail || `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, '') || 'crew'}-${Date.now().toString().slice(-4)}@event.local`;
+    const cleanPhone = phone.trim() === '+63 (917)' || phone.trim() === '+63 (917) ' ? '' : phone.trim();
 
     // Keep a local planning invitation for the demo staff portal.
     const matchedVenue = venues.find((v) => v.id === selectedEvent?.venue_id);
@@ -207,10 +212,10 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       venue_name: matchedVenue?.name || 'Designated Event Venue',
       user_id: selectedUserId || `usr-${Date.now()}`,
       user_name: name.trim(),
-      user_email: email.trim(),
+      user_email: effectiveEmail,
       role: assignedRole,
       call_time: callTime.trim() || '08:00 AM',
-      hourly_rate: Number(hourlyRate),
+      hourly_rate: Number(hourlyRate) || 0,
       can_scan_tickets: canScanTickets,
       notes: inviteNotes.trim() || undefined,
     });
@@ -219,15 +224,15 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
     addPersonnel({
       name: name.trim(),
       role: assignedRole as any,
-      hourly_rate: Number(hourlyRate),
-      phone: phone.trim(),
-      email: email.trim(),
+      hourly_rate: Number(hourlyRate) || 0,
+      phone: cleanPhone || '+63 (900) 000-0000',
+      email: effectiveEmail,
       skills: skillsList.length > 0 ? skillsList : ['General Crew Support'],
       is_available: true,
       can_scan_tickets: canScanTickets,
     });
 
-    setInviteSuccessToast(`Added ${name.trim()} to this browser's planning roster. No invitation was sent.`);
+    setInviteSuccessToast(`Added ${name.trim()} to event roster. (No Zabay account required)`);
     setTimeout(() => setInviteSuccessToast(null), 6000);
 
     // Reset Form
@@ -243,6 +248,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
     setInviteNotes('');
     setUserSearchTerm('');
     setSelectedUserId(null);
+    setShowAccountLinker(false);
     setFormError('');
     setIsAddModalOpen(false);
   };
@@ -715,9 +721,9 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                 </div>
                 <div>
                   <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
-                    Add Event Personnel
+                    Add Crew / Contact to Roster
                   </h3>
-                  <p className="text-[11px] text-slate-400">Register new staff to the event roster</p>
+                  <p className="text-[11px] text-slate-400">Add staff, external contractors, or volunteers directly (No account required)</p>
                 </div>
               </div>
               <button
@@ -739,106 +745,6 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
             )}
 
             <form onSubmit={handleAddPersonnel} className="space-y-3.5 text-xs">
-              {/* Registered Account Lookup (Like Adding Friends on Facebook) */}
-              <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#244A85] dark:text-[#8BB0E8] text-xs flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5" /> Search Registered Zabay Users
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">Connect staff account</span>
-                </div>
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Search by name or email (e.g. Rael, Maria, Juan)..."
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-                  />
-                </div>
-
-                {isSearchingUsers && (
-                  <p className="text-[11px] text-blue-600 dark:text-blue-400 animate-pulse">Searching accounts in database...</p>
-                )}
-
-                {matchedUsers.length > 0 && (
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
-                    {matchedUsers.map((u) => (
-                      <div
-                        key={u.id}
-                        onClick={() => {
-                          setName(u.name);
-                          setEmail(u.email);
-                          if (u.phone) setPhone(u.phone);
-                          setSelectedUserId(u.id);
-                          setUserSearchTerm('');
-                          setMatchedUsers([]);
-                        }}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#111722] border border-blue-100 dark:border-blue-900/40 hover:border-blue-400 cursor-pointer transition-all"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-[#EBF3FC] text-[#244A85] flex items-center justify-center font-bold text-[10px]">
-                            {u.name.slice(0, 1)}
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">{u.name}</span>
-                            <span className="text-[10px] text-slate-400">{u.email}</span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-bold text-[#3E6CB5] hover:underline">Select</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {selectedUserId && (
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Linked to Registered Account
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedUserId(null)}
-                      className="text-rose-600 hover:underline text-[10px] font-bold cursor-pointer"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-
-                {!selectedUserId && !userSearchTerm && (
-                  <div className="pt-1.5 border-t border-blue-200/50 dark:border-blue-900/40">
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">
-                      Suggested registered staff (click to invite):
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        ...mockUsers.slice(1),
-                        ...(currentUser.email && !mockUsers.some((u) => u.email === currentUser.email)
-                          ? [currentUser]
-                          : []),
-                      ].map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => {
-                            setName(u.name);
-                            setEmail(u.email);
-                            if (u.phone) setPhone(u.phone);
-                            setSelectedUserId(u.id);
-                          }}
-                          className="px-2 py-1 rounded-lg bg-white dark:bg-[#111722] hover:bg-blue-100 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-[10px] font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1 cursor-pointer transition-colors"
-                        >
-                          <span>👤 {u.name}</span>
-                          <span className="text-[9px] opacity-70">({u.role})</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Full Name */}
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -875,7 +781,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Hourly Rate (₱) <span className="text-rose-500">*</span>
+                    Hourly Rate (₱) <span className="text-[10px] text-slate-400 font-normal">(₱0 for volunteers)</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">
@@ -883,9 +789,9 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                     </span>
                     <input
                       type="number"
-                      min={100}
+                      min={0}
                       max={15000}
-                      step={50}
+                      step={25}
                       required
                       value={hourlyRate}
                       onChange={(e) => setHourlyRate(Number(e.target.value))}
@@ -929,11 +835,10 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Contact Phone <span className="text-rose-500">*</span>
+                    Contact Phone <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="tel"
-                    required
                     placeholder="+63 (917) 000-0000"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -943,11 +848,10 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Email Address <span className="text-rose-500">*</span>
+                    Email Address <span className="text-[10px] text-slate-400 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="email"
-                    required
                     placeholder="staff@zabay.ph"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -985,10 +889,125 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                       Grant Gate Turnstile Scanner Clearance
                     </span>
                     <p className="text-[11px] text-slate-400 mt-0.5">
-                      Check this for Security and Registration staff. Technical AV, stage hands, and catering crew should leave this unchecked.
+                      Check this for Security and Registration staff. Technical AV, stage hands, and catering crew can leave this unchecked.
                     </p>
                   </div>
                 </label>
+              </div>
+
+              {/* Optional Zabay Account Linker (Collapsible) */}
+              <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-200/80 dark:border-blue-900/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountLinker((prev) => !prev)}
+                    className="font-bold text-[#244A85] dark:text-[#8BB0E8] text-xs flex items-center gap-1.5 hover:underline cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>{showAccountLinker ? 'Hide Zabay Account Linker' : 'Link to Existing Zabay Account (Optional)'}</span>
+                  </button>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    {selectedUserId ? 'Account Linked' : 'Optional'}
+                  </span>
+                </div>
+
+                {selectedUserId && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300">
+                    <span className="flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Linked to Registered Account
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserId(null)}
+                      className="text-rose-600 hover:underline text-[10px] font-bold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+
+                {showAccountLinker && !selectedUserId && (
+                  <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      External contractors and volunteers do not need an account. If they already use Zabay, link them below:
+                    </p>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search by name or email (e.g. Rael, Maria, Juan)..."
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                      />
+                    </div>
+
+                    {isSearchingUsers && (
+                      <p className="text-[11px] text-blue-600 dark:text-blue-400 animate-pulse">Searching accounts in database...</p>
+                    )}
+
+                    {matchedUsers.length > 0 && (
+                      <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
+                        {matchedUsers.map((u) => (
+                          <div
+                            key={u.id}
+                            onClick={() => {
+                              setName(u.name);
+                              setEmail(u.email);
+                              if (u.phone) setPhone(u.phone);
+                              setSelectedUserId(u.id);
+                              setUserSearchTerm('');
+                              setMatchedUsers([]);
+                            }}
+                            className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#111722] border border-blue-100 dark:border-blue-900/40 hover:border-blue-400 cursor-pointer transition-all"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-[#EBF3FC] text-[#244A85] flex items-center justify-center font-bold text-[10px]">
+                                {u.name.slice(0, 1)}
+                              </div>
+                              <div>
+                                <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">{u.name}</span>
+                                <span className="text-[10px] text-slate-400">{u.email}</span>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#3E6CB5] hover:underline">Select</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {!userSearchTerm && (
+                      <div className="pt-1.5 border-t border-blue-200/50 dark:border-blue-900/40">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block mb-1 font-semibold">
+                          Quick-pick registered users:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            ...mockUsers.slice(1),
+                            ...(currentUser.email && !mockUsers.some((u) => u.email === currentUser.email)
+                              ? [currentUser]
+                              : []),
+                          ].map((u) => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => {
+                                setName(u.name);
+                                setEmail(u.email);
+                                if (u.phone) setPhone(u.phone);
+                                setSelectedUserId(u.id);
+                              }}
+                              className="px-2 py-1 rounded-lg bg-white dark:bg-[#111722] hover:bg-blue-100 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-900 text-[10px] font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1 cursor-pointer transition-colors"
+                            >
+                              <span>👤 {u.name}</span>
+                              <span className="text-[9px] opacity-70">({u.role})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800">
