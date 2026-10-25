@@ -72,8 +72,12 @@ describe('organizer event roster', () => {
     cy.contains('Roster Fixture Guest').should('not.exist');
     cy.then(() => { blocked = false; });
     cy.contains('button', 'Retry').click();
-    cy.wait('@rosterFetch').its('response.statusCode').should('eq', 200);
+    // The overview and directory can request the same endpoint independently.
+    // A queued failed alias must not masquerade as the retry response.
     cy.contains('Roster Fixture Guest').should('be.visible');
+    cy.get('@rosterFetch.all').should(requests => {
+      expect(requests.some(request => request.response?.statusCode === 200)).to.eq(true);
+    });
   });
 
   it('quick admission updates the database and re-fetches the event roster', () => {
