@@ -31,7 +31,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, venues } = useApp();
+  const { registerForEvent, currentUser, venues, isDemoMode } = useApp();
 
   const getStoredEmail = () => {
     if (currentUser.email && currentUser.id !== 'usr-guest') {
@@ -103,6 +103,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
+    if (!isDemoMode && currentUser.id === 'usr-guest') { setSubmitError('Sign in to register for this event.'); return; }
     setSubmitError('');
     setIsProcessing(true);
     try {
@@ -224,7 +225,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                    Ticket Confirmation Email
+                    Account Email
                   </label>
                   {isStoredEmail && (
                     <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
@@ -256,8 +257,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   <Mail className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C] shrink-0" />
                   <span>
                     {isStoredEmail
-                      ? 'Digital pass & QR admission ticket will automatically be sent to your verified account email.'
-                      : 'Digital pass & QR admission ticket will be sent to this email address.'}
+                      ? 'Your confirmed QR pass will appear in your account wallet.'
+                      : 'Your confirmed QR pass will appear in your account wallet.'}
                   </span>
                 </p>
               </div>
