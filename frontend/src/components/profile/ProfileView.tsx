@@ -16,6 +16,7 @@ import {
   Check,
   ExternalLink,
   ChevronRight,
+  User,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { ZabayEvent } from '../../types';
@@ -59,26 +60,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   if (!isOpen) return null;
 
   // 1. Events Attended: registrations for current user
-  const attendedRegistrations = registrations.filter(
+  const attendedRegistrations = currentUser.id === 'usr-guest' ? [] : registrations.filter(
     (r) =>
       r.attendee_id === currentUser.id ||
-      r.attendee_email.toLowerCase() === currentUser.email.toLowerCase() ||
-      (currentRole === 'attendee' && r.attendee_name.toLowerCase().includes(currentUser.name.toLowerCase()))
+      (currentUser.email && r.attendee_email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      (currentUser.name && r.attendee_name.toLowerCase() === currentUser.name.toLowerCase())
   );
 
   // 2. Events Organized: events created or led by user
-  const organizedEvents = events.filter(
-    (e) =>
-      e.organizer_id === currentUser.id ||
-      currentRole === 'organizer'
+  const organizedEvents = currentUser.id === 'usr-guest' ? [] : events.filter(
+    (e) => e.organizer_id === currentUser.id
   );
 
   // 3. Operational Shifts / Tasks Assigned to this user
-  const userTasks = tasks.filter((t) =>
+  const userTasks = currentUser.id === 'usr-guest' ? [] : tasks.filter((t) =>
     t.personnel_assignments?.some(
       (pa) =>
-        pa.personnel_name.toLowerCase().includes(currentUser.name.toLowerCase()) ||
-        pa.personnel_id === currentUser.id
+        pa.personnel_id === currentUser.id ||
+        (currentUser.name && pa.personnel_name.toLowerCase() === currentUser.name.toLowerCase())
     )
   );
 
@@ -131,14 +130,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
               <div className="flex items-start sm:items-center gap-4">
                 <div className="relative">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white dark:ring-slate-700 shadow-md"
-                  />
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#111722] flex items-center justify-center text-[10px] text-white">
-                    ✓
-                  </span>
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover ring-2 ring-white dark:ring-slate-700 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 ring-2 ring-white dark:ring-slate-700 shadow-md">
+                      <User className="w-8 h-8" />
+                    </div>
+                  )}
+                  {currentUser.id !== 'usr-guest' && (
+                    <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white dark:border-[#111722] flex items-center justify-center text-[10px] text-white">
+                      ✓
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -147,9 +154,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       {currentUser.name}
                     </h2>
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
-                      Active: {currentRole.replace('_', ' ')}
+                      {currentUser.id === 'usr-guest' ? 'Public Visitor' : `Active: ${currentRole.replace('_', ' ')}`}
                     </span>
-                    {currentUser.roles && currentUser.roles.length > 1 && (
+                    {currentUser.id !== 'usr-guest' && currentUser.roles && currentUser.roles.length > 1 && (
                       <div className="flex items-center gap-1">
                         {currentUser.roles.map((r) => (
                           <span
@@ -168,18 +175,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
 
                   <p className="text-xs text-slate-500 flex items-center gap-1.5">
-                    <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{currentUser.organization || 'Tagbilaran Community'}</span>
-                    <span>•</span>
+                    {currentUser.organization && (
+                      <>
+                        <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{currentUser.organization}</span>
+                        <span>•</span>
+                      </>
+                    )}
                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>{currentUser.location || 'Tagbilaran City, Bohol'}</span>
+                    <span>{currentUser.location || 'Bohol, Philippines'}</span>
                   </p>
 
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400 pt-0.5">
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3 h-3 text-slate-400" />
-                      {currentUser.email}
-                    </span>
+                    {currentUser.email ? (
+                      <span className="flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        {currentUser.email}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">
+                        Browsing as Guest • Sign in to save registrations & access pass wallet
+                      </span>
+                    )}
                     {currentUser.phone && (
                       <span className="flex items-center gap-1">
                         <Phone className="w-3 h-3 text-slate-400" />
@@ -190,13 +207,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#171E2B] hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Edit2 className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                <span>{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
-              </button>
+              {currentUser.id !== 'usr-guest' && (
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#171E2B] hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                  <span>{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
+                </button>
+              )}
             </div>
 
             {/* Profile Bio */}

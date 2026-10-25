@@ -21,15 +21,15 @@ import type {
 
 export const guestUser: User = {
   id: 'usr-guest',
-  name: 'Guest Explorer',
-  email: 'guest@zabay.ph',
+  name: 'Guest',
+  email: '',
   role: 'attendee',
   roles: ['attendee'],
   phone: '',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  organization: 'Bohol Community Hub',
-  location: 'Tagbilaran City, Bohol',
-  bio: 'Exploring public Bohol events, venues, and digital QR passes.',
+  avatar: '',
+  organization: '',
+  location: 'Bohol, Philippines',
+  bio: '',
 };
 
 export const mockCurrentUser: User = {

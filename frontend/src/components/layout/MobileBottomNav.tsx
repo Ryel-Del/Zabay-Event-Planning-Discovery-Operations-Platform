@@ -28,7 +28,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenProfile,
   onOpenAuth,
 }) => {
-  const { currentRole, setCurrentRole, tasks } = useApp();
+  const { currentRole, setCurrentRole, tasks, currentUser, isDevModeUnlocked } = useApp();
 
   const conflictCount = tasks.filter((t) => t.has_conflict).length;
 
@@ -251,15 +251,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <span className="text-[10px] mt-0.5 font-medium">My Passes</span>
           </button>
 
-          <button
-            onClick={() => setCurrentRole('organizer')}
-            className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
-          >
-            <div className="p-1 rounded-lg">
-              <LayoutDashboard className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] mt-0.5 font-medium">Studio</span>
-          </button>
+          {(isDevModeUnlocked || currentUser.id !== 'usr-guest') && (
+            <button
+              onClick={() => setCurrentRole('organizer')}
+              className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
+            >
+              <div className="p-1 rounded-lg">
+                <LayoutDashboard className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] mt-0.5 font-medium">Studio</span>
+            </button>
+          )}
 
           <button
             onClick={() => (onOpenAuth ? onOpenAuth() : onOpenProfile())}
@@ -268,7 +270,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <div className="p-1 rounded-lg">
               <User className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 font-medium">Sign In</span>
+            <span className="text-[10px] mt-0.5 font-medium">
+              {currentUser.id === 'usr-guest' ? 'Sign In' : 'Account'}
+            </span>
           </button>
         </>
       )}

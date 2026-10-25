@@ -266,14 +266,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return mockVenues;
   });
   const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
+      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockVenueBookings;
     }
-    return mockVenueBookings;
+    return [];
   });
   const [resources] = useState<Resource[]>(mockResources);
   const [personnel, setPersonnel] = useState<Personnel[]>(() => {
     if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
       const saved = localStorage.getItem('zabay_custom_personnel');
       if (saved) {
         try {
@@ -282,26 +284,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // ignore parsing error
         }
       }
+      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockPersonnel;
     }
-    return mockPersonnel;
+    return [];
   });
   const [tasks, setTasks] = useState<Task[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
+      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockTasks;
     }
-    return mockTasks;
+    return [];
   });
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
+      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockRegistrations;
     }
-    return mockRegistrations;
+    return [];
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
+      if (localStorage.getItem('zabay-dev-unlocked') === 'true') return mockAuditLogs;
     }
-    return mockAuditLogs;
+    return [];
   });
 
   const [committeeRoles, setCommitteeRoles] = useState<EventCommitteeRoleMap>(() => {
@@ -316,7 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
     return {
-      event_head: mockCurrentUser.name,
+      event_head: '',
       secretary: '',
       letters_head: '',
       finance_head: '',
@@ -598,6 +604,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUnlockedDevCode(null);
     setCurrentUser(guestUser);
     setCurrentRole('attendee');
+    setTasks([]);
+    setPersonnel([]);
+    setRegistrations([]);
+    setVenueBookings([]);
+    setAuditLogs([]);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('zabay-dev-unlocked');
       localStorage.removeItem('zabay-dev-code');

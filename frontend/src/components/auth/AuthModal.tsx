@@ -76,7 +76,7 @@ const DEMO_PERSONAS = [
 ];
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { setCurrentUser, setCurrentRole, previewStaffPortal, isDevModeUnlocked, unlockDevMode } = useApp();
+  const { setCurrentUser, setCurrentRole, previewStaffPortal, isDevModeUnlocked, unlockDevMode, loadDemoData } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
   const [email, setEmail] = useState('');
@@ -180,6 +180,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         });
       }
 
+      loadDemoData();
       setCurrentUser(userToSet);
       setCurrentRole(userToSet.role);
 

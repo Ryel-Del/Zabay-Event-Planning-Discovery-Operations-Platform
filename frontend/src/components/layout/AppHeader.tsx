@@ -520,17 +520,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className="flex items-center gap-2 p-1 pl-2 hover:bg-slate-100 dark:hover:bg-slate-800/60 rounded-xl transition-all cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
           >
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-300 dark:ring-slate-700"
-            />
+            {currentUser.avatar ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-300 dark:ring-slate-700"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                <User className="w-4 h-4" />
+              </div>
+            )}
             <div className="hidden lg:block text-left pr-1">
               <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 leading-none">
                 {currentUser.name}
               </p>
               <p className="text-[10px] text-slate-500 capitalize mt-0.5">
-                {currentRole === 'organizer'
+                {currentUser.id === 'usr-guest'
+                  ? 'Visitor'
+                  : currentRole === 'organizer'
                   ? 'Organizer'
                   : currentRole === 'venue_manager'
                   ? 'Venue Manager'
@@ -548,20 +556,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {/* Account Header */}
               <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80">
                 <div className="flex items-center gap-3">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-300 dark:ring-slate-700"
-                  />
+                  {currentUser.avatar ? (
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-300 dark:ring-slate-700"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-400 shrink-0">
+                      <User className="w-5 h-5" />
+                    </div>
+                  )}
                   <div className="overflow-hidden">
                     <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                       {currentUser.name}
                     </p>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {currentUser.email}
+                      {currentUser.email || 'Browsing as Guest'}
                     </p>
                     <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
-                      {currentRole.replace('_', ' ')}
+                      {currentUser.id === 'usr-guest' ? 'Public Visitor' : currentRole.replace('_', ' ')}
                     </span>
                   </div>
                 </div>
@@ -584,84 +598,106 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 </button>
               </div>
 
-              {/* Workspace Switcher */}
-              <div className="p-2 space-y-1">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Switch Workspace
+              {/* Workspace Switcher (Accessible when signed in or when dev mode unlocked) */}
+              {(isDevModeUnlocked || currentUser.id !== 'usr-guest') ? (
+                <div className="p-2 space-y-1">
+                  <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Switch Workspace
+                  </div>
+
+                  <button
+                    onClick={() => handleRoleSelect('organizer')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                      currentRole === 'organizer'
+                        ? 'bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Layers className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                      <div className="text-left">
+                        <p className="font-semibold">Organizer Studio</p>
+                        <p className="text-[10px] text-slate-500">Event operations, schedule & planning</p>
+                      </div>
+                    </div>
+                    {currentRole === 'organizer' && <Check className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleRoleSelect('venue_manager')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                      currentRole === 'venue_manager'
+                        ? 'bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Building2 className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />
+                      <div className="text-left">
+                        <p className="font-semibold">Venue Partner Hub</p>
+                        <p className="text-[10px] text-slate-500">Facility availability & collision-safe bookings</p>
+                      </div>
+                    </div>
+                    {currentRole === 'venue_manager' && <Check className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleRoleSelect('staff')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                      currentRole === 'staff'
+                        ? 'bg-[#FAF7EE] dark:bg-[#252219] text-[#8C6212] dark:text-[#E8BD68] font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Users className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />
+                      <div className="text-left">
+                        <p className="font-semibold">Event Staff Portal</p>
+                        <p className="text-[10px] text-slate-500">Shift pass, duties checklist & gate scanner</p>
+                      </div>
+                    </div>
+                    {currentRole === 'staff' && <Check className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleRoleSelect('attendee')}
+                    className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
+                      currentRole === 'attendee'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Ticket className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                      <div className="text-left">
+                        <p className="font-semibold">Public Event Feed</p>
+                        <p className="text-[10px] text-slate-500">Discover events & QR passes</p>
+                      </div>
+                    </div>
+                    {currentRole === 'attendee' && <Check className="w-4 h-4 text-slate-900 dark:text-slate-100" />}
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => handleRoleSelect('organizer')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                    currentRole === 'organizer'
-                      ? 'bg-[#EBF3FC] dark:bg-[#1E293B] text-[#244A85] dark:text-[#8BB0E8] font-semibold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Layers className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                    <div className="text-left">
-                      <p className="font-semibold">Organizer Studio</p>
-                      <p className="text-[10px] text-slate-500">Event operations, schedule & planning</p>
+              ) : (
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      if (onOpenAuth) onOpenAuth();
+                      else setIsAuthModalOpen(true);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs hover:bg-[#EBF3FC] dark:hover:bg-[#1E293B] text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Building2 className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                      <div className="text-left">
+                        <p className="font-semibold">Host an Event</p>
+                        <p className="text-[10px] text-slate-500">Sign in to organize and manage operations</p>
+                      </div>
                     </div>
-                  </div>
-                  {currentRole === 'organizer' && <Check className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />}
-                </button>
-
-                <button
-                  onClick={() => handleRoleSelect('venue_manager')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                    currentRole === 'venue_manager'
-                      ? 'bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] font-semibold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Building2 className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />
-                    <div className="text-left">
-                      <p className="font-semibold">Venue Partner Hub</p>
-                      <p className="text-[10px] text-slate-500">Facility availability & collision-safe bookings</p>
-                    </div>
-                  </div>
-                  {currentRole === 'venue_manager' && <Check className="w-4 h-4 text-[#4E8268] dark:text-[#81B89B]" />}
-                </button>
-
-                <button
-                  onClick={() => handleRoleSelect('staff')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                    currentRole === 'staff'
-                      ? 'bg-[#FAF7EE] dark:bg-[#252219] text-[#8C6212] dark:text-[#E8BD68] font-semibold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />
-                    <div className="text-left">
-                      <p className="font-semibold">Event Staff Portal</p>
-                      <p className="text-[10px] text-slate-500">Shift pass, duties checklist & gate scanner</p>
-                    </div>
-                  </div>
-                  {currentRole === 'staff' && <Check className="w-4 h-4 text-[#8C6212] dark:text-[#E8BD68]" />}
-                </button>
-
-                <button
-                  onClick={() => handleRoleSelect('attendee')}
-                  className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs transition-colors cursor-pointer ${
-                    currentRole === 'attendee'
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-semibold'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Ticket className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                    <div className="text-left">
-                      <p className="font-semibold">Public Event Feed</p>
-                      <p className="text-[10px] text-slate-500">Discover events & QR passes</p>
-                    </div>
-                  </div>
-                  {currentRole === 'attendee' && <Check className="w-4 h-4 text-slate-900 dark:text-slate-100" />}
-                </button>
-              </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  </button>
+                </div>
+              )}
 
               {/* Demo Persona Switcher (Hidden in normal mode; unlocked only in dev/evaluation mode) */}
               {isDevModeUnlocked && (

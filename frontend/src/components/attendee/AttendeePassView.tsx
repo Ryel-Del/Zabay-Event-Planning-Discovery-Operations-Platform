@@ -47,7 +47,9 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
             My Digital QR Event Passes ({userPasses.length})
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Confirmed passes for <span className="font-semibold text-stone-800 dark:text-stone-200">{currentUser.name}</span> ({currentUser.email}). Present your QR pass at gate check-in or download for offline access.
+            {currentUser.id === 'usr-guest'
+              ? 'Present your digital QR pass at gate check-in or download for offline access.'
+              : `Confirmed passes for ${currentUser.name} (${currentUser.email}). Present your QR pass at gate check-in or download for offline access.`}
           </p>
         </div>
 
@@ -77,10 +79,12 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">
-              No Registered Passes for {currentUser.name}
+              {currentUser.id === 'usr-guest' ? 'No Registered Passes Yet' : `No Registered Passes for ${currentUser.name}`}
             </h3>
             <p className="text-xs text-stone-500 max-w-md mx-auto">
-              You are currently viewing as <strong className="text-stone-700 dark:text-stone-300">{currentUser.name}</strong> ({currentUser.email}). You can register for any upcoming Bohol event on the Discovery page to receive an instant scannable digital QR pass.
+              {currentUser.id === 'usr-guest'
+                ? 'You are currently browsing as a Guest. Register for any upcoming Bohol event on the Discovery feed to receive an instant scannable digital QR pass.'
+                : `You are currently viewing as ${currentUser.name} (${currentUser.email}). You can register for any upcoming Bohol event on the Discovery page to receive an instant scannable digital QR pass.`}
             </p>
           </div>
         </div>
