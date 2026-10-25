@@ -93,10 +93,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isStoredEmail = Boolean(
-    (currentUser.email && currentUser.id !== 'usr-guest' && email.toLowerCase() === currentUser.email.toLowerCase()) ||
-    (typeof window !== 'undefined' && email && email.toLowerCase() === (localStorage.getItem('zabay-last-attendee-email') || '').toLowerCase())
-  );
+  const isStoredEmail = !isDemoMode && Boolean(currentUser.email);
 
   const price = ticketTier === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
 
@@ -107,8 +104,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     setSubmitError('');
     setIsProcessing(true);
     try {
-      const trimmedName = name.trim();
-      const trimmedEmail = email.trim();
+      const trimmedName = isDemoMode ? name.trim() : currentUser.name.trim();
+      const trimmedEmail = isDemoMode ? email.trim() : currentUser.email.trim();
       const res = await registerForEvent(event.id, ticketTier, trimmedName, trimmedEmail);
       if (!res.success || !res.registration) {
         setSubmitError(res.message);
@@ -116,7 +113,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
       }
 
       // Persist entered email and name for 1-click future checkouts
-      if (typeof window !== 'undefined') {
+      if (isDemoMode && typeof window !== 'undefined') {
         localStorage.setItem('zabay-last-attendee-email', trimmedEmail);
         localStorage.setItem('zabay-last-attendee-name', trimmedName);
       }
@@ -215,7 +212,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   data-cy="registration-name"
                   type="text"
                   required
-                  value={name}
+                  readOnly={!isDemoMode}
+                  value={isDemoMode ? name : currentUser.name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Maria Elena Santos"
                   className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
@@ -238,7 +236,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                     data-cy="registration-email"
                     type="email"
                     required
-                    value={email}
+                    readOnly={!isDemoMode}
+                    value={isDemoMode ? email : currentUser.email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. attendee@gmail.com"
                     className={`w-full bg-white dark:bg-[#171513] border ${
@@ -256,9 +255,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 flex items-center gap-1.5">
                   <Mail className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C] shrink-0" />
                   <span>
-                    {isStoredEmail
-                      ? 'Your confirmed QR pass will appear in your account wallet.'
-                      : 'Your confirmed QR pass will appear in your account wallet.'}
+                    Your confirmed QR pass will appear in your account wallet. Live pass details use your signed-in account.
                   </span>
                 </p>
               </div>

@@ -9,6 +9,12 @@ interface TestRegistration {
 describe('attendee registration and check-in', () => {
   let eventId = '';
   let eventTitle = '';
+  const attendeeEmail = `attendee-suite-${Date.now()}@example.test`;
+
+  before(() => {
+    cy.request('POST', '/api/auth/register', { name: 'Cypress Attendee', email: attendeeEmail, password: 'attendee-test-secret' })
+      .its('status').should('eq', 201);
+  });
 
   beforeEach(() => {
     eventTitle = `E2E public attendee event ${Date.now()}`;
@@ -31,9 +37,8 @@ describe('attendee registration and check-in', () => {
   });
 
   function signInAttendee() {
-    const email = `attendee-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
-    cy.request('POST', '/api/auth/register', { name: 'Cypress Attendee', email, password: 'attendee-test-secret' })
-      .its('status').should('eq', 201);
+    cy.request('POST', '/api/auth/user-login', { email: attendeeEmail, password: 'attendee-test-secret' })
+      .its('status').should('eq', 200);
   }
 
   function signInOperator() {
@@ -56,30 +61,23 @@ describe('attendee registration and check-in', () => {
       .click();
   }
 
-  function submitRegistration(name: string, email: string) {
-    cy.get('[data-cy="registration-name"]').clear().type(name);
-    cy.get('[data-cy="registration-email"]').clear().type(email);
+  function submitRegistration() {
     cy.get('[data-cy="registration-submit"]').click();
   }
 
-  it('rejects invalid email, issues distinct PostgreSQL passes, and shows both in the session wallet', () => {
+  it('uses account details, issues distinct PostgreSQL passes, and shows both in the wallet', () => {
     let firstRegistration: TestRegistration;
     let secondRegistration: TestRegistration;
-    const unique = Date.now();
     cy.intercept('POST', '/api/attendees/register').as('register');
     signInAttendee();
     cy.visit('/');
     openEventRegistration();
 
-    cy.get('[data-cy="registration-name"]').clear().type('Cypress Attendee One');
-    cy.get('[data-cy="registration-email"]').clear().type('invalid-email');
-    cy.get('[data-cy="registration-submit"]').click();
-    cy.get('[data-cy="registration-email"]').should(($input) => {
-      expect(($input[0] as HTMLInputElement).validity.typeMismatch).to.eq(true);
-    });
+    cy.get('[data-cy="registration-name"]').should('have.value', 'Cypress Attendee').and('have.attr', 'readonly');
+    cy.get('[data-cy="registration-email"]').should('have.value', attendeeEmail).and('have.attr', 'readonly');
     cy.get('@register.all').should('have.length', 0);
 
-    submitRegistration('Cypress Attendee One', `cypress-${unique}-one@example.test`);
+    submitRegistration();
     cy.wait('@register').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
       firstRegistration = response?.body.data;
@@ -102,7 +100,7 @@ describe('attendee registration and check-in', () => {
       .closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]')
       .click();
-    submitRegistration('Cypress Attendee Two', `cypress-${unique}-two@example.test`);
+    submitRegistration();
     cy.wait('@register').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
       secondRegistration = response?.body.data;
@@ -120,17 +118,16 @@ describe('attendee registration and check-in', () => {
   });
 
   it('shows a registration network failure without displaying a pass or success', () => {
-    const email = `cypress-failure-${Date.now()}@example.test`;
     cy.intercept('POST', '/api/attendees/register', { forceNetworkError: true }).as('failedRegistration');
     signInAttendee();
     cy.visit('/');
     openEventRegistration();
-    submitRegistration('Cypress Network Failure', email);
+    submitRegistration();
     cy.wait('@failedRegistration');
     cy.get('[data-cy="registration-error"]').should('be.visible');
     cy.get('[data-cy="registered-pass-code"]').should('not.exist');
     cy.contains('Registration Saved').should('not.exist');
-    cy.task('db:registrationCountByEmail', { email }).should('eq', 0);
+    cy.task('db:registrationCountByEmail', { email: attendeeEmail }).should('eq', 0);
     cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
   });
 

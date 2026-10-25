@@ -54,8 +54,8 @@ describe('database-backed registration wallet', () => {
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]').contains(eventTitle).closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]').click();
-    cy.get('[data-cy="registration-name"]').clear().type('A Different Display Name');
-    cy.get('[data-cy="registration-email"]').clear().type(otherEmail);
+    cy.get('[data-cy="registration-name"]').should('have.value', 'Wallet Owner').and('have.attr', 'readonly');
+    cy.get('[data-cy="registration-email"]').should('have.value', email).and('have.attr', 'readonly');
     cy.get('[data-cy="registration-submit"]').click();
     cy.wait('@registration').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
@@ -96,8 +96,6 @@ describe('database-backed registration wallet', () => {
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]').contains(eventTitle).closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]').click();
-    cy.get('[data-cy="registration-name"]').clear().type('Wallet Failure');
-    cy.get('[data-cy="registration-email"]').clear().type('failure@example.test');
     cy.get('[data-cy="registration-submit"]').click();
     cy.wait('@failedWrite');
     cy.get('[data-cy="registration-error"]').should('be.visible');
@@ -124,8 +122,6 @@ describe('database-backed registration wallet', () => {
       return cy.request({ method: 'POST', url: '/api/auth/logout', headers: { 'X-CSRF-Token': body.csrfToken } });
     });
     cy.intercept('GET', '/api/auth/me').as('expiredSessionCheck');
-    cy.get('[data-cy="registration-name"]').clear().type('Expiring Wallet Owner');
-    cy.get('[data-cy="registration-email"]').clear().type(email);
     cy.get('[data-cy="registration-submit"]').click();
     cy.wait('@expiredSessionCheck').then(({ response }) => {
       expect(response?.statusCode).to.eq(401);
