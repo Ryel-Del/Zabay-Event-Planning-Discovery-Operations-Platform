@@ -237,7 +237,17 @@ authRouter.post('/firebase-login', limitPublicAuth('firebase-login', 20), async 
   try {
     const identity = await verifyFirebaseIdentity(idToken);
     if (identity.email.length > 255) return res.status(401).json({ success: false, error: 'Invalid Firebase identity' });
-    let result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
+    let result: any;
+    try {
+      result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
+    } catch (queryErr: any) {
+      if (queryErr?.message?.includes('firebase_uid')) {
+        await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128)');
+        result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
+      } else {
+        throw queryErr;
+      }
+    }
     if (!result.rows.length) {
       // Email equality is insufficient to link a Firebase identity to an existing account.
       const existing = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [identity.email]);
@@ -255,9 +265,9 @@ authRouter.post('/firebase-login', limitPublicAuth('firebase-login', 20), async 
     res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
     res.json({ success: true, user, data: { user }, csrfToken: csrf });
   } catch (err: any) {
+    console.error('[Firebase Login Error]:', err);
     if (err?.code === '23505') return res.status(409).json({ success: false, error: 'Account already exists' });
-    if (!process.env.FIREBASE_PROJECT_ID) return res.status(503).json({ success: false, error: 'Firebase login unavailable' });
-    return res.status(401).json({ success: false, error: 'Invalid Firebase identity' });
+    return res.status(401).json({ success: false, error: 'Invalid Firebase identity', message: err?.message });
   }
 });
 
