@@ -1610,6 +1610,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (response.success && response.data?.qr_pass_code) {
           const saved = adaptRegistration(response.data, event.title);
           setRegistrations((previous) => [saved, ...previous]);
+          setEvents((previous) => previous.map((item) => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
+          setSelectedEvent((previous) => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
           let sessionPassIds: string[] = [];
           try { sessionPassIds = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]'); } catch { /* reset malformed browser state */ }
           sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...sessionPassIds, saved.id])]));
@@ -1643,6 +1645,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setRegistrations((prev) => [newReg, ...prev]);
+    setEvents((previous) => previous.map((item) => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
+    setSelectedEvent((previous) => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
 
     return {
       success: true,
