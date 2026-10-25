@@ -75,6 +75,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = eventTasks.filter((t) => t.has_conflict);
   const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  // Only logs linked to this event or one of its tasks belong on this overview.
+  // AppContext's audit stream is browser-local, not a persistent server ledger.
+  const eventAuditLogs = auditLogs.filter(log =>
+    log.entity_id === selectedEvent.id || eventTasks.some(task => task.id === log.entity_id)
+  );
   const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
 
   return (
@@ -315,7 +320,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
           {/* Clean Dense Task Row List (NOT bulky cards!) */}
           <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
-            {tasks.map((task) => (
+            {eventTasks.map((task) => (
               <div
                 key={task.id}
                 className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/40 px-2 rounded-xl transition-colors"
@@ -387,11 +392,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
                 Recent Audit Trail
               </h3>
-              <span className="text-[10px] text-stone-400">Live Activity Stream</span>
+              <span className="text-[10px] text-stone-400">Browser-local activity (not server audit)</span>
             </div>
 
             <div className="space-y-2.5">
-              {auditLogs.slice(0, 3).map((log) => (
+              {eventAuditLogs.slice(0, 3).map((log) => (
                 <div
                   key={log.id}
                   className="p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 text-xs space-y-1"
@@ -404,6 +409,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
                 </div>
               ))}
             </div>
+            {eventAuditLogs.length === 0 && <p className="text-xs text-stone-500">No local activity for this event.</p>}
           </div>
         </div>
       </div>
