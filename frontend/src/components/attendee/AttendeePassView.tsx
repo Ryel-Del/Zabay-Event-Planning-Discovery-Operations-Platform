@@ -18,7 +18,7 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues, notifications, currentUser } = useApp();
+  const { registrations, events, venues, notifications, currentUser, isDemoMode, walletLoadState, retryWallet } = useApp();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Live account passes are scoped by the backend session; guest passes exist only in this workspace.
@@ -29,8 +29,8 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
   } catch { /* ignore malformed browser state */ }
   const userPasses = registrations.filter((reg) => {
     if (!reg) return false;
-    if (currentUser.id === 'usr-guest') return !reg.attendee_id;
-    if (currentUser.id === 'zabay-operator') return !reg.attendee_id && guestPassIds.includes(reg.id);
+    if (currentUser.id === 'usr-guest') return isDemoMode && !reg.attendee_id;
+    if (currentUser.id === 'zabay-operator') return isDemoMode && !reg.attendee_id && guestPassIds.includes(reg.id);
     return reg.attendee_id === currentUser.id;
   });
 
@@ -53,7 +53,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
           </h2>
           <p className="text-xs text-stone-500 dark:text-stone-400">
             {currentUser.id === 'usr-guest'
-              ? 'Present your digital QR pass at gate check-in or download for offline access.'
+              ? 'Sign in to access your saved passes across devices.'
               : `Confirmed passes for ${currentUser.name} (${currentUser.email}). Present your QR pass at gate check-in or download for offline access.`}
           </p>
         </div>
@@ -77,7 +77,17 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
         )}
       </div>
 
-      {userPasses.length === 0 ? (
+      {!isDemoMode && currentUser.id !== 'usr-guest' && currentUser.id !== 'zabay-operator' && walletLoadState === 'loading' && (
+        <p role="status">Loading your saved passes…</p>
+      )}
+      {!isDemoMode && currentUser.id !== 'usr-guest' && currentUser.id !== 'zabay-operator' && walletLoadState === 'error' && (
+        <div role="alert" data-cy="wallet-load-error" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+          Your saved passes could not be loaded. Check your connection and try again.
+          <button type="button" onClick={retryWallet} className="ml-3 font-semibold underline">Retry</button>
+        </div>
+      )}
+
+      {walletLoadState === 'loaded' && userPasses.length === 0 ? (
         currentUser.id === 'usr-guest' ? (
           <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-8 sm:p-10 text-center space-y-4 shadow-xs">
             <div className="w-14 h-14 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">

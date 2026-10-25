@@ -61,6 +61,8 @@ interface AppContextType {
   // Live Database & API Status (Member 3 Connector)
   isLiveBackend: boolean;
   eventLoadState: 'loading' | 'loaded' | 'error';
+  walletLoadState: 'loading' | 'loaded' | 'error';
+  retryWallet: () => void;
   backendHealth: HealthStatus | null;
   refreshBackendStatus: () => Promise<void>;
 
@@ -419,6 +421,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
   const [eventLoadState, setEventLoadState] = useState<'loading' | 'loaded' | 'error'>(devDatasetActive() ? 'loaded' : 'loading');
+  const [walletLoadState, setWalletLoadState] = useState<'loading' | 'loaded' | 'error'>('loaded');
+  const [walletRetry, setWalletRetry] = useState(0);
+  const retryWallet = () => setWalletRetry(previous => previous + 1);
   const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
   const [operatorAuthenticated, setOperatorAuthenticated] = useState(false);
 
@@ -456,10 +461,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isDemoMode]);
 
   useEffect(() => {
-    if (isDevModeUnlocked || currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') return;
+    if (isDevModeUnlocked || currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') {
+      setWalletLoadState('loaded');
+      return;
+    }
     let active = true;
     const accountId = currentUser.id;
-    setRegistrations([]);
+    setWalletLoadState('loading');
     api.attendees.myRegistrations().then((response) => {
       if (!active) return;
       if (response.success && response.data) {
@@ -469,10 +477,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const savedIds = new Set(saved.map(registration => registration.id));
           return [...previous.filter(registration => registration.attendee_id === accountId && !savedIds.has(registration.id)), ...saved];
         });
+        setWalletLoadState('loaded');
+      } else {
+        setWalletLoadState('error');
       }
+    }).catch((error) => {
+      console.error('Could not load account passes', error);
+      if (active) setWalletLoadState('error');
     });
     return () => { active = false; };
-  }, [currentUser.id, isDevModeUnlocked]);
+  }, [currentUser.id, isDevModeUnlocked, walletRetry]);
 
   const refreshBackendStatus = async () => {
     setEventLoadState('loading');
@@ -1942,6 +1956,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadRole2DemoData,
       isLiveBackend,
       eventLoadState,
+      walletLoadState,
+      retryWallet,
       backendHealth,
       refreshBackendStatus,
       notifications,
@@ -2003,6 +2019,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unlockedDevCode,
       isLiveBackend,
       eventLoadState,
+      walletLoadState,
       backendHealth,
       notifications,
       unreadNotificationCount,
