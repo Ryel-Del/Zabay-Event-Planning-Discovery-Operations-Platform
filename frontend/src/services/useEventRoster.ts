@@ -64,6 +64,6 @@ export function useEventRoster(
     () => isDemoMode && eventId ? localEventRoster(eventId, wallet, page) : null,
     [isDemoMode, eventId, wallet, page],
   );
-  const data = demo ?? (remote?.eventId === eventId && remote.page === page ? remote.data : null);
+  const data = demo ?? (remote !== null && remote.eventId === eventId && remote.page === page ? remote.data : null);
   return { data, loading, error, page, setPage, refresh, isDemo: isDemoMode };
 }
