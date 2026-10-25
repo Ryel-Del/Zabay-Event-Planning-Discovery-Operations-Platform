@@ -90,6 +90,19 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       const foreign = await other.get(`/api/events/${otherId}/registrations`);
       assert.equal(foreign.body.data.registrations[0].attendee_name, 'Foreign Attendee');
     });
+    await t.test('bounded pagination rejects abusive input and returns stable slices', async () => {
+      const first = await owner.get(`${path}?page=1&limit=1`);
+      assert.equal(first.status, 200);
+      assert.equal(first.body.data.total, 1);
+      assert.equal(first.body.data.page, 1);
+      assert.equal(first.body.data.limit, 1);
+      assert.equal(first.body.data.has_next, false);
+      assert.equal((await owner.get(`${path}?page=2&limit=1`)).body.data.registrations.length, 0);
+      for (const suffix of ['page=0', 'page=-1', 'page=x', 'page=9999999999', 'limit=0', 'limit=101', 'limit=nope']) {
+        const response = await owner.get(`${path}?${suffix}`);
+        assert.equal(response.status, 400, suffix);
+      }
+    });
     await t.test('historical admission mismatch is reported, never automatically repaired', async () => {
       await pool.query("UPDATE registrations SET status = 'checked_in' WHERE id = $1", [ownRegistration]);
       const inconsistent = await owner.get(path);
@@ -109,19 +122,36 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       assert.equal(reconciled.body.data.summary.checked_in, 1);
       assert.equal(reconciled.body.data.summary.integrity_issues, 0);
     });
-    await t.test('bounded pagination rejects abusive input and returns stable slices', async () => {
-      const first = await owner.get(`${path}?page=1&limit=1`);
-      assert.equal(first.status, 200);
-      assert.equal(first.body.data.total, 1);
-      assert.equal(first.body.data.page, 1);
-      assert.equal(first.body.data.limit, 1);
-      assert.equal(first.body.data.has_next, false);
-      assert.equal((await owner.get(`${path}?page=2&limit=1`)).body.data.registrations.length, 0);
-      for (const suffix of ['page=0', 'page=-1', 'page=x', 'page=9999999999', 'limit=0', 'limit=101', 'limit=nope']) {
-        const response = await owner.get(`${path}?${suffix}`);
-        assert.equal(response.status, 400, suffix);
-      }
+    await t.test('gate admission persists exactly once and refreshes database counts', async () => {
+      const registrationId = `reg-${randomUUID()}`;
+      const code = `PASS-${randomUUID()}`;
+      await pool.query(
+        `INSERT INTO registrations (id, event_id, attendee_name, attendee_email, qr_pass_code)
+         VALUES ($1, $2, 'Gate Test', 'gate@example.test', $3)`,
+        [registrationId, eventId, code]
+      );
+      const endpoint = '/api/attendees/checkin';
+      const wrong = await owner.post(endpoint).set('X-CSRF-Token', ownerLogin.body.csrfToken)
+        .send({ qr_pass_code: code, event_id: otherId });
+      assert.equal(wrong.status, 400);
+      assert.equal(wrong.body.code, 'WRONG_EVENT');
+      const admitted = await owner.post(endpoint).set('X-CSRF-Token', ownerLogin.body.csrfToken)
+        .send({ qr_pass_code: code, event_id: eventId });
+      assert.equal(admitted.status, 200);
+      assert.equal(admitted.body.data.id, registrationId);
+      assert.equal(admitted.body.data.status, 'checked_in');
+      const duplicate = await owner.post(endpoint).set('X-CSRF-Token', ownerLogin.body.csrfToken)
+        .send({ qr_pass_code: code, event_id: eventId });
+      assert.equal(duplicate.status, 409);
+      assert.equal(duplicate.body.code, 'DUPLICATE_CHECK_IN');
+      const stored = await pool.query('SELECT count(*)::int AS total FROM attendance_records WHERE registration_id = $1', [registrationId]);
+      assert.equal(stored.rows[0].total, 1);
+      const refreshed = await owner.get(path);
+      assert.equal(refreshed.body.data.summary.registered, 2);
+      assert.equal(refreshed.body.data.summary.checked_in, 2);
+      assert.equal(refreshed.body.data.summary.integrity_issues, 0);
     });
+
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
     await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
