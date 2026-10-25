@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { QRCodeCanvas } from 'qrcode.react';
 import {
@@ -10,8 +10,10 @@ import {
   Printer,
   Download,
   Check,
+  ShieldCheck,
+  Mail,
 } from 'lucide-react';
-import type { ZabayEvent, Registration } from '../../types';
+import type { ZabayEvent, Registration, User } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { downloadPassAsImage, printPassSlip } from '../../services/passExportService';
 
@@ -28,17 +30,72 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, isDemoMode, venues } = useApp();
+  const { registerForEvent, currentUser, setCurrentUser, isDemoMode, venues } = useApp();
+
+  const getStoredEmail = () => {
+    if (currentUser.email && currentUser.id !== 'usr-guest') {
+      return currentUser.email;
+    }
+    if (typeof window !== 'undefined') {
+      const last = localStorage.getItem('zabay-last-attendee-email');
+      if (last) return last;
+      const savedUser = localStorage.getItem('zabay-user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.email) return parsed.email;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return '';
+  };
+
+  const getStoredName = () => {
+    if (currentUser.name && currentUser.id !== 'usr-guest' && currentUser.name !== 'Guest') {
+      return currentUser.name;
+    }
+    if (typeof window !== 'undefined') {
+      const last = localStorage.getItem('zabay-last-attendee-name');
+      if (last) return last;
+      const savedUser = localStorage.getItem('zabay-user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.name && parsed.name !== 'Guest') return parsed.name;
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return '';
+  };
 
   const [ticketTier, setTicketTier] = useState<'General Admission' | 'VIP Access'>('General Admission');
-  const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(currentUser.email);
+  const [name, setName] = useState(getStoredName);
+  const [email, setEmail] = useState(getStoredEmail);
   const [isProcessing, setIsProcessing] = useState(false);
   const [completedReg, setCompletedReg] = useState<Registration | null>(null);
   const [submitError, setSubmitError] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Auto-sync stored account email and attendee name when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const initialEmail = getStoredEmail();
+      const initialName = getStoredName();
+      if (initialEmail) setEmail(initialEmail);
+      if (initialName) setName(initialName);
+    }
+  }, [isOpen, currentUser]);
+
   if (!isOpen) return null;
+
+  const isStoredEmail = Boolean(
+    (currentUser.email && currentUser.id !== 'usr-guest' && email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (typeof window !== 'undefined' && email && email.toLowerCase() === (localStorage.getItem('zabay-last-attendee-email') || '').toLowerCase())
+  );
 
   const price = ticketTier === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
 
@@ -48,11 +105,33 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     setSubmitError('');
     setIsProcessing(true);
     try {
-      const res = await registerForEvent(event.id, ticketTier, name, email);
+      const trimmedName = name.trim();
+      const trimmedEmail = email.trim();
+      const res = await registerForEvent(event.id, ticketTier, trimmedName, trimmedEmail);
       if (!res.success || !res.registration) {
         setSubmitError(res.message);
         return;
       }
+
+      // Persist entered email and name for 1-click future checkouts
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-last-attendee-email', trimmedEmail);
+        localStorage.setItem('zabay-last-attendee-name', trimmedName);
+      }
+
+      // If user was currently a guest, elevate attendee profile with entered credentials
+      if (currentUser.id === 'usr-guest') {
+        const updatedUser: User = {
+          ...currentUser,
+          name: trimmedName || 'Attendee',
+          email: trimmedEmail,
+        };
+        setCurrentUser(updatedUser);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zabay-user', JSON.stringify(updatedUser));
+        }
+      }
+
       setCompletedReg(res.registration);
       confetti({
         particleCount: 60,
@@ -147,22 +226,50 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Maria Elena Santos"
                   className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 block mb-1">
-                  Ticket Confirmation Email
-                </label>
-                <input
-                  data-cy="registration-email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">
+                    Ticket Confirmation Email
+                  </label>
+                  {isStoredEmail && (
+                    <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" /> Stored Account Email
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <input
+                    data-cy="registration-email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="e.g. attendee@gmail.com"
+                    className={`w-full bg-white dark:bg-[#171513] border ${
+                      isStoredEmail
+                        ? 'border-emerald-400/80 dark:border-emerald-700/80 focus:ring-emerald-500'
+                        : 'border-stone-300 dark:border-stone-700 focus:ring-[#B68366]'
+                    } rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1`}
+                  />
+                  {isStoredEmail && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-emerald-600 dark:text-emerald-400">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 flex items-center gap-1.5">
+                  <Mail className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C] shrink-0" />
+                  <span>
+                    {isStoredEmail
+                      ? 'Digital pass & QR admission ticket will automatically be sent to your verified account email.'
+                      : 'Digital pass & QR admission ticket will be sent to this email address.'}
+                  </span>
+                </p>
               </div>
             </div>
 

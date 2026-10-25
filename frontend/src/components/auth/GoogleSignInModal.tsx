@@ -99,6 +99,8 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-user', JSON.stringify(googleUser));
         localStorage.setItem('zabay-role', 'attendee');
+        if (googleUser.email) localStorage.setItem('zabay-last-attendee-email', googleUser.email);
+        if (googleUser.name) localStorage.setItem('zabay-last-attendee-name', googleUser.name);
       }
 
       setIsAuthenticating(false);
@@ -139,6 +141,8 @@ export const GoogleSignInModal: React.FC<GoogleSignInModalProps> = ({
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-user', JSON.stringify(googleUser));
         localStorage.setItem('zabay-role', role);
+        if (googleUser.email) localStorage.setItem('zabay-last-attendee-email', googleUser.email);
+        if (googleUser.name) localStorage.setItem('zabay-last-attendee-name', googleUser.name);
       }
 
       setIsAuthenticating(false);
