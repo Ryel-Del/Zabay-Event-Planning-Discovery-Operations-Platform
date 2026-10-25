@@ -898,32 +898,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('End date cannot precede the event start date.');
     }
 
-    if (isLiveBackend) {
+    if (!(isDemoMode && isDevModeUnlocked)) {
+      if (!isLiveBackend) throw new Error('Server is currently offline. Event was not saved.');
+      let response;
       try {
-        const response = await api.events.create({
+        response = await api.events.create({
           ...data,
           organizer_id: currentUser.id,
           venue_id: undefined,
           hall_id: undefined,
           hall_name: undefined,
         });
-        if (response.success && response.data?.id) {
-          const saved = adaptEvent(response.data);
-          saved.organizer_id = response.data.organizer_id || currentUser.id;
-          setEvents((previous) => [saved, ...previous]);
-          setSelectedEvent(saved);
-          return saved;
-        }
-        if (response.code === 'NETWORK_ERROR') {
-          setIsLiveBackend(false);
-        } else {
-          throw new Error(response.error || 'Event was not saved.');
-        }
-      } catch (err: any) {
-        if (!err?.message?.includes('Network') && !err?.message?.includes('unavailable') && !err?.message?.includes('offline')) {
-          throw err;
-        }
+      } catch {
+        throw new Error('Could not confirm whether the event was saved. Check your events before trying again.');
       }
+      if (response.code === 'NETWORK_ERROR') {
+        throw new Error('Could not confirm whether the event was saved. Check your events before trying again.');
+      }
+      if (!response.success || !response.data?.id) throw new Error(response.error || 'Event was not saved.');
+      const saved = adaptEvent(response.data);
+      saved.organizer_id = response.data.organizer_id || currentUser.id;
+      setEvents((previous) => [saved, ...previous]);
+      setSelectedEvent(saved);
+      return saved;
     }
 
     const newEvt: ZabayEvent = {
@@ -1485,38 +1482,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const spaceName = selectedHall ? `${venue.name} • ${selectedHall.name}` : venue.name;
     const event = events.find((e) => e.id === eventId) || selectedEvent;
 
-    if (isLiveBackend) {
+    if (!(isDemoMode && isDevModeUnlocked)) {
+      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. Venue was not booked.' };
       try {
         const savedEvent = await api.events.getById(eventId);
-        if (savedEvent.success && savedEvent.data?.id) {
-          const apiRes = await api.venues.book(venueId, {
-            event_id: eventId,
-            event_title: savedEvent.data.title,
-            start_time: startTime,
-            end_time: endTime,
-            hall_id: hallId,
-            hall_name: selectedHall?.name,
-          });
-
-          if (apiRes.success && apiRes.data?.id) {
-            setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
-            setEvents((previous) => previous.map((item) => item.id === eventId
-              ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
-              : item));
-            setSelectedEvent((previous) => previous?.id === eventId
-              ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
-              : previous);
-            return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
-          }
-          if (apiRes.code !== 'NETWORK_ERROR') {
-            return {
-              success: false,
-              message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}`,
-            };
-          }
+        if (savedEvent.code === 'NETWORK_ERROR') {
+          return { success: false, message: 'Could not verify the event because the server connection failed. No booking was confirmed.' };
         }
+        if (!savedEvent.success || !savedEvent.data?.id) {
+          return { success: false, message: savedEvent.error || 'Event could not be verified. Venue was not booked.' };
+        }
+        const apiRes = await api.venues.book(venueId, {
+          event_id: eventId,
+          event_title: savedEvent.data.title,
+          start_time: startTime,
+          end_time: endTime,
+          hall_id: hallId,
+          hall_name: selectedHall?.name,
+        });
+
+        if (apiRes.success && apiRes.data?.id) {
+          setVenueBookings((previous) => [...previous, apiRes.data as VenueBooking]);
+          setEvents((previous) => previous.map((item) => item.id === eventId
+            ? { ...item, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+            : item));
+          setSelectedEvent((previous) => previous?.id === eventId
+            ? { ...previous, venue_id: venueId, hall_id: hallId, hall_name: selectedHall?.name }
+            : previous);
+          return { success: true, message: `Venue booking confirmed for ${spaceName}.` };
+        }
+        if (apiRes.code === 'NETWORK_ERROR') {
+          return { success: false, message: 'Could not confirm whether the venue was booked. Check reservations before trying again.' };
+        }
+        return { success: false, message: apiRes.error || `Database EXCLUDE conflict detected on ${spaceName}` };
       } catch {
-        // Fall back to client booking validation
+        return { success: false, message: 'Could not confirm whether the venue was booked. Check reservations before trying again.' };
       }
     }
 
