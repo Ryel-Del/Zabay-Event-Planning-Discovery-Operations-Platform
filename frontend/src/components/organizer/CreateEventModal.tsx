@@ -3,7 +3,6 @@ import {
   X,
   Calendar,
   Zap,
-  Sparkles,
   CheckCircle,
   Globe,
   Lock,
@@ -31,7 +30,7 @@ const getTodayIso = () => {
 };
 
 export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onCreated }) => {
-  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, loadDemoData, isDemoMode, isLiveBackend } = useApp();
+  const { venues, personnel, createEvent, bookVenue, broadcastEventChange, isDemoMode, isLiveBackend } = useApp();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -222,9 +221,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     broadcastEventChange({
       eventId: newEvent.id,
       eventTitle: newEvent.title,
-      summary: isDemoMode
-        ? `Sample event created: "${newEvent.title}"${venueId ? ' with a sample venue reservation' : ''}.`
-        : `Event saved in planning: "${newEvent.title}"${venueId ? `; venue booking confirmed at ${selectedVenue?.name}` : '; no venue booked'}.`,
+      summary: `Event saved in planning: "${newEvent.title}"${venueId ? `; venue booking confirmed at ${selectedVenue?.name}` : '; no venue booked'}.`,
     });
 
     if (onCreated) onCreated(newEvent);
@@ -313,26 +310,6 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
           {/* STEP 1: BASICS */}
           {currentStep === 1 && (
             <fieldset disabled={Boolean(persistedEvent) || saving} className="space-y-4 animate-in fade-in duration-150">
-              {/* Quick Demo Seed */}
-              <div className="p-3 bg-[#EBF3FC] dark:bg-[#152030] border border-[#C8DCF7] dark:border-[#2D4160] rounded-xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
-                  <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                    Want to test with full Bohol sample data instead?
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    loadDemoData();
-                    closeWizard();
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold bg-[#3E6CB5] text-white rounded-lg hover:bg-[#325896] transition-colors shrink-0 cursor-pointer"
-                >
-                  Load Sample
-                </button>
-              </div>
-
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Event Title <span className="text-rose-500">*</span>
@@ -829,11 +806,11 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
               <button
                 type="submit"
                 data-cy="event-save"
-                disabled={saving || (!isDemoMode && !isLiveBackend)}
+                disabled={saving}
                 className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>{saving ? 'Saving…' : persistedEvent ? 'Retry Venue Booking' : isDemoMode ? 'Create Sample Event' : 'Save Event & Book Venue'}</span>
+                <span>{saving ? 'Saving…' : persistedEvent ? 'Retry Venue Booking' : 'Save Event & Book Venue'}</span>
               </button>
             )}
           </div>

@@ -15,12 +15,17 @@ interface AttendeeDirectoryDatagridProps {
 export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({
   onScanPassModal,
 }) => {
-  const { registrations, checkInAttendee, selectedEvent, loadDemoData } = useApp();
+  const { registrations, checkInAttendee, selectedEvent, isDevModeUnlocked, loadDemoData } = useApp();
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState<string>('all');
   const [feedback, setFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
-  const filtered = registrations.filter((reg) => {
+  const eventRegistrations = React.useMemo(() => {
+    if (!selectedEvent) return [];
+    return registrations.filter((reg) => reg.event_id === selectedEvent.id);
+  }, [registrations, selectedEvent]);
+
+  const filtered = eventRegistrations.filter((reg) => {
     const matchesSearch =
       reg.attendee_name.toLowerCase().includes(search.toLowerCase()) ||
       reg.attendee_email.toLowerCase().includes(search.toLowerCase()) ||
@@ -50,7 +55,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
 
         <div className="flex items-center gap-2 text-xs">
           <span className="text-stone-500">
-            Showing <strong>{filtered.length}</strong> of {registrations.length} registrations
+            Showing <strong>{filtered.length}</strong> of {eventRegistrations.length} registrations
           </span>
         </div>
       </div>
@@ -111,13 +116,15 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                   <p className="text-[11px] text-stone-400 mt-1 max-w-sm mx-auto">
                     Registrations issued in this workspace will appear here for camera check-in.
                   </p>
-                  <button
-                    onClick={loadDemoData}
-                    className="mt-3 px-3 py-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Load Sample Attendee Records</span>
-                  </button>
+                  {isDevModeUnlocked && (
+                    <button
+                      onClick={loadDemoData}
+                      className="mt-3 px-3 py-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Load Sample Attendee Records</span>
+                    </button>
+                  )}
                 </td>
               </tr>
             ) : (

@@ -24,7 +24,7 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { selectedEvent, tasks, resources, registrations, loadDemoData } = useApp();
+  const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData } = useApp();
 
   if (!selectedEvent) {
     return (
@@ -38,24 +38,28 @@ export const AnalyticsDashboard: React.FC = () => {
             Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
           </p>
         </div>
-        <button
-          onClick={loadDemoData}
-          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Load Bohol Sample Data</span>
-        </button>
+        {isDevModeUnlocked && (
+          <button
+            onClick={loadDemoData}
+            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Load Bohol Sample Data</span>
+          </button>
+        )}
       </div>
     );
   }
 
-  // Metric derivations from views
+  // Metric derivations from views scoped to selectedEvent
+  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
+  const eventRegistrations = registrations.filter((r) => r.event_id === selectedEvent.id);
   const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
   const capacityPercent = selectedEvent.max_capacity > 0 ? Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100) : 0;
-  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const taskReadiness = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
-  const checkedInCount = registrations.filter((r) => r.status === 'checked_in').length;
-  const attendanceRate = registrations.length > 0 ? Math.round((checkedInCount / registrations.length) * 100) : 0;
+  const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
+  const taskReadiness = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  const checkedInCount = eventRegistrations.filter((r) => r.status === 'checked_in').length;
+  const attendanceRate = eventRegistrations.length > 0 ? Math.round((checkedInCount / eventRegistrations.length) * 100) : 0;
 
   // Chart 1: Hourly Check-in Flow (v_attendance_arrival_flow)
   const hourlyFlowData = [

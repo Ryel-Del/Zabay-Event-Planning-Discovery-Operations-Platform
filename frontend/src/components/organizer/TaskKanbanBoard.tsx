@@ -28,6 +28,7 @@ type BoardViewMode = 'board' | 'list' | 'my_tasks' | 'unassigned';
 export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPeople }) => {
   const {
     tasks,
+    selectedEvent,
     workflowKits,
     currentUser,
     updateTaskStatus,
@@ -85,11 +86,17 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
     { id: 'blocked', title: 'Blocked', color: 'border-[#F7D8D3] dark:border-[#52251F]', dotColor: 'bg-[#C45547]' },
   ];
 
+  // Tasks strictly scoped to active event workspace
+  const scopedTasks = useMemo(() => {
+    if (!selectedEvent) return [];
+    return tasks.filter((t) => t.event_id === selectedEvent.id);
+  }, [tasks, selectedEvent]);
+
   // Distinct milestones from current task set
   const distinctMilestones = useMemo(() => {
-    const list = tasks.map((t) => t.milestone).filter(Boolean) as string[];
+    const list = scopedTasks.map((t) => t.milestone).filter(Boolean) as string[];
     return Array.from(new Set(list));
-  }, [tasks]);
+  }, [scopedTasks]);
 
   // Unique names from personnel & currentUser
   const candidateAssignees = useMemo(() => {
@@ -98,7 +105,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
 
   // Filter tasks based on view mode and filters
   const filteredTasks = useMemo(() => {
-    return tasks.filter((t) => {
+    return scopedTasks.filter((t) => {
       // View Mode constraints
       if (viewMode === 'my_tasks') {
         const hasMe = t.personnel_assignments?.some(
@@ -130,7 +137,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
 
       return true;
     });
-  }, [tasks, viewMode, committeeFilter, priorityFilter, milestoneFilter, currentUser]);
+  }, [scopedTasks, viewMode, committeeFilter, priorityFilter, milestoneFilter, currentUser]);
 
   const handleApplyKit = (kitId: string, kitName: string) => {
     loadTaskTemplate(kitId);
@@ -396,7 +403,7 @@ export const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ onNavigateToPe
             }`}
           >
             <AlertCircle className="w-3.5 h-3.5" />
-            <span>Unassigned ({tasks.filter((t) => !t.personnel_assignments || t.personnel_assignments.length === 0).length})</span>
+            <span>Unassigned ({scopedTasks.filter((t) => !t.personnel_assignments || t.personnel_assignments.length === 0).length})</span>
           </button>
         </div>
 

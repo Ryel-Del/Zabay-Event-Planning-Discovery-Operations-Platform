@@ -70,9 +70,10 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   }
 
   const venue = venues.find((v) => v.id === selectedEvent.venue_id);
-  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const conflictTasks = tasks.filter((t) => t.has_conflict);
-  const readinessPercent = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
+  const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
+  const conflictTasks = eventTasks.filter((t) => t.has_conflict);
+  const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
   const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
 
   return (
@@ -142,7 +143,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Operational Readiness</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent}%</span>
-              <span className="text-slate-500">({completedTasks}/{tasks.length} tasks ready)</span>
+              <span className="text-slate-500">({completedTasks}/{eventTasks.length} tasks ready)</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
               <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />

@@ -9,10 +9,21 @@ import {
 import { useApp } from '../../context/AppContext';
 
 export const TaskGanttView: React.FC = () => {
-  const { tasks, loadDemoData } = useApp();
-  const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[0]?.id || '');
+  const { tasks, selectedEvent, isDevModeUnlocked, loadDemoData } = useApp();
+  const eventTasks = React.useMemo(() => {
+    if (!selectedEvent) return [];
+    return tasks.filter((t) => t.event_id === selectedEvent.id);
+  }, [tasks, selectedEvent]);
 
-  if (tasks.length === 0) {
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+
+  React.useEffect(() => {
+    if (eventTasks.length > 0 && (!selectedTaskId || !eventTasks.some((t) => t.id === selectedTaskId))) {
+      setSelectedTaskId(eventTasks[0].id);
+    }
+  }, [eventTasks, selectedTaskId]);
+
+  if (eventTasks.length === 0) {
     return (
       <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
         <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
@@ -21,21 +32,23 @@ export const TaskGanttView: React.FC = () => {
         <div className="space-y-1">
           <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">No Scheduled Tasks in Workspace</h2>
           <p className="text-xs text-stone-500 max-w-md mx-auto">
-            The schedule timeline visualizes task durations, setup windows, and activity sequences. Add tasks in the Kanban board or load the Bohol sample plan.
+            The schedule timeline visualizes task durations, setup windows, and activity sequences. Add tasks in the Kanban board or load standard event workflows.
           </p>
         </div>
-        <button
-          onClick={loadDemoData}
-          className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Load Bohol Sample Data</span>
-        </button>
+        {isDevModeUnlocked && (
+          <button
+            onClick={loadDemoData}
+            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Load Bohol Sample Data</span>
+          </button>
+        )}
       </div>
     );
   }
 
-  const selectedTask = tasks.find((t) => t.id === selectedTaskId) || tasks[0];
+  const selectedTask = eventTasks.find((t) => t.id === selectedTaskId) || eventTasks[0];
 
   // Convert "HH:mm" to minutes from 06:00 (base = 360)
   const timeToPercent = (timeStr: string) => {
@@ -91,7 +104,7 @@ export const TaskGanttView: React.FC = () => {
 
           {/* Visual Track Rows */}
           <div className="space-y-3 pt-2">
-            {tasks.map((task) => {
+            {eventTasks.map((task) => {
               const left = timeToPercent(task.start_time);
               const right = timeToPercent(task.end_time);
               const width = Math.max(8, right - left);

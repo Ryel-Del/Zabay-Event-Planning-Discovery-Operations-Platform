@@ -24,42 +24,54 @@ export const ChangeImpactSimulator: React.FC = () => {
     broadcastEventChange,
   } = useApp();
 
-  const [selectedTaskId, setSelectedTaskId] = useState<string>(tasks[2]?.id || tasks[0]?.id);
+  const eventTasks = useMemo(() => {
+    if (!selectedEvent) return [];
+    return tasks.filter((t) => t.event_id === selectedEvent.id);
+  }, [tasks, selectedEvent]);
+
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
+
+  React.useEffect(() => {
+    if (eventTasks.length > 0 && (!selectedTaskId || !eventTasks.some((t) => t.id === selectedTaskId))) {
+      setSelectedTaskId(eventTasks[0].id);
+    }
+  }, [eventTasks, selectedTaskId]);
+
   const [delayMinutes, setDelayMinutes] = useState<number>(30);
   const [delayReason, setDelayReason] = useState<string>('Equipment delivery delayed in highway traffic');
   const [appliedFeedback, setAppliedFeedback] = useState<string | null>(null);
 
   // Real-world operational delay scenarios
-  const quickScenarios = [
+  const quickScenarios = useMemo(() => [
     {
       label: '🍕 Catering & Concessions Late',
       minutes: 30,
       reason: 'Catering delivery van delayed in highway traffic',
-      taskId: tasks[4]?.id || tasks[0]?.id,
+      taskId: eventTasks[4]?.id || eventTasks[0]?.id || '',
     },
     {
       label: '🎤 Keynote Speaker Flight Delay',
       minutes: 45,
       reason: 'VIP guest arrival delayed at airport',
-      taskId: tasks[2]?.id || tasks[0]?.id,
+      taskId: eventTasks[2]?.id || eventTasks[0]?.id || '',
     },
     {
       label: '🔊 Stage Audio & Sound Check Glitch',
       minutes: 40,
       reason: 'Sound board HDMI interface handshaking issue',
-      taskId: tasks[1]?.id || tasks[0]?.id,
+      taskId: eventTasks[1]?.id || eventTasks[0]?.id || '',
     },
     {
       label: '⏱️ Project Presentations Overrun',
       minutes: 25,
       reason: 'Morning session Q&A ran past allotted timeslot',
-      taskId: tasks[3]?.id || tasks[0]?.id,
+      taskId: eventTasks[3]?.id || eventTasks[0]?.id || '',
     },
-  ];
+  ], [eventTasks]);
 
   const selectedTask = useMemo(
-    () => tasks.find((t) => t.id === selectedTaskId) || tasks[0],
-    [tasks, selectedTaskId]
+    () => eventTasks.find((t) => t.id === selectedTaskId) || eventTasks[0],
+    [eventTasks, selectedTaskId]
   );
 
   const downstreamResult = useMemo(
@@ -79,10 +91,10 @@ export const ChangeImpactSimulator: React.FC = () => {
 
   const unaffectedTasks = useMemo(() => {
     if (!selectedTask) return [];
-    return tasks.filter(
+    return eventTasks.filter(
       (t) => t.id !== selectedTask.id && !downstreamResult.affectedTaskIds.includes(t.id)
     );
-  }, [tasks, selectedTask, downstreamResult]);
+  }, [eventTasks, selectedTask, downstreamResult]);
 
   const handleApply = () => {
     if (!selectedTask) return;
@@ -102,7 +114,7 @@ export const ChangeImpactSimulator: React.FC = () => {
     });
 
     setAppliedFeedback(
-      `✓ Sample schedule updated! ${selectedTask.title} shifted +${delayMinutes}m. ${affectedDependentTasks.length} dependent tasks adjusted, ${unaffectedTasks.length} independent tasks untouched. An in-app notice was added for this session.`
+      `✓ Schedule updated! ${selectedTask.title} shifted +${delayMinutes}m. ${affectedDependentTasks.length} dependent tasks adjusted, ${unaffectedTasks.length} independent tasks untouched. An in-app notice was added for this session.`
     );
     setTimeout(() => setAppliedFeedback(null), 6000);
   };
@@ -190,9 +202,9 @@ export const ChangeImpactSimulator: React.FC = () => {
             1. Select Task to Delay
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {tasks.slice(0, 6).map((task) => {
+            {eventTasks.slice(0, 6).map((task) => {
               const isSelected = task.id === selectedTaskId;
-              const hasDependents = tasks.some((t) => t.dependencies?.includes(task.id));
+              const hasDependents = eventTasks.some((t) => t.dependencies?.includes(task.id));
               return (
                 <button
                   key={task.id}

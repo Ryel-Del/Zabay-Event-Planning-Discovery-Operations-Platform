@@ -135,6 +135,7 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
 }) => {
   const {
     currentUser,
+    selectedEvent,
     tasks,
     personnel,
     committeeRoles,
@@ -145,7 +146,7 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
 
   const [activeTab, setActiveTab] = useState<'matrix' | 'roster'>('matrix');
   const [localRoles, setLocalRoles] = useState<EventCommitteeRoleMap>(() => ({
-    event_head: committeeRoles.event_head || currentUser.name,
+    event_head: committeeRoles.event_head || (currentUser.id !== 'usr-guest' ? currentUser.name : ''),
     secretary: committeeRoles.secretary || '',
     letters_head: committeeRoles.letters_head || '',
     finance_head: committeeRoles.finance_head || '',
@@ -167,14 +168,16 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
   // Compute task statistics by committee
   const getCommitteeTasks = (commTag: string) => {
     return tasks.filter((t) => {
+      if (selectedEvent && t.event_id && t.event_id !== selectedEvent.id) return false;
       const c = t.committee ? String(t.committee).toLowerCase() : '';
       return c === commTag;
     });
   };
 
-  const unassignedTasksCount = tasks.filter(
-    (t) => !t.personnel_assignments || t.personnel_assignments.length === 0
-  ).length;
+  const unassignedTasksCount = tasks.filter((t) => {
+    if (selectedEvent && t.event_id && t.event_id !== selectedEvent.id) return false;
+    return !t.personnel_assignments || t.personnel_assignments.length === 0;
+  }).length;
 
   const handleRoleChange = (key: keyof EventCommitteeRoleMap, value: string) => {
     setLocalRoles((prev) => ({

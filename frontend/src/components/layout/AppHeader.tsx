@@ -16,9 +16,7 @@ import {
   Compass,
   MapPin,
   Users,
-  Sparkles,
   Plus,
-  Trash2,
   Globe,
   Lock,
   User,
@@ -65,13 +63,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     auditLogs,
     theme,
     toggleTheme,
-    isDemoMode,
     isDevModeUnlocked,
     unlockedDevCode,
     lockDevMode,
     signOut,
-    loadDemoData,
-    clearToCleanSlate,
     notifications,
     unreadNotificationCount,
     dismissNotification,
@@ -92,7 +87,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const hasConflicts = tasks.some((t) => t.has_conflict);
 
   const managedEvents = useMemo(() => {
-    if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
       return events;
     }
     if (currentUser.id === 'usr-guest') {
@@ -333,32 +328,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <Plus className="w-3.5 h-3.5" />
                     <span>Create New Event</span>
                   </button>
-
-                  {isDevModeUnlocked && (
-                    isDemoMode ? (
-                      <button
-                        onClick={() => {
-                          clearToCleanSlate();
-                          setIsEventPickerOpen(false);
-                        }}
-                        className="w-full py-1.5 px-3 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                        <span>Exit Sample Mode</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          loadDemoData();
-                          setIsEventPickerOpen(false);
-                        }}
-                        className="w-full py-1.5 px-3 bg-[#EBF3FC] hover:bg-[#D4E4F7] dark:bg-[#1E293B] dark:hover:bg-[#283852] text-[#244A85] dark:text-[#8BB0E8] rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <Sparkles className="w-3 h-3 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                        <span>Load Bohol Sample Data</span>
-                      </button>
-                    )
-                  )}
                 </div>
               </div>
             )}

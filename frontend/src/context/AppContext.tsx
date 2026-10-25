@@ -228,21 +228,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('zabay-demo-mode') === 'true';
+      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const devCode = localStorage.getItem('zabay-dev-code');
+      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL')) {
+        return localStorage.getItem('zabay-demo-mode') === 'true';
+      }
+      localStorage.removeItem('zabay-demo-mode');
     }
     return false;
   });
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const devCode = localStorage.getItem('zabay-dev-code');
+      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL' || devCode === 'ROLE2-SEED' || devCode === 'CLEAN-SLATE')) {
+        return true;
+      }
+      localStorage.removeItem('zabay-dev-unlocked');
+      localStorage.removeItem('zabay-dev-code');
     }
     return false;
   });
 
   const [unlockedDevCode, setUnlockedDevCode] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('zabay-dev-code');
+      const devUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const devCode = localStorage.getItem('zabay-dev-code');
+      if (devUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL' || devCode === 'ROLE2-SEED' || devCode === 'CLEAN-SLATE')) {
+        return devCode;
+      }
     }
     return null;
   });
@@ -259,6 +274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       }
       const isDevUnlocked = localStorage.getItem('zabay-dev-unlocked') === 'true';
+      const devCode = localStorage.getItem('zabay-dev-code');
       const savedUserStr = localStorage.getItem('zabay-user');
       let userId = 'usr-guest';
       if (savedUserStr) {
@@ -269,13 +285,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // ignore
         }
       }
-      // If dev mode is NOT unlocked and user is not Mark Bautista ('usr-org-1'),
-      // start with a clean workspace (no event preselected)
-      if (!isDevUnlocked && userId !== 'usr-org-1') {
-        return null;
+      // Only preselect mockEvents[0] if explicitly dev unlocked with demo dataset OR user is Mark Bautista ('usr-org-1')
+      if ((isDevUnlocked && (devCode === 'ZABAY2026' || devCode === 'DEV-BOHOL')) || userId === 'usr-org-1') {
+        return mockEvents[0] || null;
       }
+      return null;
     }
-    return mockEvents[0] || null;
+    return null;
   });
 
   const [venues, setVenues] = useState<Venue[]>(() => {
@@ -387,7 +403,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const found = liveEvents.find((event) => event.id === previous.id);
           if (found) return found;
         }
-        if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+        if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
           return liveEvents[0] || null;
         }
         if (currentUser.id && currentUser.id !== 'usr-guest') {
@@ -407,12 +423,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Synchronize active workspace (selectedEvent) with currentUser session and devMode state
   useEffect(() => {
-    if (isDevModeUnlocked || currentUser.id === 'usr-org-1') {
+    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
       setSelectedEvent((prev) => prev || events[0] || null);
       return;
     }
     if (currentUser.id === 'usr-guest') {
-      setSelectedEvent((prev) => (prev ? null : prev));
+      setSelectedEvent(null);
       return;
     }
     setSelectedEvent((prev) => {
@@ -700,8 +716,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('End date cannot precede the event start date.');
     }
 
-    if (!isDemoMode) {
-      if (!isLiveBackend) throw new Error('Live server is unavailable. Please check your connection or continue in local mode.');
+    if (isLiveBackend) {
       const response = await api.events.create({
         ...data,
         organizer_id: currentUser.id,
@@ -719,8 +734,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSelectedEvent(saved);
       return saved;
     }
+
     const newEvt: ZabayEvent = {
-      id: `demo-evt-${Date.now()}`,
+      id: `evt-${Date.now()}`,
       title: data.title || 'Untitled Bohol Event',
       description: data.description || 'Newly created event workspace.',
       category: data.category || 'Sports & Athletics',
@@ -1003,6 +1019,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newTask: Task = {
       ...newTaskData,
       id: `task-${Date.now()}`,
+      event_id: newTaskData.event_id || selectedEvent?.id || 'evt-1',
     };
     setTasks((prev) => [...prev, newTask]);
 

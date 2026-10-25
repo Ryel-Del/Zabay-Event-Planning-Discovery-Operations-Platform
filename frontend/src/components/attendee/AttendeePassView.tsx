@@ -17,7 +17,7 @@ interface AttendeePassViewProps {
 }
 
 export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
-  const { registrations, events, venues, notifications, isDemoMode, currentUser } = useApp();
+  const { registrations, events, venues, notifications, currentUser } = useApp();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Filter confirmed passes strictly belonging to the currently active user or remembered browser session
@@ -125,7 +125,7 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
               <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 border-b border-stone-200/80 dark:border-stone-800/80 flex justify-between items-start">
                 <div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                    {isDemoMode ? 'Sample Event Pass' : 'Event Pass'}
+                    Official Event Pass
                   </span>
                   <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100 leading-tight mt-0.5">
                     {reg.event_title}

@@ -95,6 +95,7 @@ export const TopDownCalendarView: React.FC = () => {
     calendarDays.forEach((day) => {
       // Find tasks matching due_date or default to 2026-11-12
       const dayTasks = tasks.filter((t) => {
+        if (selectedEvent && t.event_id && t.event_id !== selectedEvent.id) return false;
         const d = t.due_date || '2026-11-12';
         if (d !== day.dateString) return false;
         if (activeTrackFilter !== 'all' && t.track !== activeTrackFilter) return false;
@@ -103,6 +104,7 @@ export const TopDownCalendarView: React.FC = () => {
 
       // Find venue bookings that overlap with this date
       const dayBookings = venueBookings.filter((b) => {
+        if (selectedEvent && b.event_id && b.event_id !== selectedEvent.id) return false;
         const bStart = b.start_time.split('T')[0];
         const bEnd = b.end_time.split('T')[0];
         return day.dateString >= bStart && day.dateString <= bEnd;

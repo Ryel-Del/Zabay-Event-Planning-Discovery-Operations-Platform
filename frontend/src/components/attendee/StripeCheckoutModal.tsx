@@ -30,7 +30,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, setCurrentUser, isDemoMode, venues } = useApp();
+  const { registerForEvent, currentUser, setCurrentUser, venues } = useApp();
 
   const getStoredEmail = () => {
     if (currentUser.email && currentUser.id !== 'usr-guest') {
@@ -304,9 +304,9 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">{isDemoMode ? 'Sample Pass Created' : 'Registration Saved'}</h3>
+              <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">Registration Confirmed</h3>
               <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-                No payment was collected. Your QR pass is ready for check-in.
+                Your digital event pass is generated and ready for check-in.
               </p>
             </div>
 
