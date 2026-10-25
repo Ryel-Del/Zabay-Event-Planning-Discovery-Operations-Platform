@@ -126,6 +126,16 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {roster.error && <p role="alert" className="text-sm text-rose-800">
+        Event registration analytics unavailable: {roster.error}
+        <button onClick={roster.refresh} className="underline ml-2">Retry</button>
+      </p>}
+      {taskStream.error && <p role="alert" className="text-sm text-rose-800">
+        Event task metrics unavailable: {taskStream.error}
+        <button onClick={taskStream.refresh} className="underline ml-2">Retry</button>
+      </p>}
+      {(roster.loading || taskStream.loading) && <p role="status" className="text-xs text-stone-500">Loading verified event analytics…</p>}
+
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1 */}
@@ -197,7 +207,9 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2-Column Visual Charts */}
+      {/* Sample-only charts must never be represented as real PostgreSQL telemetry. */}
+      {isDemoMode ? <>
+        <p className="text-xs text-amber-700">Illustrative browser-local sample charts — not recorded payments or server measurements.</p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Arrival Flow */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
@@ -302,6 +314,7 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      </> : <p className="text-xs text-stone-500">Historical arrival, staff workload, and payment breakdown charts are unavailable without verified server data.</p>}
     </div>
   );
 };
