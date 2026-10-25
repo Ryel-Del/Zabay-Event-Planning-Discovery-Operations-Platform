@@ -23,6 +23,7 @@ export interface AttendeeRegistrationRequest {
   attendee_name: string;
   attendee_email: string;
   ticket_type: string;
+  registration_mode: 'account' | 'guest';
 }
 
 export type DbRegistration = Omit<Registration, 'event_title' | 'attendee_id' | 'amount_paid'> & {
@@ -76,7 +77,7 @@ export function adaptEvent(row: any): ZabayEvent {
     ticket_price: asNumber(row.ticket_price),
     currency: row.currency || 'PHP',
     budget: asNumber(row.budget),
-    tickets_sold: 0,
+    tickets_sold: asNumber(row.registration_count),
     banner_url: row.banner_url || '/zabay-logo.png',
     requirements: {
       min_capacity: row.expected_attendance,
@@ -121,7 +122,7 @@ async function csrf() {
 }
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const mutation = options.method && !['GET', 'HEAD'].includes(options.method);
-  const token = mutation && endpoint !== '/api/attendees/register' ? await csrf().catch(() => undefined) : undefined;
+  const token = mutation ? await csrf().catch(() => undefined) : undefined;
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { 'X-CSRF-Token': token } : {}),
@@ -284,6 +285,7 @@ export const api = {
 
   // Attendee & Ticket Operations
   attendees: {
+    myRegistrations: () => request<(DbRegistration & { event_title: string })[]>('/api/attendees/registrations/me'),
     register: (payload: AttendeeRegistrationRequest) =>
       request<DbRegistration>(`/api/attendees/register`, {
         method: 'POST',
