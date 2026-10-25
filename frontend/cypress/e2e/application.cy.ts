@@ -48,15 +48,25 @@ describe('application startup', () => {
   });
 
   it('shows an event API failure and reloads real events when retried', () => {
-    cy.intercept({ method: 'GET', url: '/api/events', times: 1 }, { statusCode: 503, body: { success: false, error: 'Unavailable' } }).as('failedEvents');
+    const title = `Retry event ${Date.now()}`;
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({ method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken }, body: {
+      title, category: 'Community & Civic', event_type: 'public', is_private: false,
+      start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100,
+    } }).its('status').should('eq', 201));
+    let failing = true;
+    cy.intercept('GET', '/api/events', req => {
+      if (failing) req.reply({ statusCode: 503, body: { success: false, error: 'Unavailable' } });
+      else req.continue();
+    }).as('eventsRequest');
     cy.visit('/');
-    cy.wait('@failedEvents');
+    cy.wait('@eventsRequest');
     cy.get('[data-cy="attendee-mode"]').click();
     cy.get('[data-cy="event-load-error"]').should('be.visible');
     cy.get('[data-cy="event-card"]').should('not.exist');
+    cy.then(() => { failing = false; });
     cy.contains('button', 'Retry').click();
     cy.get('[data-cy="event-load-error"]').should('not.exist');
-    cy.get('[data-cy="event-card"]').should('have.length.greaterThan', 0);
+    cy.get('[data-cy="event-card"]').should('contain.text', title);
   });
 
   it('shows a genuine empty state without production sample events', () => {
