@@ -62,6 +62,10 @@ test('schema-only database supports the complete operator workflow', async () =>
     });
     assert.equal(registration.status, 201, JSON.stringify(registration.body));
     const pass = registration.body.data.qr_pass_code;
+    const listedEvent = (await request(app).get('/api/events')).body.data.find(row => row.id === eventId);
+    assert.equal(listedEvent.registration_count, 1, 'list endpoint reports persisted active registrations');
+    const detailEvent = (await request(app).get(`/api/events/${eventId}`)).body.data;
+    assert.equal(detailEvent.registration_count, 1, 'detail endpoint reports persisted active registrations');
     assert.equal((await request(app).post('/api/attendees/checkin').send({ qr_pass_code: pass })).status, 401);
     const checkIn = () => agent.post('/api/attendees/checkin').set('X-CSRF-Token', csrf).send({ qr_pass_code: pass });
     assert.equal((await checkIn()).status, 200);
