@@ -151,17 +151,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             className="h-6 sm:h-9 w-auto object-contain group-hover:scale-105 transition-transform hidden dark:block shrink-0"
           />
           {currentRole === 'organizer' && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
+            <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8] border border-[#C8DCF7] dark:border-[#2D4160]">
               Studio
             </span>
           )}
           {currentRole === 'venue_manager' && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
+            <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232]">
               Venue Hub
             </span>
           )}
           {currentRole === 'staff' && (
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF7EE] text-[#8C6212] dark:bg-[#252219] dark:text-[#E8BD68] border border-[#ECD9A8] dark:border-[#5A4B27]">
+            <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FAF7EE] text-[#8C6212] dark:bg-[#252219] dark:text-[#E8BD68] border border-[#ECD9A8] dark:border-[#5A4B27]">
               Staff View
             </span>
           )}
@@ -186,24 +186,24 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       {/* Center: Contextual Tools (Custom Popover Event Selector - NO NATIVE SELECT!) */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
         {currentRole === 'organizer' && (
-          <div className="relative" ref={eventPickerRef}>
+          <div className="relative min-w-0" ref={eventPickerRef}>
             <button
               onClick={() => setIsEventPickerOpen(!isEventPickerOpen)}
               data-cy="event-picker"
-              className="flex items-center gap-1.5 sm:gap-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1A2536] px-2.5 sm:px-3.5 py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all cursor-pointer text-left"
+              className="flex items-center gap-1.5 sm:gap-2.5 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-[#EBF3FC] dark:hover:bg-[#1A2536] px-2 py-1 xs:px-2.5 xs:py-1.5 sm:px-3.5 sm:py-1.5 rounded-xl border border-slate-200/90 dark:border-slate-800 shadow-xs transition-all cursor-pointer text-left max-w-full"
             >
               <Calendar className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0] shrink-0" />
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0">
                 <span className="text-[10px] text-slate-400 font-semibold leading-tight hidden lg:block">
                   Active Workspace
                 </span>
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[110px] xs:max-w-[160px] sm:max-w-[260px]">
+                <span className="text-[11px] xs:text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[85px] xs:max-w-[125px] sm:max-w-[200px] md:max-w-[260px]">
                   {selectedEvent ? selectedEvent.title : 'No Event Selected'}
                 </span>
               </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isEventPickerOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isEventPickerOpen ? 'rotate-180' : ''}`} />
 
               {/* Visibility & Micro Live Feasibility Pill */}
               {selectedEvent && (
@@ -343,7 +343,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
 
       {/* Right: Actions, Studio CTA & Account Menu */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      <div className="flex items-center gap-1 xs:gap-1.5 sm:gap-2.5 shrink-0">
         {/* Creator / Host Studio CTA (When viewing the Public Feed - shown on desktop md+; mobile has bottom nav) */}
         {currentRole === 'attendee' && (
           <button
@@ -466,10 +466,10 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           )}
         </div>
 
-        {/* Theme Toggle (Sun / Moon) */}
+        {/* Theme Toggle (Sun / Moon) - Displayed on sm+ to keep mobile header clean; accessible in avatar dropdown */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 sm:p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer shrink-0"
+          className="hidden sm:flex p-1.5 sm:p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer shrink-0"
           title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         >
           {isDark ? <Sun className="w-4 h-4 text-[#7EA6E0]" /> : <Moon className="w-4 h-4 text-slate-600" />}
@@ -571,8 +571,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 </div>
               )}
 
-              {/* Profile Page Action */}
-              <div className="p-2 border-b border-slate-100 dark:border-slate-800/80">
+              {/* Profile Page & Theme Toggle Actions */}
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800/80 space-y-1">
                 <button
                   onClick={() => {
                     setIsProfileMenuOpen(false);
@@ -585,6 +585,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     <span>My Profile & Events</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {isDark ? <Sun className="w-4 h-4 text-[#7EA6E0]" /> : <Moon className="w-4 h-4 text-slate-600" />}
+                    <span>Theme: {isDark ? 'Dark Mode' : 'Light Mode'}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Toggle</span>
                 </button>
               </div>
 

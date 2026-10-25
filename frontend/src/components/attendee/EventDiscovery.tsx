@@ -30,6 +30,16 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
   const [selectedEventForCheckout, setSelectedEventForCheckout] = useState<ZabayEvent | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] = useState<ZabayEvent | null>(null);
 
+  React.useEffect(() => {
+    const handleSetTab = (e: any) => {
+      if (e.detail?.tab) setActiveTab(e.detail.tab);
+      if (e.detail?.view) setViewMode(e.detail.view);
+      setSelectedEventDetail(null);
+    };
+    window.addEventListener('zabay:set-attendee-tab', handleSetTab);
+    return () => window.removeEventListener('zabay:set-attendee-tab', handleSetTab);
+  }, []);
+
   const categories: string[] = [
     'All',
     'Sports & Athletics',

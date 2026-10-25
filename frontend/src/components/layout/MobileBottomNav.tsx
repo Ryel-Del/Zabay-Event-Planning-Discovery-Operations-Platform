@@ -10,6 +10,7 @@ import {
   Calendar,
   Box,
   ClipboardList,
+  MapPin,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -228,12 +229,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       {/* 4. PUBLIC ATTENDEE BOTTOM BAR */}
       {currentRole === 'attendee' && (
         <>
+          {/* Tab 1: Discover Events */}
           <button
             onClick={() => {
-              // Scroll to top or trigger explore
+              window.dispatchEvent(new CustomEvent('zabay:set-attendee-tab', { detail: { tab: 'browse', view: 'grid' } }));
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            className="flex flex-col items-center justify-center py-1 px-3 text-[#244A85] dark:text-[#7EA6E0] cursor-pointer"
+            className="flex flex-col items-center justify-center py-1 px-2 text-[#244A85] dark:text-[#7EA6E0] cursor-pointer"
           >
             <div className="p-1 rounded-lg bg-[#EBF3FC] dark:bg-[#1E293B]">
               <Compass className="w-5 h-5" />
@@ -241,38 +243,62 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <span className="text-[10px] mt-0.5 font-bold">Discover</span>
           </button>
 
+          {/* Tab 2: My Digital Passes */}
           <button
             onClick={() => {
               if (currentUser.id === 'usr-guest') {
                 if (onOpenAuth) onOpenAuth();
                 else onOpenProfile();
               } else {
-                onOpenProfile();
+                window.dispatchEvent(new CustomEvent('zabay:set-attendee-tab', { detail: { tab: 'passes' } }));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
+            className="flex flex-col items-center justify-center py-1 px-2 text-slate-500 dark:text-slate-400 cursor-pointer"
           >
             <div className="p-1 rounded-lg">
               <Ticket className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 font-medium">My Passes</span>
+            <span className="text-[10px] mt-0.5 font-medium">Passes</span>
           </button>
 
-          {(isDevModeUnlocked || currentUser.id !== 'usr-guest') && (
-            <button
-              onClick={() => setCurrentRole('organizer')}
-              className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
-            >
-              <div className="p-1 rounded-lg">
-                <LayoutDashboard className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] mt-0.5 font-medium">Studio</span>
-            </button>
-          )}
-
+          {/* Tab 3: Center Elevated Floating Studio / Host Button */}
           <button
-            onClick={() => (onOpenAuth ? onOpenAuth() : onOpenProfile())}
-            className="flex flex-col items-center justify-center py-1 px-3 text-slate-500 dark:text-slate-400 cursor-pointer"
+            onClick={() => {
+              if (currentUser.id === 'usr-guest' && !isDevModeUnlocked) {
+                if (onOpenAuth) onOpenAuth();
+                else onOpenProfile();
+              } else {
+                setCurrentRole('organizer');
+              }
+            }}
+            aria-label="Organizer Studio"
+            className="-mt-5 flex flex-col items-center group cursor-pointer"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#3E6CB5] hover:bg-[#325896] text-white flex items-center justify-center shadow-lg shadow-blue-500/25 ring-4 ring-white dark:ring-[#111722] group-active:scale-95 transition-transform">
+              <LayoutDashboard className="w-6 h-6" />
+            </div>
+            <span className="text-[10px] font-bold text-[#3E6CB5] dark:text-[#7EA6E0] mt-0.5">Studio</span>
+          </button>
+
+          {/* Tab 4: OpenStreetMap Venues */}
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('zabay:set-attendee-tab', { detail: { tab: 'browse', view: 'map' } }));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex flex-col items-center justify-center py-1 px-2 text-slate-500 dark:text-slate-400 cursor-pointer"
+          >
+            <div className="p-1 rounded-lg">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] mt-0.5 font-medium">Map</span>
+          </button>
+
+          {/* Tab 5: Account or Sign In */}
+          <button
+            onClick={() => (currentUser.id === 'usr-guest' && onOpenAuth ? onOpenAuth() : onOpenProfile())}
+            className="flex flex-col items-center justify-center py-1 px-2 text-slate-500 dark:text-slate-400 cursor-pointer"
           >
             <div className="p-1 rounded-lg">
               <User className="w-5 h-5" />
