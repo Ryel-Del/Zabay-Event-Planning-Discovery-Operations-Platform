@@ -145,16 +145,22 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'matrix' | 'roster'>('matrix');
-  const [localRoles, setLocalRoles] = useState<EventCommitteeRoleMap>(() => ({
-    event_head: committeeRoles.event_head || (currentUser.id !== 'usr-guest' ? currentUser.name : ''),
-    secretary: committeeRoles.secretary || '',
-    letters_head: committeeRoles.letters_head || '',
-    finance_head: committeeRoles.finance_head || '',
-    logistics_head: committeeRoles.logistics_head || '',
-    documentation_head: committeeRoles.documentation_head || '',
-    publicity_head: committeeRoles.publicity_head || '',
-    program_head: committeeRoles.program_head || '',
-  }));
+  const [localRoles, setLocalRoles] = useState<EventCommitteeRoleMap>(() => {
+    const isNamedUser = currentUser.id !== 'usr-guest' && currentUser.name && currentUser.name !== 'Mark Bautista';
+    const cleanEventHead = isNamedUser
+      ? (committeeRoles.event_head && committeeRoles.event_head !== 'Mark Bautista' ? committeeRoles.event_head : currentUser.name)
+      : (committeeRoles.event_head === 'Mark Bautista' ? '' : committeeRoles.event_head || '');
+    return {
+      event_head: cleanEventHead,
+      secretary: committeeRoles.secretary === 'Mark Bautista' ? '' : committeeRoles.secretary || '',
+      letters_head: committeeRoles.letters_head || '',
+      finance_head: committeeRoles.finance_head || '',
+      logistics_head: committeeRoles.logistics_head || '',
+      documentation_head: committeeRoles.documentation_head || '',
+      publicity_head: committeeRoles.publicity_head || '',
+      program_head: committeeRoles.program_head || '',
+    };
+  });
   const [preserveOverrides, setPreserveOverrides] = useState<boolean>(true);
   const [propagationNotice, setPropagationNotice] = useState<string | null>(null);
 
@@ -497,14 +503,14 @@ export const EventPeopleAssignments: React.FC<EventPeopleAssignmentsProps> = ({
                 </div>
                 <div className="flex items-center gap-2 text-slate-500 text-[11px]">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{currentUser.phone || '+63 (917) 389-1029'}</span>
+                  <span>{currentUser.phone || 'No phone recorded'}</span>
                 </div>
               </div>
 
               <div className="p-2 rounded-xl bg-[#FAF9F5] dark:bg-[#111722] text-[11px] text-slate-500 flex items-center justify-between">
                 <span>Assigned Role:</span>
                 <span className="font-bold text-[#244A85] dark:text-[#8BB0E8]">
-                  {localRoles.event_head || 'Event Head'}
+                  Lead Event Organizer
                 </span>
               </div>
             </div>

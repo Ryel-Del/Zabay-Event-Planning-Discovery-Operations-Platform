@@ -75,7 +75,7 @@ export const PersonnelPortal: React.FC = () => {
     id: currentUser.id,
     name: currentUser.name,
     role: 'Event Coordinator',
-    phone: currentUser.phone || '+63 (917) 389-1029',
+    phone: currentUser.phone || '',
     email: currentUser.email,
     hourly_rate: 0,
     skills: ['Event Operations', 'Gate Access', 'Logistics'],
@@ -1194,14 +1194,20 @@ export const PersonnelPortal: React.FC = () => {
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">Lead Event Organizer</p>
-                    <p className="text-[10px] text-slate-400">Mark Bautista • Zabay Operations</p>
+                    <p className="text-[10px] text-slate-400">
+                      {currentUser.id !== 'usr-guest' && currentUser.name !== 'Guest' ? `${currentUser.name} • Event Lead` : 'Event Operations Lead'}
+                    </p>
                   </div>
-                  <a
-                    href="tel:+639173891029"
-                    className="px-2.5 py-1 rounded-lg bg-[#3E6CB5] text-white text-[10px] font-bold"
-                  >
-                    Call Lead
-                  </a>
+                  {currentUser.phone ? (
+                    <a
+                      href={`tel:${currentUser.phone}`}
+                      className="px-2.5 py-1 rounded-lg bg-[#3E6CB5] text-white text-[10px] font-bold"
+                    >
+                      Call Lead
+                    </a>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-mono">Lead Organizer</span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800">

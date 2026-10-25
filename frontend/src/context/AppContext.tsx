@@ -419,7 +419,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const saved = localStorage.getItem('zabay_committee_roles');
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            return {
+              ...parsed,
+              event_head: parsed.event_head === 'Mark Bautista' ? '' : parsed.event_head || '',
+              secretary: parsed.secretary === 'Mark Bautista' ? '' : parsed.secretary || '',
+            };
+          }
         } catch {
           // ignore
         }
@@ -442,6 +449,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('zabay_committee_roles', JSON.stringify(committeeRoles));
     }
   }, [committeeRoles]);
+
+  useEffect(() => {
+    if (currentUser.id && currentUser.id !== 'usr-guest' && currentUser.name && currentUser.name !== 'Mark Bautista') {
+      setCommitteeRoles((prev) => {
+        if (!prev.event_head || prev.event_head === 'Mark Bautista') {
+          return { ...prev, event_head: currentUser.name };
+        }
+        return prev;
+      });
+    }
+  }, [currentUser.id, currentUser.name]);
 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
