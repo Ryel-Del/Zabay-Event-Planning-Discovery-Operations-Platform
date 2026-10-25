@@ -70,9 +70,10 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal(firstAccount.status, 201);
     assert.equal((await firstAttendee.post('/api/attendees/register').send(registrationPayload0)).status, 403);
     assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', 'invalid').send(registrationPayload0)).status, 403);
+    assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0)).status, 403);
     assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).set('Origin', 'https://untrusted.example').send(registrationPayload0)).status, 403);
     assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, 0);
-    const registration = await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0);
+    const registration = await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).set('Origin', 'http://localhost:5173').send(registrationPayload0);
     assert.equal(registration.status, 201, JSON.stringify(registration.body));
     assert.equal(registration.body.data.attendee_id, firstAccount.body.user.id);
     assert.equal(registration.body.data.attendee_name, 'Synthetic Attendee');
@@ -146,6 +147,7 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await attendee.post('/api/attendees/register').send({ ...registrationPayload, registration_mode: 'account' })).status, 403);
     const signedInRegistration = await attendee.post('/api/attendees/register')
       .set('X-CSRF-Token', registered.body.csrfToken)
+      .set('Origin', 'http://localhost:5173')
       .send({ ...registrationPayload, registration_mode: 'account' });
     assert.equal(signedInRegistration.status, 201, JSON.stringify(signedInRegistration.body));
     assert.equal(signedInRegistration.body.data.attendee_id, registered.body.user.id);
@@ -161,11 +163,11 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await otherOrganizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
     assert.equal((await request(app).get('/api/attendees/registrations/me')).status, 401);
     assert.equal((await organizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
-    const claimedGuestMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken)
+    const claimedGuestMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken).set('Origin', 'http://localhost:5173')
       .send({ ...registrationPayload, registration_mode: 'guest', attendee_id: secondRegistration.body.user.id });
     assert.equal(claimedGuestMode.status, 201);
     assert.equal(claimedGuestMode.body.data.attendee_id, registered.body.user.id);
-    const omittedMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken)
+    const omittedMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken).set('Origin', 'http://localhost:5173')
       .send({ ...registrationPayload, attendee_id: secondRegistration.body.user.id });
     assert.equal(omittedMode.status, 201);
     assert.equal(omittedMode.body.data.attendee_id, registered.body.user.id);
@@ -182,7 +184,7 @@ test('schema-only database supports the complete operator workflow', async () =>
       .send({ ...registrationPayload, registration_mode: 'account', attendee_email: 'expired-session@example.test' });
     assert.equal(expiredRegistration.status, 401);
     assert.equal((await pool.query("SELECT count(*)::int AS count FROM registrations WHERE attendee_email = 'expired-session@example.test'")).rows[0].count, 0);
-    const ownRegistration = await organizer.post('/api/attendees/register').set('X-CSRF-Token', organizerLogin.body.csrfToken).send({ event_id: publicEvent.body.data.id, attendee_name: 'Owned Guest', attendee_email: 'owned-guest@example.test', ticket_type: 'General Admission' });
+    const ownRegistration = await organizer.post('/api/attendees/register').set('X-CSRF-Token', organizerLogin.body.csrfToken).set('Origin', 'http://localhost:5173').send({ event_id: publicEvent.body.data.id, attendee_name: 'Owned Guest', attendee_email: 'owned-guest@example.test', ticket_type: 'General Admission' });
     assert.equal(ownRegistration.status, 201);
     const passCode = ownRegistration.body.data.qr_pass_code;
     assert.equal((await otherOrganizer.post('/api/attendees/checkin').set('X-CSRF-Token', otherLogin.body.csrfToken).send({ qr_pass_code: passCode })).status, 403);

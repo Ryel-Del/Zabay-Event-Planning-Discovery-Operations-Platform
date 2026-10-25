@@ -55,7 +55,7 @@ export function verifyRegistrationMode(req: Request, res: Response, next: NextFu
   if (found?.identity !== 'user' || !found.userId) {
     return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
   }
-  if (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf) {
+  if (!req.get('origin') || !sameOrigin(req) || req.get('x-csrf-token') !== found.csrf) {
     return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
   }
   next();

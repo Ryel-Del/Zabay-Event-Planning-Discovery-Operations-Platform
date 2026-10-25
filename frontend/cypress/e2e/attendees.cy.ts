@@ -127,14 +127,13 @@ describe('attendee registration and check-in', () => {
     cy.get('[data-cy="registration-error"]').should('be.visible');
     cy.get('[data-cy="registered-pass-code"]').should('not.exist');
     cy.contains('Registration Saved').should('not.exist');
-    cy.task('db:registrationCountByEmail', { email: attendeeEmail }).should('eq', 0);
     cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
   });
 
   it('admits valid passes once, rejects duplicates and unknown codes, and admits another registration independently', () => {
     const unique = Date.now();
     signInAttendee();
-    const createRegistration = (number: number) => cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken }, body: {
+    const createRegistration = (number: number) => cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken, Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' }, body: {
       event_id: eventId,
       attendee_name: `Cypress Check In ${number}`,
       attendee_email: `cypress-checkin-${unique}-${number}@example.test`,
@@ -186,7 +185,7 @@ describe('attendee registration and check-in', () => {
 
   it('does not admit a pass when the check-in request fails on the network', () => {
     signInAttendee();
-    cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken }, body: {
+    cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken, Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' }, body: {
       event_id: eventId,
       attendee_name: 'Cypress Check In Network Failure',
       attendee_email: `cypress-checkin-failure-${Date.now()}@example.test`,

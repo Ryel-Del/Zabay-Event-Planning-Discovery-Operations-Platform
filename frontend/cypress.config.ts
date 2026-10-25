@@ -71,7 +71,7 @@ export default defineConfig({
         const accountCsrf = (await account.json()).csrfToken;
         const accountCookie = account.headers.get('set-cookie')?.split(';')[0] || '';
         const registerResponse = await fetch(`${api}/api/attendees/register`, {
-          method: 'POST', headers: { 'content-type': 'application/json', cookie: accountCookie, 'x-csrf-token': accountCsrf },
+          method: 'POST', headers: { 'content-type': 'application/json', cookie: accountCookie, 'x-csrf-token': accountCsrf, origin: process.env.CYPRESS_BASE_URL || 'http://127.0.0.1:5174' },
           body: JSON.stringify({
           event_id: event.id,
           attendee_name: 'Cypress Camera Attendee',

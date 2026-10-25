@@ -84,7 +84,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   });
   assert.equal(attendeeAccount.status, 201);
   const register = (overrides = {}) => attendee.post('/api/attendees/register')
-    .set('X-CSRF-Token', attendeeAccount.body.csrfToken).send({
+    .set('X-CSRF-Token', attendeeAccount.body.csrfToken).set('Origin', 'http://localhost:5173').send({
       event_id: eventId,
       attendee_name: 'Spoofed Name',
       attendee_email: 'spoofed@example.test',
