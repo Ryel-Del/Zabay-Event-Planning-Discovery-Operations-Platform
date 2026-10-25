@@ -11,6 +11,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useEventRoster } from '../../services/useEventRoster';
+import { useEventTasks } from '../../services/useEventTasks';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
 import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
@@ -20,7 +22,9 @@ interface OperationsOverviewProps {
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, isLiveBackend, isDemoMode } = useApp();
+  const roster = useEventRoster(selectedEvent?.id, isDemoMode, isLiveBackend, registrations);
+  const taskStream = useEventTasks(selectedEvent?.id, isDemoMode, isLiveBackend, tasks);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   if (!selectedEvent) {
@@ -71,11 +75,21 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   }
 
   const venue = venues.find((v) => v.id === selectedEvent.venue_id);
-  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
+  const eventTasks = taskStream.data ?? [];
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = eventTasks.filter((t) => t.has_conflict);
-  const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
+  const readinessPercent = taskStream.data === null ? null : eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  // Only logs linked to this event or one of its tasks belong on this overview.
+  // AppContext's audit stream is browser-local, not a persistent server ledger.
+  const eventAuditLogs = auditLogs.filter(log =>
+    log.entity_id === selectedEvent.id || eventTasks.some(task => task.id === log.entity_id)
+  );
+  const registered = roster.data?.summary.registered ?? null;
+  const admitted = roster.data?.summary.checked_in ?? null;
+  const capacity = Number.isFinite(selectedEvent.max_capacity) && selectedEvent.max_capacity > 0 ? selectedEvent.max_capacity : null;
+  const capacityPercent = registered !== null && capacity !== null
+    ? Math.min(100, Math.max(0, Math.round(registered / capacity * 100))) : null;
+  const estimatedTicketValue = registered === null ? null : registered * selectedEvent.ticket_price;
 
   return (
     <div className="space-y-6">
@@ -138,16 +152,26 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           </div>
         </div>
 
+        {!roster.isDemo && roster.loading &&
+          <p role="status" className="text-xs text-slate-500 mt-4">Loading this event's PostgreSQL admission counts…</p>}
+        {roster.error && <div role="alert" className="mt-4 rounded-lg bg-rose-50 text-rose-900 text-xs p-3">
+          Registration and gate metrics are unavailable: {roster.error}
+          <button className="underline font-semibold ml-2" onClick={roster.refresh}>Retry</button>
+        </div>}
+        {roster.data && roster.data.summary.integrity_issues > 0 && <p role="alert" className="mt-4 text-xs text-amber-700">
+          {roster.data.summary.integrity_issues} admission record inconsistency detected; counts exclude unverified admissions.
+        </p>}
+
         {/* Operational Pulse Metrics Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200/80 dark:border-slate-800 text-xs">
           <div>
             <span className="text-slate-500 block mb-1">Operational Readiness</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent}%</span>
-              <span className="text-slate-500">({completedTasks}/{eventTasks.length} tasks ready)</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{readinessPercent === null ? '—' : `${readinessPercent}%`}</span>
+              <span className="text-slate-500">{taskStream.data === null ? 'Persistent tasks not loaded' : `(${completedTasks}/${eventTasks.length} tasks ready)`}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent}%` }} />
+              <div className="bg-[#4E8268] dark:bg-[#81B89B] h-full rounded-full" style={{ width: `${readinessPercent ?? 0}%` }} />
             </div>
           </div>
 
@@ -155,35 +179,35 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Capacity Registered</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
+                {capacityPercent === null ? '—' : `${capacityPercent}%`}
               </span>
-              <span className="text-slate-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+              <span className="text-slate-500">{registered === null ? '—' : registered} / {capacity === null ? 'capacity unknown' : capacity}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${capacityPercent ?? 0}%` }} />
             </div>
           </div>
 
           <div>
-            <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
+            <span className="text-slate-500 block mb-1">Estimated Ticket Face Value</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {selectedEvent.ticket_price <= 0
+                {estimatedTicketValue === null ? 'Unavailable' : selectedEvent.ticket_price <= 0
                   ? 'Free'
-                  : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                  : `${getCurrencySymbol(selectedEvent.currency)}${estimatedTicketValue.toLocaleString()}`}
               </span>
-              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">No payment collected</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               {selectedEvent.ticket_price <= 0
                 ? 'Free Admission (No fee)'
-                : `Avg ${formatTicketPrice(selectedEvent.ticket_price, selectedEvent.currency, true)} / ticket`}
+                : `Listed ${formatTicketPrice(selectedEvent.ticket_price, selectedEvent.currency, true)} / ticket · not actual revenue`}
             </p>
           </div>
 
           <div>
             <span className="text-slate-500 block mb-1">Schedule Feasibility</span>
-            {conflictTasks.length > 0 ? (
+            {taskStream.data === null ? <span className="text-xs text-slate-500">Task status unavailable</span> : conflictTasks.length > 0 ? (
               <div className="flex items-center gap-1.5 text-[#C45547] dark:text-[#E07D70] font-bold text-sm">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{conflictTasks.length} Conflict Requires Attention</span>
@@ -191,10 +215,10 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             ) : (
               <div className="flex items-center gap-1.5 text-[#2B6149] dark:text-[#81B89B] font-bold text-sm">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Schedule & Planning Feasible</span>
+                <span>No local task conflicts flagged</span>
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-1">Task dependencies and timing in sync</p>
+            <p className="text-[11px] text-slate-400 mt-1">Browser-local planning estimate, not server validation</p>
           </div>
         </div>
       </div>
@@ -313,9 +337,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             </button>
           </div>
 
+          {taskStream.error && <p role="alert" className="text-xs text-rose-800">{taskStream.error} <button className="underline" onClick={taskStream.refresh}>Retry</button></p>}
+          {taskStream.loading && <p role="status" className="text-xs text-stone-500">Loading persistent event tasks…</p>}
           {/* Clean Dense Task Row List (NOT bulky cards!) */}
           <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
-            {tasks.map((task) => (
+            {eventTasks.map((task) => (
               <div
                 key={task.id}
                 className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/40 px-2 rounded-xl transition-colors"
@@ -372,11 +398,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <div>
                 <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
                 <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                  {registrations.filter((r) => r.status === 'checked_in').length} / {registrations.length} Checked In
+                  {admitted === null || registered === null ? 'Unavailable' : `${admitted} / ${registered} Checked In`}
                 </p>
               </div>
               <span className="text-[10px] px-2 py-1 bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] rounded-lg font-bold">
-                Zero Duplicates
+                {roster.data ? `${roster.data.summary.integrity_issues} data discrepancies` : 'Not verified'}
               </span>
             </div>
           </div>
@@ -387,11 +413,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
                 Recent Audit Trail
               </h3>
-              <span className="text-[10px] text-stone-400">Live Activity Stream</span>
+              <span className="text-[10px] text-stone-400">Browser-local activity (not server audit)</span>
             </div>
 
             <div className="space-y-2.5">
-              {auditLogs.slice(0, 3).map((log) => (
+              {eventAuditLogs.slice(0, 3).map((log) => (
                 <div
                   key={log.id}
                   className="p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 text-xs space-y-1"
@@ -404,6 +430,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
                 </div>
               ))}
             </div>
+            {eventAuditLogs.length === 0 && <p className="text-xs text-stone-500">No local activity for this event.</p>}
           </div>
         </div>
       </div>

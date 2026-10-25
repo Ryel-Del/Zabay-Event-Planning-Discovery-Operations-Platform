@@ -22,10 +22,14 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useEventRoster } from '../../services/useEventRoster';
+import { useEventTasks } from '../../services/useEventTasks';
 import { getCurrencySymbol } from '../../utils/currency';
 
 export const AnalyticsDashboard: React.FC = () => {
-  const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData } = useApp();
+  const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData, isDemoMode, isLiveBackend } = useApp();
+  const roster = useEventRoster(selectedEvent?.id, isDemoMode, isLiveBackend, registrations);
+  const taskStream = useEventTasks(selectedEvent?.id, isDemoMode, isLiveBackend, tasks);
 
   if (!selectedEvent) {
     return (
@@ -53,14 +57,18 @@ export const AnalyticsDashboard: React.FC = () => {
   }
 
   // Metric derivations from views scoped to selectedEvent
-  const eventTasks = tasks.filter((t) => t.event_id === selectedEvent.id);
-  const eventRegistrations = registrations.filter((r) => r.event_id === selectedEvent.id);
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
-  const capacityPercent = selectedEvent.max_capacity > 0 ? Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100) : 0;
+  const eventTasks = taskStream.data ?? [];
+  const registered = roster.data?.summary.registered ?? null;
+  const checkedInCount = roster.data?.summary.checked_in ?? null;
+  const totalTicketValue = registered === null ? null : registered * selectedEvent.ticket_price;
+  const validCapacity = Number.isFinite(selectedEvent.max_capacity) && selectedEvent.max_capacity > 0 ? selectedEvent.max_capacity : null;
+  const capacityPercent = registered === null || validCapacity === null ? null
+    : Math.min(100, Math.max(0, Math.round(registered / validCapacity * 100)));
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
-  const taskReadiness = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
-  const checkedInCount = eventRegistrations.filter((r) => r.status === 'checked_in').length;
-  const attendanceRate = eventRegistrations.length > 0 ? Math.round((checkedInCount / eventRegistrations.length) * 100) : 0;
+  const taskReadiness = taskStream.data === null ? null
+    : eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
+  const attendanceRate = registered === null || checkedInCount === null ? null
+    : registered > 0 ? Math.min(100, Math.round(checkedInCount / registered * 100)) : 0;
 
   // Chart 1: Hourly Check-in Flow (v_attendance_arrival_flow)
   const hourlyFlowData = [
@@ -108,7 +116,7 @@ export const AnalyticsDashboard: React.FC = () => {
             <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
               Business & Operational Analytics
               <span className="text-[11px] px-2 py-0.5 rounded-md bg-[#EDF7F2] dark:bg-[#17271F] text-[#2B6149] dark:text-[#81B89B] border border-emerald-200 dark:border-emerald-900 font-semibold">
-                Live Operational Metrics
+                {isDemoMode ? 'Browser-local demo' : 'PostgreSQL operational metrics'}
               </span>
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
@@ -117,6 +125,16 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {roster.error && <p role="alert" className="text-sm text-rose-800">
+        Event registration analytics unavailable: {roster.error}
+        <button onClick={roster.refresh} className="underline ml-2">Retry</button>
+      </p>}
+      {taskStream.error && <p role="alert" className="text-sm text-rose-800">
+        Event task metrics unavailable: {taskStream.error}
+        <button onClick={taskStream.refresh} className="underline ml-2">Retry</button>
+      </p>}
+      {(roster.loading || taskStream.loading) && <p role="status" className="text-xs text-stone-500">Loading verified event analytics…</p>}
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -127,29 +145,29 @@ export const AnalyticsDashboard: React.FC = () => {
             <Users className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{capacityPercent}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{capacityPercent === null ? '—' : `${capacityPercent}%`}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {selectedEvent.tickets_sold} / {selectedEvent.max_capacity}
+              {registered === null ? '—' : registered} / {validCapacity === null ? 'unknown' : validCapacity}
             </span>
           </div>
           <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#B68366] dark:bg-[#D4A58C] h-full rounded-full" style={{ width: `${capacityPercent}%` }} />
+            <div className="bg-[#B68366] dark:bg-[#D4A58C] h-full rounded-full" style={{ width: `${capacityPercent ?? 0}%` }} />
           </div>
         </div>
 
         {/* KPI 2 */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
           <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
-            <span>Gross Ticket Revenue</span>
+            <span>Estimated Ticket Face Value</span>
             <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">{getCurrencySymbol(selectedEvent.currency)}</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
-              {selectedEvent.ticket_price <= 0
+              {totalTicketValue === null ? 'Unavailable' : selectedEvent.ticket_price <= 0
                 ? 'Free'
-                : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                : `${getCurrencySymbol(selectedEvent.currency)}${totalTicketValue.toLocaleString()}`}
             </span>
-            <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">Estimate</span>
+            <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">No payments collected</span>
           </div>
           <p className="text-[11px] text-stone-500">
             {selectedEvent.ticket_price <= 0 ? 'Free admission (no ticket fee)' : 'Payment processing is not connected'}
@@ -163,13 +181,13 @@ export const AnalyticsDashboard: React.FC = () => {
             <CheckCircle className="w-4 h-4 text-[#A36B75] dark:text-[#D8A5AD]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{taskReadiness}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{taskReadiness === null ? '—' : `${taskReadiness}%`}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {completedTasks}/{tasks.length} tasks ready
+              {taskStream.data === null ? 'Unavailable' : `${completedTasks}/${eventTasks.length} tasks ready`}
             </span>
           </div>
           <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#A36B75] dark:bg-[#D8A5AD] h-full rounded-full" style={{ width: `${taskReadiness}%` }} />
+            <div className="bg-[#A36B75] dark:bg-[#D8A5AD] h-full rounded-full" style={{ width: `${taskReadiness ?? 0}%` }} />
           </div>
         </div>
 
@@ -180,16 +198,18 @@ export const AnalyticsDashboard: React.FC = () => {
             <Clock className="w-4 h-4 text-[#C28E3A] dark:text-[#E5BE7E]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{attendanceRate}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{attendanceRate === null ? '—' : `${attendanceRate}%`}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {checkedInCount} checked in
+              {checkedInCount === null ? 'Unavailable' : `${checkedInCount} checked in`}
             </span>
           </div>
-          <p className="text-[11px] text-stone-500">Zero duplicate entries allowed</p>
+          <p className="text-[11px] text-stone-500">{roster.data ? `${roster.data.summary.integrity_issues} admission inconsistencies` : 'Admission records not verified'}</p>
         </div>
       </div>
 
-      {/* 2-Column Visual Charts */}
+      {/* Sample-only charts must never be represented as real PostgreSQL telemetry. */}
+      {isDemoMode ? <>
+        <p className="text-xs text-amber-700">Illustrative browser-local sample charts — not recorded payments or server measurements.</p>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1: Arrival Flow */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
@@ -294,6 +314,7 @@ export const AnalyticsDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+      </> : <p className="text-xs text-stone-500">Historical arrival, staff workload, and payment breakdown charts are unavailable without verified server data.</p>}
     </div>
   );
 };

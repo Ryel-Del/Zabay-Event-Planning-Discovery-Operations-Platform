@@ -1,4 +1,5 @@
 import type { Venue, ZabayEvent, Task, Registration } from '../types';
+import type { EventRosterPage } from './eventRoster';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -266,6 +267,8 @@ export const api = {
   events: {
     getAll: () => request<any[]>('/api/events'),
     getById: (id: string) => request<any>(`/api/events/${id}`),
+    registrations: (id: string, page = 1, limit = 50) =>
+      request<EventRosterPage>(`/api/events/${encodeURIComponent(id)}/registrations?page=${page}&limit=${limit}`),
     create: (eventData: Partial<ZabayEvent>) =>
       request<any>('/api/events', {
         method: 'POST',
@@ -275,7 +278,7 @@ export const api = {
 
   // Task Operations
   tasks: {
-    getAll: () => request<Task[]>('/api/tasks'),
+    getAll: (eventId?: string) => request<Task[]>(`/api/tasks${eventId ? `?event_id=${encodeURIComponent(eventId)}` : ''}`),
     updateStatus: (taskId: string, status: string) =>
       request<{ id: string; status: string }>(`/api/tasks/${taskId}/status`, {
         method: 'PATCH',
