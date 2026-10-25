@@ -3,8 +3,10 @@ describe('organizer event roster', () => {
   let eventTitle = '';
   let passCode = '';
   let registrationId = '';
+  let attendeeEmail = '';
   beforeEach(() => {
     eventTitle = `Organizer roster E2E ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    attendeeEmail = `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`;
     cy.get<string>('@csrfToken').then(csrfToken => cy.request({
       method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken },
       body: { title: eventTitle, category: 'Community & Civic', event_type: 'public',
@@ -14,7 +16,7 @@ describe('organizer event roster', () => {
       eventId = body.data.id;
       return cy.request('POST', '/api/auth/register', {
         name: 'Roster Fixture Guest',
-        email: `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`,
+        email: attendeeEmail,
         password: 'roster-test-secret-long',
       }).then(({ status }) => { expect(status).to.eq(201); });
     }).then(() => cy.request('/api/auth/session')).then(({ body: session }) => {
@@ -23,7 +25,7 @@ describe('organizer event roster', () => {
         headers: { 'X-CSRF-Token': session.csrfToken,
           Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' },
         body: { event_id: eventId, attendee_name: 'Roster Fixture Guest',
-          attendee_email: 'fixture@email.example', ticket_type: 'General Admission',
+          attendee_email: attendeeEmail, ticket_type: 'General Admission',
           registration_mode: 'account' },
       });
     }).then(({ status, body }) => {
