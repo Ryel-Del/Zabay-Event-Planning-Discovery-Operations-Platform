@@ -12,6 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import type { ZabayEvent } from '../../types';
 import { EventMapView } from './EventMapView';
+import { AuthModal } from '../auth/AuthModal';
 import { StripeCheckoutModal } from './StripeCheckoutModal';
 import { AttendeePassView } from './AttendeePassView';
 import { LumaEventDetailView } from './LumaEventDetailView';
@@ -22,7 +23,7 @@ interface EventDiscoveryProps {
 }
 
 export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWithPass }) => {
-  const { events, venues, loadDemoData } = useApp();
+  const { events, venues, currentUser, isDemoMode, eventLoadState, refreshBackendStatus } = useApp();
 
   const [activeTab, setActiveTab] = useState<'browse' | 'passes'>('browse');
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
@@ -30,6 +31,20 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedEventForCheckout, setSelectedEventForCheckout] = useState<ZabayEvent | null>(null);
   const [selectedEventDetail, setSelectedEventDetail] = useState<ZabayEvent | null>(null);
+  const [pendingEvent, setPendingEvent] = useState<ZabayEvent | null>(null);
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const signedIn = currentUser.id !== 'usr-guest' && currentUser.id !== 'zabay-operator';
+  const requestRegistration = (event: ZabayEvent) => {
+    if (isDemoMode || signedIn) setSelectedEventForCheckout(event);
+    else { setPendingEvent(event); setAuthPromptOpen(true); }
+  };
+  React.useEffect(() => {
+    if (pendingEvent && signedIn) {
+      setAuthPromptOpen(false);
+      setSelectedEventForCheckout(pendingEvent);
+      setPendingEvent(null);
+    }
+  }, [pendingEvent, signedIn]);
 
   React.useEffect(() => {
     const handleSetTab = (e: any) => {
@@ -73,12 +88,14 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           event={selectedEventDetail}
           venue={venue}
           onBack={() => setSelectedEventDetail(null)}
-          onRegister={() => setSelectedEventForCheckout(selectedEventDetail)}
+          onRegister={() => requestRegistration(selectedEventDetail)}
           onViewPass={() => {
             setSelectedEventDetail(null);
             setActiveTab('passes');
           }}
         />
+
+        <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={() => setAuthPromptOpen(false)} />
 
         {/* Stripe Checkout Modal */}
         {selectedEventForCheckout && (
@@ -136,7 +153,14 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
         </div>
       </div>
 
-      {activeTab === 'browse' ? (
+      {activeTab === 'browse' && !isDemoMode && eventLoadState === 'loading' && <p role="status">Loading public events…</p>}
+      {activeTab === 'browse' && !isDemoMode && eventLoadState === 'error' && (
+        <div role="alert" data-cy="event-load-error" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900">
+          Public events could not be loaded. Check your connection and try again.
+          <button type="button" onClick={refreshBackendStatus} className="ml-3 underline font-semibold">Retry</button>
+        </div>
+      )}
+      {activeTab === 'browse' && (isDemoMode || eventLoadState === 'loaded') ? (
         <>
           {/* Search, Filter & View Controls */}
           <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-white dark:bg-[#171E2B] p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
@@ -215,16 +239,9 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
               <div className="space-y-1">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No Events Discovered</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  There are no scheduled public events matching your search in Bohol. You can load sample Bohol events to explore registrations, venues, and passes.
+                  {publicEvents.length === 0 ? 'No public events are scheduled right now.' : 'No public events match your search.'}
                 </p>
               </div>
-              <button
-                onClick={loadDemoData}
-                className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Load Bohol Sample Events</span>
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -318,7 +335,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedEventForCheckout(event);
+                          requestRegistration(event);
                         }}
                         data-cy="event-register"
                         className="py-2.5 px-3.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
@@ -337,6 +354,8 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
       ) : (
         <AttendeePassView onScanPass={onOpenScannerWithPass} />
       )}
+
+      <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={() => setAuthPromptOpen(false)} />
 
       {/* Stripe Checkout Modal */}
       {selectedEventForCheckout && (
