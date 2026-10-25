@@ -70,6 +70,26 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
     await t.test('nonexistent event is not a roster', async () => {
       assert.equal((await owner.get('/api/events/missing-roster-event/registrations')).status, 404);
     });
+    const ownRegistration = `reg-${randomUUID()}`;
+    const foreignRegistration = `reg-${randomUUID()}`;
+    await pool.query(
+      `INSERT INTO registrations (id, event_id, attendee_name, attendee_email, qr_pass_code)
+       VALUES ($1, $2, 'Owned Attendee', 'owned@example.test', $3),
+              ($4, $5, 'Foreign Attendee', 'foreign@example.test', $6)`,
+      [ownRegistration, eventId, `PASS-${randomUUID()}`, foreignRegistration, otherId, `PASS-${randomUUID()}`]
+    );
+    await t.test('event-specific roster never includes registrations from another event', async () => {
+      const result = await owner.get(path);
+      assert.equal(result.status, 200);
+      assert.equal(result.body.data.total, 1);
+      assert.deepEqual(result.body.data.registrations.map(row => row.attendee_name), ['Owned Attendee']);
+      assert.equal(result.body.data.registrations[0].attendee_email, 'owned@example.test');
+      assert.equal(result.body.data.registrations[0].attendee_id, undefined);
+      assert.equal(result.body.data.registrations[0].amount_paid, undefined);
+      assert.equal((await other.get(path)).status, 403);
+      const foreign = await other.get(`/api/events/${otherId}/registrations`);
+      assert.equal(foreign.body.data.registrations[0].attendee_name, 'Foreign Attendee');
+    });
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
     await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
