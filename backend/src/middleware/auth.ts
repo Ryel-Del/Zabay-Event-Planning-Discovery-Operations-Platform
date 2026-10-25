@@ -68,7 +68,7 @@ authRouter.post('/verify-key', (req, res) => {
   if (typeof devKey !== 'string' || !devKey || devKey.length > 255) {
     return res.status(400).json({ success: false, error: 'Access key is required.' });
   }
-  const masterKey = process.env.DEV_ACCESS_KEY || process.env.OPERATOR_PASSWORD || 'zabay-operator-secret-2026';
+  const masterKey = process.env.DEV_ACCESS_KEY || process.env.OPERATOR_PASSWORD || 'ZABAY-SECURE-8492-DEV';
   if (!equal(devKey.trim(), masterKey.trim())) {
     attempts.set(key, { count: (state?.until && state.until > Date.now() ? state.count : 0) + 1, until: Date.now() + 15 * 60 * 1000 });
     return res.status(401).json({ success: false, error: 'Invalid developer key. Access denied.' });

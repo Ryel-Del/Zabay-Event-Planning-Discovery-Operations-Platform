@@ -719,15 +719,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hash = await computeSha256(normalized);
 
     // Cryptographic hashes of authorized developer keys:
-    const HASH_MASTER = '57657f2decf0f713fae8d9ad588dc5e7a6110c4ab13944f84993fac8add0032b';
-    const HASH_BOHOL = 'a9a534cf393dcfd174e25f3c97c49fd5b40a5998360d4463fc7addf55edd0908';
+    // Master Key (ZABAY-SECURE-8492-DEV):
+    const HASH_MASTER = '6058ab1776a2b6c08c1d403fc10b8683cd5aef62e231dbce890c4601366e4840';
     const HASH_ROLE2 = 'f24b41698af9cdd65c9ac8b36a439c803dac87e5d4b46011850918b2a4407324';
     const HASH_CLEAN = 'c0ef37c9ed162dbdb951a5eefc91f453cb5a834024def49cf21b13ae64704cf6';
 
     const customEnvKey = (import.meta as any).env?.VITE_DEV_KEY;
     const isCustomMatch = customEnvKey && (raw === customEnvKey || normalized === customEnvKey.toUpperCase());
 
-    if (hash === HASH_MASTER || hash === HASH_BOHOL || isCustomMatch) {
+    if (hash === HASH_MASTER || isCustomMatch) {
       loadDemoData();
       setIsDevModeUnlocked(true);
       setUnlockedDevCode('AUTHORIZED');
