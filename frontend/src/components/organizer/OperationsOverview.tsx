@@ -177,19 +177,19 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           </div>
 
           <div>
-            <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
+            <span className="text-slate-500 block mb-1">Estimated Ticket Face Value</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {selectedEvent.ticket_price <= 0
+                {estimatedTicketValue === null ? 'Unavailable' : selectedEvent.ticket_price <= 0
                   ? 'Free'
-                  : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                  : `${getCurrencySymbol(selectedEvent.currency)}${estimatedTicketValue.toLocaleString()}`}
               </span>
-              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">No payment collected</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               {selectedEvent.ticket_price <= 0
                 ? 'Free Admission (No fee)'
-                : `Avg ${formatTicketPrice(selectedEvent.ticket_price, selectedEvent.currency, true)} / ticket`}
+                : `Listed ${formatTicketPrice(selectedEvent.ticket_price, selectedEvent.currency, true)} / ticket · not actual revenue`}
             </p>
           </div>
 
@@ -203,10 +203,10 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             ) : (
               <div className="flex items-center gap-1.5 text-[#2B6149] dark:text-[#81B89B] font-bold text-sm">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>Schedule & Planning Feasible</span>
+                <span>No local task conflicts flagged</span>
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-1">Task dependencies and timing in sync</p>
+            <p className="text-[11px] text-slate-400 mt-1">Browser-local planning estimate, not server validation</p>
           </div>
         </div>
       </div>
