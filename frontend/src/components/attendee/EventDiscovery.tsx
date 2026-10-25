@@ -22,7 +22,7 @@ interface EventDiscoveryProps {
   onOpenScannerWithPass?: (code: string) => void;
 }
 
-export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWithPass }) => {
+export const EventDiscovery: React.FC<EventDiscoveryProps> = () => {
   const { events, venues, currentUser, isDemoMode, eventLoadState, refreshBackendStatus } = useApp();
 
   const [activeTab, setActiveTab] = useState<'browse' | 'passes'>('browse');
@@ -357,7 +357,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
           )}
         </>
       ) : (
-        <AttendeePassView onScanPass={onOpenScannerWithPass} />
+        <AttendeePassView />
       )}
 
       <AuthModal isOpen={authPromptOpen} intent={pendingEvent ? `Sign in to get a pass for ${pendingEvent.title}. Your event will be ready after sign-in.` : undefined} onClose={closeAuthPrompt} />

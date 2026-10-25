@@ -157,11 +157,7 @@ const MainContent: React.FC = () => {
               {currentRole === 'staff' && <StaffPage />}
 
               {/* 4. Attendee Mode: Public Discovery, Map & Pass Wallet */}
-              {currentRole === 'attendee' && (
-                <AttendeePage
-                  onOpenScannerWithPass={(code) => handleOpenScannerWithCode(code)}
-                />
-              )}
+              {currentRole === 'attendee' && <AttendeePage />}
             </>
           )}
         </main>

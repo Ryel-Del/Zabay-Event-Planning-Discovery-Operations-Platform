@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   Printer,
   Download,
-  QrCode,
   Check,
   Lock,
 } from 'lucide-react';
@@ -17,7 +16,7 @@ interface AttendeePassViewProps {
   onScanPass?: (code: string) => void;
 }
 
-export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }) => {
+export const AttendeePassView: React.FC<AttendeePassViewProps> = () => {
   const { registrations, events, venues, notifications, currentUser, isDemoMode, walletLoadState, retryWallet } = useApp();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -264,20 +263,6 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
                       <Printer className="w-3.5 h-3.5 text-slate-500" />
                       <span>Print</span>
                     </button>
-
-                    {/* Open Scanner Shortcut */}
-                    {onScanPass && (
-                      <button
-                        type="button"
-                        onClick={() => onScanPass(reg.qr_pass_code)}
-                        data-cy="open-pass-scanner"
-                        className="px-2.5 py-1.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
-                        title="Simulate scanning this pass at turnstile"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span>Scan</span>
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
