@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Mail,
 } from 'lucide-react';
-import type { ZabayEvent, Registration, User } from '../../types';
+import type { ZabayEvent, Registration } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { downloadPassAsImage, printPassSlip } from '../../services/passExportService';
 import { formatTicketPrice } from '../../utils/currency';
@@ -31,7 +31,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, setCurrentUser, venues } = useApp();
+  const { registerForEvent, currentUser, venues } = useApp();
 
   const getStoredEmail = () => {
     if (currentUser.email && currentUser.id !== 'usr-guest') {
@@ -118,19 +118,6 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-last-attendee-email', trimmedEmail);
         localStorage.setItem('zabay-last-attendee-name', trimmedName);
-      }
-
-      // If user was currently a guest, elevate attendee profile with entered credentials
-      if (currentUser.id === 'usr-guest') {
-        const updatedUser: User = {
-          ...currentUser,
-          name: trimmedName || 'Attendee',
-          email: trimmedEmail,
-        };
-        setCurrentUser(updatedUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('zabay-user', JSON.stringify(updatedUser));
-        }
       }
 
       setCompletedReg(res.registration);

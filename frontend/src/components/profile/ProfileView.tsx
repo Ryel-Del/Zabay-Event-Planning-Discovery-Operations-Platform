@@ -61,10 +61,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // 1. Events Attended: registrations for current user
   const attendedRegistrations = currentUser.id === 'usr-guest' ? [] : registrations.filter(
-    (r) =>
-      r.attendee_id === currentUser.id ||
-      (currentUser.email && r.attendee_email.toLowerCase() === currentUser.email.toLowerCase()) ||
-      (currentUser.name && r.attendee_name.toLowerCase() === currentUser.name.toLowerCase())
+    (r) => r.attendee_id === currentUser.id
   );
 
   // 2. Events Organized: events created or led by user
