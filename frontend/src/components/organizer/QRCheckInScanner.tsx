@@ -136,8 +136,14 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setVerifying(true);
     try {
       const res = await checkInAttendee(code, activeEventId);
-      setResult(res);
-      if (res.success) {
+      const confirmed = res.success && res.registration?.status === 'checked_in' &&
+        res.registration.event_id === activeEventId;
+      const verifiedResult = res.success && !confirmed
+        ? { success: false, message: 'Admission was not confirmed by the selected event.' }
+        : res;
+      setResult(verifiedResult);
+      if (confirmed) {
+        window.dispatchEvent(new CustomEvent('zabay:admission-confirmed', { detail: { eventId: activeEventId } }));
         playAudioFeedback('success');
       } else if (res.isDuplicate) {
         playAudioFeedback('duplicate');
