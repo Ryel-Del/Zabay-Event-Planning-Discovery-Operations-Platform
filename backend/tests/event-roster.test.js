@@ -175,6 +175,22 @@ test('event roster access boundaries with disposable PostgreSQL', { skip: !datab
       assert.equal((await pool.query('SELECT status FROM registrations WHERE id = $1', [registrationId])).rows[0].status, 'confirmed');
     });
 
+    await t.test('cancelled registrations remain auditable but do not inflate attendance', async () => {
+      const cancelledId = `reg-${randomUUID()}`;
+      await pool.query(
+        `INSERT INTO registrations (id, event_id, attendee_name, attendee_email, qr_pass_code, status)
+         VALUES ($1, $2, 'Cancelled Attendee', 'cancelled@example.test', $3, 'cancelled')`,
+        [cancelledId, eventId, `PASS-${randomUUID()}`]
+      );
+      const response = await owner.get(path);
+      assert.equal(response.status, 200);
+      assert.equal(response.body.data.total, 4);
+      assert.equal(response.body.data.summary.registered, 3);
+      assert.equal(response.body.data.summary.checked_in, 2);
+      assert.equal(response.body.data.summary.integrity_issues, 1);
+      assert.ok(response.body.data.registrations.some(row => row.id === cancelledId && row.status === 'cancelled'));
+    });
+
   } finally {
     await pool.query('DELETE FROM events WHERE id = ANY($1::varchar[])', [[eventId, otherId]]);
     await pool.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[ownerId, outsiderId]]);
