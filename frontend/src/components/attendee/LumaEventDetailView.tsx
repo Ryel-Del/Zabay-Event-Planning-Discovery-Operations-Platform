@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { ZabayEvent, Venue } from '../../types';
 import { useApp } from '../../context/AppContext';
+import { formatTicketPrice } from '../../utils/currency';
 
 interface LumaEventDetailViewProps {
   event: ZabayEvent;
@@ -367,11 +368,11 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
                 </h3>
               </div>
               <div className="text-right">
-                <span className="text-2xl font-black text-slate-900 dark:text-slate-100">
-                  ₱{event.ticket_price}
+                <span className={`text-2xl font-black ${event.ticket_price <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-100'}`}>
+                  {formatTicketPrice(event.ticket_price, event.currency, true)}
                 </span>
                 <span className="text-[10px] text-slate-400 block font-mono">
-                  listed ticket price
+                  {event.ticket_price <= 0 ? 'no admission fee' : 'listed ticket price'}
                 </span>
               </div>
             </div>

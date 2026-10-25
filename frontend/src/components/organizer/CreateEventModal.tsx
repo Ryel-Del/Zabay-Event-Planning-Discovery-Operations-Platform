@@ -14,6 +14,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import type { EventCategory, ZabayEvent } from '../../types';
 import { CreateVenueModal } from '../venue/CreateVenueModal';
+import { getCurrencySymbol } from '../../utils/currency';
 
 interface CreateEventModalProps {
   isOpen: boolean;
@@ -57,6 +58,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
 
   // Step 4: Ticketing & Launch
   const [ticketPrice, setTicketPrice] = useState(50);
+  const [currency, setCurrency] = useState('PHP');
   const [maxCapacity, setMaxCapacity] = useState(500);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -186,6 +188,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
       expected_attendance: Number(expectedAttendance) || 100,
       max_capacity: Number(maxCapacity) || 200,
       ticket_price: Number(ticketPrice) || 0,
+      currency,
       status: 'planning',
       banner_url: getBannerForCategory(category),
       requirements: {
@@ -710,17 +713,36 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
             <div className="space-y-4 animate-in fade-in duration-150">
               <fieldset disabled={Boolean(persistedEvent) || saving} className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Ticket Price (₱)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={ticketPrice}
-                    onChange={(e) => setTicketPrice(Number(e.target.value))}
-                    className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">0 for Free admission</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-slate-300">
+                      Ticket Price
+                    </label>
+                    {ticketPrice === 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold">
+                        Free Admission
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <select
+                      value={currency}
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-2 py-2 text-slate-900 dark:text-slate-100 font-bold text-xs focus:outline-none shrink-0"
+                    >
+                      <option value="PHP">PHP (₱)</option>
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="SGD">SGD (S$)</option>
+                    </select>
+                    <input
+                      type="number"
+                      min={0}
+                      value={ticketPrice}
+                      onChange={(e) => setTicketPrice(Math.max(0, Number(e.target.value)))}
+                      className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 font-mono focus:outline-none"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Enter 0 for Free admission</span>
                 </div>
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -758,7 +780,9 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                 <div className="flex justify-between py-1">
                   <span className="text-slate-500">Projected Revenue:</span>
                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    ₱{(ticketPrice * expectedAttendance).toLocaleString()}
+                    {ticketPrice <= 0
+                      ? 'Free (No admission fee)'
+                      : `${currency} ${getCurrencySymbol(currency)}${(ticketPrice * expectedAttendance).toLocaleString()}`}
                   </span>
                 </div>
               </div>

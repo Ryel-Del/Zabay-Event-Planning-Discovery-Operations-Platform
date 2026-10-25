@@ -16,6 +16,7 @@ import {
 import type { ZabayEvent, Registration, User } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { downloadPassAsImage, printPassSlip } from '../../services/passExportService';
+import { formatTicketPrice } from '../../utils/currency';
 
 interface StripeCheckoutModalProps {
   event: ZabayEvent;
@@ -190,7 +191,9 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 }`}
               >
                 <div className="text-xs font-semibold text-stone-900 dark:text-stone-100">General Admission</div>
-                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">₱{event.ticket_price}</div>
+                <div className={`text-sm font-black mt-1 ${event.ticket_price <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-900 dark:text-stone-100'}`}>
+                  {formatTicketPrice(event.ticket_price, event.currency, true)}
+                </div>
                 <p className="text-[10px] text-stone-500 mt-0.5">Keynotes & Expo Floor</p>
               </button>
 
@@ -207,10 +210,10 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   <span>VIP Access</span>
                   <Sparkles className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C]" />
                 </div>
-                <div className="text-sm font-black text-stone-900 dark:text-stone-100 mt-1">
-                  ₱{Math.round(event.ticket_price * 1.4)}
+                <div className={`text-sm font-black mt-1 ${event.ticket_price <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-900 dark:text-stone-100'}`}>
+                  {event.ticket_price <= 0 ? 'Free (VIP)' : formatTicketPrice(Math.round(event.ticket_price * 1.4), event.currency, true)}
                 </div>
-                <p className="text-[10px] text-stone-500 mt-0.5">VIP Lounge + Afterparty</p>
+                <p className="text-[10px] text-stone-500 mt-0.5">VIP Lounge + Reserved Seating</p>
               </button>
             </div>
 
@@ -290,7 +293,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 <span>Saving registration...</span>
               ) : (
                 <>
-                  <span>Register & Receive Digital Pass</span>
+                  <span>{price <= 0 ? 'Claim Free Digital Pass' : 'Register & Receive Digital Pass'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

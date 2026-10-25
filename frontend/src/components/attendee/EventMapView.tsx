@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, ArrowRight, Crosshair, Loader2, ChevronLeft, ChevronRight, Calendar, Layers } from 'lucide-react';
 import type { ZabayEvent, Venue } from '../../types';
+import { formatTicketPrice } from '../../utils/currency';
 
 interface EventMapViewProps {
   events: ZabayEvent[];
@@ -235,8 +236,8 @@ const VenueMarker: React.FC<VenueMarkerProps> = ({ venue, venueEvents, onSelectE
                     day: 'numeric',
                   })}
                 </span>
-                <span className="font-semibold text-slate-800">
-                  ₱{currentEvent.ticket_price}
+                <span className={`font-semibold ${currentEvent.ticket_price <= 0 ? 'text-emerald-600 font-bold' : 'text-slate-800'}`}>
+                  {formatTicketPrice(currentEvent.ticket_price, currentEvent.currency, true)}
                 </span>
               </div>
 

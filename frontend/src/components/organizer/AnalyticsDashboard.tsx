@@ -22,6 +22,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getCurrencySymbol } from '../../utils/currency';
 
 export const AnalyticsDashboard: React.FC = () => {
   const { selectedEvent, tasks, resources, registrations, isDevModeUnlocked, loadDemoData } = useApp();
@@ -140,13 +141,19 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
           <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
             <span>Gross Ticket Revenue</span>
-            <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">₱</span>
+            <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">{getCurrencySymbol(selectedEvent.currency)}</span>
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">₱{totalRevenue.toLocaleString()}</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
+              {selectedEvent.ticket_price <= 0
+                ? 'Free'
+                : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+            </span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">Estimate</span>
           </div>
-          <p className="text-[11px] text-stone-500">Payment processing is not connected</p>
+          <p className="text-[11px] text-stone-500">
+            {selectedEvent.ticket_price <= 0 ? 'Free admission (no ticket fee)' : 'Payment processing is not connected'}
+          </p>
         </div>
 
         {/* KPI 3 */}

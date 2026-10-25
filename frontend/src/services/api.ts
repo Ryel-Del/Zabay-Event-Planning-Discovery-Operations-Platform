@@ -74,6 +74,7 @@ export function adaptEvent(row: any): ZabayEvent {
     hall_name: row.hall_name || undefined,
     description: row.description || '',
     ticket_price: asNumber(row.ticket_price),
+    currency: row.currency || 'PHP',
     budget: asNumber(row.budget),
     tickets_sold: 0,
     banner_url: row.banner_url || '/zabay-logo.png',

@@ -15,6 +15,7 @@ import { EventMapView } from './EventMapView';
 import { StripeCheckoutModal } from './StripeCheckoutModal';
 import { AttendeePassView } from './AttendeePassView';
 import { LumaEventDetailView } from './LumaEventDetailView';
+import { formatTicketPrice } from '../../utils/currency';
 
 interface EventDiscoveryProps {
   onOpenScannerWithPass?: (code: string) => void;
@@ -249,8 +250,12 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
                         <span className="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider bg-white/95 dark:bg-slate-900/90 backdrop-blur-md text-slate-900 dark:text-slate-100 shadow-xs">
                           {event.category}
                         </span>
-                        <span className="absolute top-3 right-3 px-2.5 py-1 rounded-md text-xs font-bold bg-[#3E6CB5] text-white shadow-xs">
-                          ₱{event.ticket_price}
+                        <span className={`absolute top-3 right-3 px-2.5 py-1 rounded-md text-xs font-bold shadow-xs ${
+                          event.ticket_price <= 0
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-[#3E6CB5] text-white'
+                        }`}>
+                          {formatTicketPrice(event.ticket_price, event.currency, true)}
                         </span>
                       </div>
 

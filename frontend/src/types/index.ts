@@ -63,6 +63,7 @@ export interface ZabayEvent {
   expected_attendance: number;
   max_capacity: number;
   ticket_price: number;
+  currency?: string;
   tickets_sold: number;
   banner_url: string;
   requirements: EventRequirements;

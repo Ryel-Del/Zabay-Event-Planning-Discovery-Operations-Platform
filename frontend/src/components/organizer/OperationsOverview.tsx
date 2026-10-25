@@ -13,6 +13,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
+import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
 
 interface OperationsOverviewProps {
   onNavigate: (view: OrganizerView) => void;
@@ -166,10 +167,18 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           <div>
             <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">₱{totalRevenue.toLocaleString()}</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                {selectedEvent.ticket_price <= 0
+                  ? 'Free'
+                  : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+              </span>
               <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Avg ₱{selectedEvent.ticket_price} / ticket</p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {selectedEvent.ticket_price <= 0
+                ? 'Free Admission (No fee)'
+                : `Avg ${formatTicketPrice(selectedEvent.ticket_price, selectedEvent.currency, true)} / ticket`}
+            </p>
           </div>
 
           <div>

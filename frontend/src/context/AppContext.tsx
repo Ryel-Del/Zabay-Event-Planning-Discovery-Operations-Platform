@@ -924,6 +924,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       expected_attendance: data.expected_attendance || 100,
       max_capacity: data.max_capacity || 200,
       ticket_price: data.ticket_price || 0,
+      currency: data.currency || 'PHP',
       tickets_sold: 0,
       banner_url: data.banner_url || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80',
       organizer_id: currentUser.id,
