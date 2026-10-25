@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -13,9 +13,13 @@ import {
   AlertCircle,
   QrCode,
   Lock,
+  Clock,
+  Send,
+  UserCheck,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { canPersonnelScanTickets } from '../../types';
+import { api } from '../../services/api';
 
 interface PersonnelDirectoryProps {
   onSwitchToStaffView?: () => void;
@@ -36,7 +40,18 @@ const ROLE_OPTIONS = [
 ] as const;
 
 export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitchToStaffView }) => {
-  const { personnel, tasks, selectedEvent, addPersonnel, updatePersonnel, removePersonnel, previewStaffPortal } = useApp();
+  const {
+    personnel,
+    tasks,
+    selectedEvent,
+    venues,
+    addPersonnel,
+    updatePersonnel,
+    removePersonnel,
+    previewStaffPortal,
+    staffInvitations,
+    sendStaffInvitation,
+  } = useApp();
 
   const handlePreviewStaff = (staffId: string = 'per-3') => {
     previewStaffPortal(staffId);
@@ -59,7 +74,38 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
   const [email, setEmail] = useState('');
   const [skillsInput, setSkillsInput] = useState('Event Staging, Floor Coordination');
   const [canScanTickets, setCanScanTickets] = useState(false);
+  const [callTime, setCallTime] = useState('08:00 AM');
+  const [inviteNotes, setInviteNotes] = useState('');
   const [formError, setFormError] = useState('');
+
+  // User search state for inviting existing registered users
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [matchedUsers, setMatchedUsers] = useState<Array<{ id: string; name: string; email: string; phone?: string; role?: string }>>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [inviteSuccessToast, setInviteSuccessToast] = useState<string | null>(null);
+
+  // Search registered users
+  useEffect(() => {
+    if (!userSearchTerm.trim()) {
+      setMatchedUsers([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setIsSearchingUsers(true);
+      try {
+        const res = await api.auth.searchUsers(userSearchTerm.trim());
+        if (res.data?.users) {
+          setMatchedUsers(res.data.users);
+        }
+      } catch (err) {
+        console.warn('Failed to search users:', err);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [userSearchTerm]);
 
   // Filter personnel
   const filteredPersonnel = personnel.filter((p) => {
@@ -85,7 +131,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       ? Math.round(personnel.reduce((acc, p) => acc + p.hourly_rate, 0) / totalCrew)
       : 0;
 
-  // Handle adding personnel
+  // Handle adding personnel & sending shift invitation
   const handleAddPersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -107,6 +153,24 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       .map((s) => s.trim())
       .filter(Boolean);
 
+    // 1. Dispatch staff shift invitation so user sees it in their Staff Portal
+    const matchedVenue = venues.find((v) => v.id === selectedEvent?.venue_id);
+    sendStaffInvitation({
+      event_id: selectedEvent?.id || 'evt-1',
+      event_title: selectedEvent?.title || 'Active Event',
+      event_date: selectedEvent?.start_date || 'November 13, 2026',
+      venue_name: matchedVenue?.name || 'Designated Event Venue',
+      user_id: selectedUserId || `usr-${Date.now()}`,
+      user_name: name.trim(),
+      user_email: email.trim(),
+      role: assignedRole,
+      call_time: callTime.trim() || '08:00 AM',
+      hourly_rate: Number(hourlyRate),
+      can_scan_tickets: canScanTickets,
+      notes: inviteNotes.trim() || undefined,
+    });
+
+    // 2. Add to event personnel roster
     addPersonnel({
       name: name.trim(),
       role: assignedRole as any,
@@ -118,6 +182,11 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       can_scan_tickets: canScanTickets,
     });
 
+    setInviteSuccessToast(
+      `🎉 Shift invitation sent to ${name.trim()}! They can now accept their slot and view run-of-show duties in their Staff Portal.`
+    );
+    setTimeout(() => setInviteSuccessToast(null), 6000);
+
     // Reset Form
     setName('');
     setRole('Stage Manager');
@@ -127,12 +196,32 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
     setEmail('');
     setSkillsInput('Event Staging, Floor Coordination');
     setCanScanTickets(false);
+    setCallTime('08:00 AM');
+    setInviteNotes('');
+    setUserSearchTerm('');
+    setSelectedUserId(null);
     setFormError('');
     setIsAddModalOpen(false);
   };
 
   return (
     <div className="space-y-6">
+      {/* Shift Invitation Sent Alert Toast */}
+      {inviteSuccessToast && (
+        <div className="bg-emerald-600 text-white p-4 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-md animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span className="font-semibold">{inviteSuccessToast}</span>
+          </div>
+          <button
+            onClick={() => setInviteSuccessToast(null)}
+            className="text-white/80 hover:text-white text-xs font-bold px-2 py-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Banner & Action Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-[#171E2B] p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div>
@@ -290,6 +379,15 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
             t.personnel_assignments?.some((pa) => pa.personnel_id === person.id)
           );
 
+          // Check staff invitation status for this person in the active event
+          const personInvite = (staffInvitations || []).find(
+            (inv) =>
+              (inv.user_id === person.id ||
+                inv.user_email?.toLowerCase() === person.email.toLowerCase() ||
+                inv.user_name.toLowerCase() === person.name.toLowerCase()) &&
+              inv.event_id === selectedEvent?.id
+          );
+
           return (
             <div
               key={person.id}
@@ -318,9 +416,26 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                           title={person.is_available ? 'Ready on Shift' : 'Unavailable'}
                         />
                       </div>
-                      <span className="inline-block text-[11px] font-semibold text-[#3E6CB5] dark:text-[#7EA6E0]">
-                        {person.role}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="inline-block text-[11px] font-semibold text-[#3E6CB5] dark:text-[#7EA6E0]">
+                          {person.role}
+                        </span>
+                        {personInvite ? (
+                          personInvite.status === 'confirmed' ? (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-1 font-mono">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Confirmed
+                            </span>
+                          ) : personInvite.status === 'declined' ? (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 font-bold flex items-center gap-1 font-mono">
+                              Declined
+                            </span>
+                          ) : (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold flex items-center gap-1 font-mono">
+                              <Clock className="w-2.5 h-2.5 animate-pulse" /> Invite Pending
+                            </span>
+                          )
+                        ) : null}
+                      </div>
                     </div>
                   </div>
 
@@ -541,6 +656,75 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
             )}
 
             <form onSubmit={handleAddPersonnel} className="space-y-3.5 text-xs">
+              {/* Registered Account Lookup (Like Adding Friends on Facebook) */}
+              <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-900/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-[#244A85] dark:text-[#8BB0E8] text-xs flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" /> Search Registered Zabay Users
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">Connect staff account</span>
+                </div>
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by name or email (e.g. Rael, Maria, Juan)..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800 bg-white dark:bg-[#111722] text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
+                </div>
+
+                {isSearchingUsers && (
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 animate-pulse">Searching accounts in database...</p>
+                )}
+
+                {matchedUsers.length > 0 && (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pt-1">
+                    {matchedUsers.map((u) => (
+                      <div
+                        key={u.id}
+                        onClick={() => {
+                          setName(u.name);
+                          setEmail(u.email);
+                          if (u.phone) setPhone(u.phone);
+                          setSelectedUserId(u.id);
+                          setUserSearchTerm('');
+                          setMatchedUsers([]);
+                        }}
+                        className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#111722] border border-blue-100 dark:border-blue-900/40 hover:border-blue-400 cursor-pointer transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-[#EBF3FC] text-[#244A85] flex items-center justify-center font-bold text-[10px]">
+                            {u.name.slice(0, 1)}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 block text-[11px]">{u.name}</span>
+                            <span className="text-[10px] text-slate-400">{u.email}</span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold text-[#3E6CB5] hover:underline">Select</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {selectedUserId && (
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300">
+                    <span className="flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Linked to Registered Account
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUserId(null)}
+                      className="text-rose-600 hover:underline text-[10px] font-bold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Full Name */}
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -556,7 +740,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                 />
               </div>
 
-              {/* Role Selection */}
+              {/* Role Selection & Hourly Rate */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -594,6 +778,36 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                       className="w-full pl-7 pr-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Call Time & Shift Briefing Note */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Call Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 08:00 AM"
+                    value={callTime}
+                    onChange={(e) => setCallTime(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Shift Note / Station Briefing
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Lead turnstile gate operator"
+                    value={inviteNotes}
+                    onChange={(e) => setInviteNotes(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-[#F8FAFD] dark:bg-[#111722] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
+                  />
                 </div>
               </div>
 
@@ -676,9 +890,10 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-semibold transition-all cursor-pointer shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-semibold transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                 >
-                  Register Personnel
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Shift Invitation & Add</span>
                 </button>
               </div>
             </form>

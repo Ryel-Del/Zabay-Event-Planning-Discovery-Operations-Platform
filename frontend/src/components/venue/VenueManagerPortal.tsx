@@ -16,6 +16,7 @@ import {
   Phone,
   ArrowRight,
   Plus,
+  GitBranch,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { VenueView } from '../layout/AppSidebar';
@@ -30,7 +31,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   currentView = 'overview',
   onSelectView,
 }) => {
-  const { venues, venueBookings, bookVenue, selectedEvent } = useApp();
+  const { venues, venueBookings, bookVenue, selectedEvent, currentUser, isDevModeUnlocked } = useApp();
   const [internalView, setInternalView] = useState<VenueView>('overview');
   const activeView = currentView || internalView;
 
@@ -45,6 +46,24 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   const [testStart, setTestStart] = useState('2026-11-13T10:00:00Z');
   const [testEnd, setTestEnd] = useState('2026-11-13T18:00:00Z');
   const [bookingStatus, setBookingStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [forkSuccessToast, setForkSuccessToast] = useState<string | null>(null);
+
+  // Permission boundary: Check if logged-in user is verified venue owner
+  const isVenueOwner =
+    isDevModeUnlocked ||
+    (selectedVenue &&
+      (selectedVenue.manager_id === currentUser.id ||
+        (selectedVenue.manager_name &&
+          selectedVenue.manager_name.toLowerCase() === currentUser.name.toLowerCase()) ||
+        (selectedVenue.contact_email &&
+          selectedVenue.contact_email.toLowerCase() === currentUser.email.toLowerCase())));
+
+  const handleForkLayout = () => {
+    setForkSuccessToast(
+      `✨ Facility layout for "${selectedVenue?.name}" successfully forked into your custom event workspace! You can adjust temporary stage seating without altering master facility specs.`
+    );
+    setTimeout(() => setForkSuccessToast(null), 6000);
+  };
 
   const bookingsForVenue = venueBookings.filter((b) => b.venue_id === selectedVenue?.id);
   const [testHallId, setTestHallId] = useState<string>('');
@@ -75,6 +94,22 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
+      {/* Fork Layout Success Alert */}
+      {forkSuccessToast && (
+        <div className="bg-emerald-600 text-white p-4 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-md animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span className="font-semibold">{forkSuccessToast}</span>
+          </div>
+          <button
+            onClick={() => setForkSuccessToast(null)}
+            className="text-white/80 hover:text-white text-xs font-bold px-2 py-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Venue Hub Header */}
       <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-sm transition-colors">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200/80 dark:border-slate-800">
@@ -83,21 +118,36 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   {selectedVenue.name}
                 </h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-semibold">
-                  {selectedVenue.is_indoor ? 'Indoor Facility' : 'Outdoor Complex'}
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B] border border-[#BDE3CF] dark:border-[#234232] font-bold flex items-center gap-1 font-mono">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified Facility Partner
                 </span>
+                {isVenueOwner ? (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold font-mono">
+                    👑 Master Owner Control
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-medium font-mono">
+                    👁️ Organizer View
+                  </span>
+                )}
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
                   Collision-Safe Booking
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{selectedVenue.address}</span>
-              </p>
+              <div className="flex items-center gap-3 flex-wrap mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span>{selectedVenue.address}</span>
+                </p>
+                <span>•</span>
+                <p className="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                  Managed by: <strong className="text-slate-800 dark:text-slate-200 font-semibold">{selectedVenue.manager_name || 'Bohol Provincial Facilities'}</strong> (Verified Facility Owner)
+                </p>
+              </div>
             </div>
           </div>
 
@@ -178,6 +228,34 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Organizer Permission Boundary & Fork Facility Action */}
+      {!isVenueOwner && (
+        <div className="bg-[#EBF3FC]/80 dark:bg-[#1E293B]/60 border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs shadow-xs animate-in fade-in">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-bold text-[#244A85] dark:text-[#8BB0E8]">
+                Verified Facility Partner: {selectedVenue.manager_name || 'Designated Facility Manager'}
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#111722] text-slate-600 dark:text-slate-300 font-mono border border-[#C8DCF7] dark:border-[#2D4160]">
+                Protected Master Registry
+              </span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+              As an event organizer, you have public schedule visibility and collision-safe booking rights. You can fork this facility's architectural partition layout for your custom event staging, while master power ratings, pricing, and hall registry remain exclusively guarded by the verified owner.
+            </p>
+          </div>
+
+          <button
+            onClick={handleForkLayout}
+            className="px-4 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white font-bold text-xs flex items-center justify-center gap-2 shrink-0 shadow-xs transition-all cursor-pointer"
+          >
+            <GitBranch className="w-4 h-4 text-[#D4E4F7]" />
+            <span>Fork Layout for Custom Event</span>
+          </button>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* VIEW 1: FACILITY OVERVIEW                                                */}

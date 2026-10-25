@@ -95,6 +95,10 @@ export interface Venue {
   is_indoor: boolean;
   operating_hours: { open: string; close: string };
   manager_id: string;
+  manager_name?: string;
+  is_verified_partner?: boolean; // Verified Facility Partner badge & status
+  is_custom_fork?: boolean;      // Forked layout for an organizer's custom event
+  forked_from_id?: string;
   image_url: string;
   contact_email: string;
   contact_phone: string;
@@ -125,8 +129,31 @@ export interface Resource {
   unit: string;
 }
 
+export type StaffInvitationStatus = 'pending' | 'confirmed' | 'declined';
+
+export interface StaffInvitation {
+  id: string;
+  event_id: string;
+  event_title: string;
+  event_date: string;
+  venue_name: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  role: string;
+  call_time: string;
+  hourly_rate?: number;
+  can_scan_tickets: boolean;
+  status: StaffInvitationStatus;
+  invited_at: string;
+  responded_at?: string;
+  notes?: string;
+}
+
 export interface Personnel {
   id: string;
+  user_id?: string;
+  event_id?: string;
   name: string;
   role:
     | 'Sound Engineer'
@@ -139,13 +166,17 @@ export interface Personnel {
     | 'Tournament Referee'
     | 'Emcee / Host'
     | 'Medical / First Aid'
-    | 'Network Admin';
+    | 'Network Admin'
+    | string;
   skills: string[];
   phone: string;
   email: string;
   hourly_rate: number;
   is_available: boolean;
   can_scan_tickets?: boolean;
+  invitation_status?: StaffInvitationStatus;
+  call_time?: string;
+  invited_at?: string;
 }
 
 /**

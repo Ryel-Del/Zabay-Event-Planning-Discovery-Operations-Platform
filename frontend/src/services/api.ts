@@ -199,6 +199,27 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ devKey }),
       }),
+    register: (payload: {
+      name: string;
+      email: string;
+      password: string;
+      role?: string;
+      organization?: string;
+      phone?: string;
+    }) =>
+      request<{ user: any; csrfToken?: string }>('/api/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    userLogin: (payload: { email: string; password: string }) =>
+      request<{ user: any; csrfToken?: string }>('/api/auth/user-login', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    getMe: () =>
+      request<{ user: any; csrfToken?: string }>('/api/auth/me'),
+    searchUsers: (q?: string) =>
+      request<{ users: any[] }>(`/api/auth/search-users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   },
   // System Health
   health: {

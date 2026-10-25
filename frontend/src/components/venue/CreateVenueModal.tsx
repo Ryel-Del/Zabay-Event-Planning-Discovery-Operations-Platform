@@ -293,6 +293,8 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
         is_indoor: isIndoor,
         operating_hours: { open: openTime, close: closeTime },
         manager_id: currentUser?.id || 'usr-vm-1',
+        manager_name: currentUser?.name || 'Verified Facility Owner',
+        is_verified_partner: true,
         image_url: imageUrl || PRESET_SPORTS_CATEGORIES[0].image,
         contact_email: contactEmail.trim(),
         contact_phone: contactPhone.trim(),

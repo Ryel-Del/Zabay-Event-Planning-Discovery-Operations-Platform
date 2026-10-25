@@ -17,6 +17,7 @@ import type {
   Registration,
   AuditLog,
   WorkflowTemplateKit,
+  StaffInvitation,
 } from '../types';
 
 export const guestUser: User = {
@@ -108,6 +109,8 @@ export const mockVenues: Venue[] = [
     is_indoor: true,
     operating_hours: { open: '06:00', close: '23:59' },
     manager_id: 'usr-vm-1',
+    manager_name: 'Maria Elena Santos',
+    is_verified_partner: true,
     image_url: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80',
     contact_email: 'events@boholculturalcenter.ph',
     contact_phone: '+63 (38) 411-3520',
@@ -156,6 +159,8 @@ export const mockVenues: Venue[] = [
     is_indoor: true,
     operating_hours: { open: '06:30', close: '22:30' },
     manager_id: 'usr-vm-2',
+    manager_name: 'HNU Athletic Directorate',
+    is_verified_partner: true,
     image_url: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800&auto=format&fit=crop&q=80',
     contact_email: 'gym@hnu.edu.ph',
     contact_phone: '+63 (38) 411-2244',
@@ -203,6 +208,8 @@ export const mockVenues: Venue[] = [
     is_indoor: true,
     operating_hours: { open: '07:00', close: '21:30' },
     manager_id: 'usr-vm-3',
+    manager_name: 'BWS Facilities Dept',
+    is_verified_partner: true,
     image_url: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop&q=80',
     contact_email: 'gymnasium@boholwisdom.edu.ph',
     contact_phone: '+63 (38) 412-3456',
@@ -3540,3 +3547,39 @@ export const mockAuditLogs: AuditLog[] = [
     created_at: '2026-10-18T19:15:30Z',
   },
 ];
+
+export const mockStaffInvitations: StaffInvitation[] = [
+  {
+    id: 'sinv-demo-1',
+    event_id: 'evt-athletics-2026',
+    event_title: 'Bohol Interschool Athletics Cup 2026',
+    event_date: 'Oct 28, 2026 • 08:00 AM',
+    venue_name: 'BWS Hardwood Gymnasium',
+    user_id: 'usr-stf-1',
+    user_name: 'Carlos Mendoza',
+    user_email: 'carlos.mendoza@stagemaster.ph',
+    role: 'Stage Manager & Floor Lead',
+    call_time: '07:30 - 18:30',
+    can_scan_tickets: false,
+    status: 'confirmed',
+    invited_at: '2026-10-24T08:00:00Z',
+    responded_at: '2026-10-24T09:12:00Z',
+  },
+  {
+    id: 'sinv-demo-2',
+    event_id: 'evt-athletics-2026',
+    event_title: 'Bohol Interschool Athletics Cup 2026',
+    event_date: 'Oct 28, 2026 • 08:00 AM',
+    venue_name: 'BWS Hardwood Gymnasium',
+    user_id: 'usr-org-1',
+    user_name: 'Rael Deloso',
+    user_email: 'ryeldeloso18@gmail.com',
+    role: 'Gate Operations & Turnstile Coordinator',
+    call_time: '08:00 - 18:00',
+    can_scan_tickets: true,
+    status: 'pending',
+    invited_at: '2026-10-25T08:00:00Z',
+    notes: 'Please confirm your slot for the Main Gate turnstile access and attendee ticket verification.',
+  },
+];
+

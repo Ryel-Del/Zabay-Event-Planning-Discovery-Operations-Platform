@@ -1,8 +1,9 @@
-import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
+import { randomBytes, timingSafeEqual, createHash, scryptSync } from 'node:crypto';
 import { Request, Response, NextFunction, Router } from 'express';
 import { production } from '../config/runtime';
+import { query } from '../config/db';
 
-const sessions = new Map<string, { csrf: string; expires: number }>();
+const sessions = new Map<string, { csrf: string; expires: number; userId?: string }>();
 const attempts = new Map<string, { count: number; until: number }>();
 const lifetime = 8 * 60 * 60 * 1000;
 const cookieName = 'zabay_session';
@@ -78,9 +79,155 @@ authRouter.post('/verify-key', (req, res) => {
   res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
   res.json({ success: true, message: 'Developer session authorized.', csrfToken: csrf });
 });
-authRouter.post('/logout', requireOperator, (req, res) => {
+
+/**
+ * 3. User Registration (Real PostgreSQL password hash with salt)
+ */
+authRouter.post('/register', async (req, res) => {
+  try {
+    const { name, email, password, role, organization, phone } = req.body || {};
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ success: false, error: 'Full name is required (minimum 2 characters).' });
+    }
+    if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    }
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters long.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ success: false, error: 'An account with this email address already exists.' });
+    }
+
+    const validRoles = ['organizer', 'venue_manager', 'staff', 'attendee'];
+    const assignedRole = validRoles.includes(role) ? role : 'attendee';
+    const salt = randomBytes(16).toString('hex');
+    const hash = scryptSync(password, salt, 64).toString('hex');
+    const userId = `usr-${randomBytes(6).toString('hex')}`;
+    const avatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=3E6CB5&color=fff&bold=true`;
+
+    const insertResult = await query(
+      `INSERT INTO users (id, name, email, role, phone, organization, avatar, password_hash, password_salt)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id, name, email, role, phone, organization, avatar, created_at`,
+      [userId, name.trim(), cleanEmail, assignedRole, phone || '', organization || '', avatar, hash, salt]
+    );
+
+    const newUser = insertResult.rows[0];
+    const id = token();
+    const csrf = token();
+    sessions.set(id, { csrf, expires: Date.now() + lifetime, userId: newUser.id });
+    res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
+    res.status(201).json({ success: true, user: newUser, csrfToken: csrf });
+  } catch (err: any) {
+    console.error('Registration error:', err);
+    res.status(500).json({ success: false, error: 'Internal server error during registration.' });
+  }
+});
+
+/**
+ * 4. User Login (Authenticates against PostgreSQL with salted timing-safe verification)
+ */
+authRouter.post('/user-login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const result = await query(
+      'SELECT id, name, email, role, phone, organization, avatar, password_hash, password_salt FROM users WHERE LOWER(email) = LOWER($1)',
+      [cleanEmail]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+    }
+
+    const user = result.rows[0];
+    let passwordMatches = false;
+
+    // Handle initial unhashed seed accounts gracefully by setting password on first successful entry or Zabay2026!
+    if (!user.password_hash || !user.password_salt) {
+      if (password === 'Zabay2026!' || password.length >= 6) {
+        const salt = randomBytes(16).toString('hex');
+        const hash = scryptSync(password, salt, 64).toString('hex');
+        await query('UPDATE users SET password_hash = $1, password_salt = $2 WHERE id = $3', [hash, salt, user.id]);
+        passwordMatches = true;
+      }
+    } else {
+      const computedHash = scryptSync(password, user.password_salt, 64).toString('hex');
+      try {
+        passwordMatches = timingSafeEqual(Buffer.from(computedHash, 'hex'), Buffer.from(user.password_hash, 'hex'));
+      } catch {
+        passwordMatches = false;
+      }
+    }
+
+    if (!passwordMatches) {
+      return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+    }
+
+    const id = token();
+    const csrf = token();
+    sessions.set(id, { csrf, expires: Date.now() + lifetime, userId: user.id });
+    res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
+
+    const { password_hash, password_salt, ...safeUser } = user;
+    res.json({ success: true, user: safeUser, csrfToken: csrf });
+  } catch (err: any) {
+    console.error('User login error:', err);
+    res.status(500).json({ success: false, error: 'Internal server error during login.' });
+  }
+});
+
+/**
+ * 5. Current Authenticated Session Profile
+ */
+authRouter.get('/me', async (req, res) => {
+  const found = session(req);
+  if (!found || !found.userId) {
+    return res.status(401).json({ success: false, error: 'Not authenticated' });
+  }
+  try {
+    const result = await query(
+      'SELECT id, name, email, role, phone, organization, avatar, created_at FROM users WHERE id = $1',
+      [found.userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0], csrfToken: found.csrf });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Error fetching session user' });
+  }
+});
+
+/**
+ * 6. Search Registered Users (For Event Staff Recruitment & Invitations)
+ */
+authRouter.get('/search-users', async (req, res) => {
+  const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+  try {
+    const sql = q
+      ? `SELECT id, name, email, role, avatar, organization, phone FROM users WHERE LOWER(name) LIKE $1 OR LOWER(email) LIKE $1 ORDER BY name ASC LIMIT 15`
+      : `SELECT id, name, email, role, avatar, organization, phone FROM users ORDER BY name ASC LIMIT 15`;
+    const params = q ? [`%${q.toLowerCase()}%`] : [];
+    const result = await query(sql, params);
+    res.json({ success: true, users: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to search users' });
+  }
+});
+
+authRouter.post('/logout', (req, res) => {
   const raw = req.headers.cookie?.match(/(?:^|;\s*)zabay_session=([a-f0-9]{64})/)?.[1];
   if (raw) sessions.delete(raw);
   res.setHeader('Set-Cookie', `${cookieName}=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0${production ? '; Secure' : ''}`);
   res.json({ success: true });
 });
+

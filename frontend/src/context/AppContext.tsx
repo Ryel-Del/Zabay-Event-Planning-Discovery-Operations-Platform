@@ -15,6 +15,8 @@ import type {
   WorkflowTemplateKit,
   AppNotification,
   EventCommitteeRoleMap,
+  StaffInvitation,
+  StaffInvitationStatus,
 } from '../types';
 import {
   guestUser,
@@ -28,6 +30,7 @@ import {
   mockWorkflowKits,
   mockRegistrations,
   mockAuditLogs,
+  mockStaffInvitations,
 } from '../mock/mockData';
 import api, { adaptEvent, adaptRegistration, adaptVenue, type HealthStatus } from '../services/api';
 
@@ -125,6 +128,11 @@ interface AppContextType {
   addPersonnel: (data: Omit<Personnel, 'id'>) => Personnel;
   updatePersonnel: (id: string, updates: Partial<Personnel>) => void;
   removePersonnel: (id: string) => void;
+
+  // Staff Invitations & Crew Group System
+  staffInvitations: StaffInvitation[];
+  sendStaffInvitation: (invitation: Omit<StaffInvitation, 'id' | 'status' | 'invited_at'>) => StaffInvitation;
+  respondToStaffInvitation: (invitationId: string, accept: boolean) => void;
 
   // Staff Portal Preview & Crew Inspection
   activeStaffId: string | null;
@@ -321,6 +329,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return [];
   });
+
+  const [staffInvitations, setStaffInvitations] = useState<StaffInvitation[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay_staff_invitations');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return mockStaffInvitations;
+  });
+
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
@@ -1600,6 +1623,129 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAuditLogs((prev) => [log, ...prev]);
   };
 
+  const sendStaffInvitation = (data: Omit<StaffInvitation, 'id' | 'status' | 'invited_at'>): StaffInvitation => {
+    const newInvitation: StaffInvitation = {
+      id: `sinv-${Date.now()}`,
+      ...data,
+      status: 'pending',
+      invited_at: new Date().toISOString(),
+    };
+    setStaffInvitations((prev) => {
+      const updated = [newInvitation, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_staff_invitations', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    const newPerson: Personnel = {
+      id: `per-${Date.now()}`,
+      user_id: data.user_id,
+      event_id: data.event_id,
+      name: data.user_name,
+      role: data.role,
+      skills: ['Gate Clearance', 'Logistics', 'Event Operations'],
+      phone: '+63 (917) 000-0000',
+      email: data.user_email,
+      hourly_rate: 450,
+      is_available: false,
+      can_scan_tickets: data.can_scan_tickets,
+      invitation_status: 'pending',
+      call_time: data.call_time,
+      invited_at: new Date().toISOString(),
+    };
+    setPersonnel((prev) => [newPerson, ...prev]);
+
+    const notif: AppNotification = {
+      id: `notif-${Date.now()}`,
+      title: `Staff Invitation Sent`,
+      message: `Invited ${data.user_name} (${data.role}) to staff "${data.event_title}".`,
+      type: 'info',
+      timestamp: new Date().toISOString(),
+      targetRole: 'staff',
+      eventId: data.event_id,
+      read: false,
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    return newInvitation;
+  };
+
+  const respondToStaffInvitation = (invitationId: string, accept: boolean) => {
+    setStaffInvitations((prev) => {
+      const updated = prev.map((inv) => {
+        if (inv.id === invitationId) {
+          return {
+            ...inv,
+            status: (accept ? 'confirmed' : 'declined') as StaffInvitationStatus,
+            responded_at: new Date().toISOString(),
+          };
+        }
+        return inv;
+      });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_staff_invitations', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    const targetInvite = staffInvitations.find((inv) => inv.id === invitationId);
+    if (targetInvite) {
+      if (accept) {
+        setPersonnel((prev) => {
+          const existing = prev.find((p) => p.email.toLowerCase() === targetInvite.user_email.toLowerCase() || p.id === targetInvite.user_id);
+          if (existing) {
+            return prev.map((p) => (p.id === existing.id ? { ...p, invitation_status: 'confirmed', is_available: true, can_scan_tickets: targetInvite.can_scan_tickets } : p));
+          }
+          const confirmedPerson: Personnel = {
+            id: targetInvite.user_id || `per-${Date.now()}`,
+            user_id: targetInvite.user_id,
+            event_id: targetInvite.event_id,
+            name: targetInvite.user_name,
+            role: targetInvite.role,
+            skills: ['Gate Clearance', 'Logistics', 'Operations'],
+            phone: '+63 (917) 389-1029',
+            email: targetInvite.user_email,
+            hourly_rate: 500,
+            is_available: true,
+            can_scan_tickets: targetInvite.can_scan_tickets,
+            invitation_status: 'confirmed',
+            call_time: targetInvite.call_time,
+            invited_at: targetInvite.invited_at,
+          };
+          return [confirmedPerson, ...prev];
+        });
+
+        // Automatically assign matching tasks to this staff member
+        setTasks((prevTasks) => {
+          return prevTasks.map((t, idx) => {
+            if (idx < 3 || t.committee === 'security' || t.title.toLowerCase().includes('gate') || t.title.toLowerCase().includes('turnstile')) {
+              const currentAssignments = t.personnel_assignments || [];
+              if (!currentAssignments.some((a) => a.personnel_id === targetInvite.user_id || a.personnel_name === targetInvite.user_name)) {
+                return {
+                  ...t,
+                  personnel_assignments: [
+                    ...currentAssignments,
+                    {
+                      personnel_id: targetInvite.user_id,
+                      personnel_name: targetInvite.user_name,
+                      role: targetInvite.role,
+                    },
+                  ],
+                };
+              }
+            }
+            return t;
+          });
+        });
+      } else {
+        setPersonnel((prev) =>
+          prev.map((p) => (p.email.toLowerCase() === targetInvite.user_email.toLowerCase() ? { ...p, invitation_status: 'declined', is_available: false } : p))
+        );
+      }
+    }
+  };
+
   const value = useMemo(
     () => ({
       currentUser,
@@ -1656,6 +1802,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addPersonnel,
       updatePersonnel,
       removePersonnel,
+      staffInvitations,
+      sendStaffInvitation,
+      respondToStaffInvitation,
       activeStaffId,
       setActiveStaffId,
       previewStaffPortal,
@@ -1680,6 +1829,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       venueBookings,
       resources,
       personnel,
+      staffInvitations,
       tasks,
       registrations,
       auditLogs,

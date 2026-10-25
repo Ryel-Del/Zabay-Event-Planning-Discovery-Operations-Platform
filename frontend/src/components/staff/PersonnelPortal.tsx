@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   Eye,
   ArrowLeft,
+  X,
+  Bell,
+  Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
@@ -34,7 +37,20 @@ export const PersonnelPortal: React.FC = () => {
     activeStaffId,
     exitStaffPreview,
     isDevModeUnlocked,
+    staffInvitations,
+    respondToStaffInvitation,
   } = useApp();
+
+  // Filter invitations directed to this user
+  const myPendingInvitations = (staffInvitations || []).filter(
+    (inv) =>
+      (inv.user_id === currentUser.id ||
+        inv.user_email?.toLowerCase() === currentUser.email.toLowerCase() ||
+        inv.user_name.toLowerCase() === currentUser.name.toLowerCase()) &&
+      inv.status === 'pending'
+  );
+
+  const [invitationResponseAlert, setInvitationResponseAlert] = useState<string | null>(null);
 
   // In normal mode, identify the logged-in staff member; in dev mode allow selecting another personnel
   const loggedInStaffPersonnel = personnel.find(
@@ -56,7 +72,7 @@ export const PersonnelPortal: React.FC = () => {
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>(
     activeStaffId || 'current'
   );
-  const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'venue_contacts'>('my_tasks');
+  const [activeTab, setActiveTab] = useState<'my_tasks' | 'run_of_show' | 'crew_group' | 'venue_contacts'>('my_tasks');
   const [searchRunOfShow, setSearchRunOfShow] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -184,6 +200,101 @@ export const PersonnelPortal: React.FC = () => {
             </div>
           </div>
           <span className="text-[10px] font-mono px-2.5 py-1 rounded bg-black/20 shrink-0 font-bold">Priority Update</span>
+        </div>
+      )}
+
+      {/* Invitation Response Toast */}
+      {invitationResponseAlert && (
+        <div className="bg-emerald-600 text-white p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-md animate-in slide-in-from-top-1">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span className="font-semibold">{invitationResponseAlert}</span>
+          </div>
+          <button
+            onClick={() => setInvitationResponseAlert(null)}
+            className="text-white/80 hover:text-white text-xs font-bold px-2 py-1 rounded cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Incoming Staff Invitations (Like Facebook Friend/Crew Invites to a Group) */}
+      {myPendingInvitations.length > 0 && (
+        <div className="bg-gradient-to-r from-[#244A85] via-[#3E6CB5] to-[#4E80CD] text-white rounded-2xl p-5 shadow-lg space-y-4 animate-in slide-in-from-top-2 border border-blue-400/30">
+          <div className="flex items-center justify-between gap-3 border-b border-white/20 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <Bell className="w-4 h-4 text-emerald-300" />
+                Incoming Event Crew Invitation ({myPendingInvitations.length})
+              </span>
+            </div>
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white/20 font-bold uppercase tracking-wider">
+              Slot Confirmation Needed
+            </span>
+          </div>
+
+          <p className="text-xs text-blue-100">
+            You've been invited by the Lead Organizer to join the event crew. Review your assigned station and confirm your slot:
+          </p>
+
+          <div className="space-y-3">
+            {myPendingInvitations.map((inv) => (
+              <div
+                key={inv.id}
+                className="bg-white/10 backdrop-blur-md rounded-xl p-4 border border-white/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-sm text-white">{inv.event_title}</h4>
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-white/25 font-bold font-mono">
+                      Role: {inv.role}
+                    </span>
+                    {inv.can_scan_tickets && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/90 text-white font-mono flex items-center gap-1 font-semibold">
+                        <QrCode className="w-3 h-3" /> Scanner Clearance
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-blue-100 flex items-center gap-3 flex-wrap">
+                    <span>⏰ Call Time: <strong className="text-white font-mono">{inv.call_time}</strong></span>
+                    {inv.hourly_rate ? (
+                      <span>💰 Rate: <strong className="text-white font-mono">₱{inv.hourly_rate.toLocaleString()}/hr</strong></span>
+                    ) : null}
+                  </div>
+                  {inv.notes && (
+                    <p className="text-xs text-blue-200 italic mt-0.5 bg-black/15 px-2.5 py-1 rounded-lg">
+                      "{inv.notes}"
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0">
+                  <button
+                    onClick={() => {
+                      respondToStaffInvitation(inv.id, true);
+                      setInvitationResponseAlert(`Slot confirmed! You are now active on shift for "${inv.event_title}".`);
+                    }}
+                    className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm & Accept Slot</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      respondToStaffInvitation(inv.id, false);
+                      setInvitationResponseAlert(`Invitation to "${inv.event_title}" declined.`);
+                    }}
+                    className="flex-1 md:flex-none px-3.5 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Decline</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -370,6 +481,18 @@ export const PersonnelPortal: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('crew_group')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+            activeTab === 'crew_group'
+              ? 'bg-[#3E6CB5] text-white shadow-xs'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Event Crew Roster & Comms ({personnel.length})</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('venue_contacts')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
             activeTab === 'venue_contacts'
@@ -533,14 +656,57 @@ export const PersonnelPortal: React.FC = () => {
             })}
 
             {myTasks.length === 0 && (
-              <div className="text-center py-12 bg-white dark:bg-[#171E2B] rounded-2xl border border-slate-200/80 dark:border-slate-800 p-6 space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                  No Active Shift Tasks Assigned
-                </h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  You currently have no specific duties assigned to your account for this event. You can monitor the schedule in the <strong>Full Event Run-of-Show</strong> tab or coordinate with the Lead Organizer.
-                </p>
+              <div className="space-y-4">
+                <div className="bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] rounded-2xl p-5 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        Operational Shift Protocol & Checklist
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-white dark:bg-[#111722] text-[#244A85] dark:text-[#8BB0E8] font-bold border border-[#C8DCF7] dark:border-[#2D4160]">
+                      Station: {currentPerson?.role || 'Event Crew'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    Your account is on active shift! While individual timeline tasks are being assigned by the stage manager, here is your standard day-of operational protocol for <strong>{currentPerson?.role || 'Event Crew'}</strong>:
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {[
+                      { title: 'Check in with Lead Organizer at Operations Desk & sync schedule', time: '08:00 AM' },
+                      { title: 'Test VHF Radio Comms on Dispatch Channel VHF CH 04', time: '08:15 AM' },
+                      {
+                        title: hasScannerPermission
+                          ? 'Operate turnstile ticket scanner & verify general/VIP attendee admissions'
+                          : 'Review designated floor station, inspect crowd barricades & clear emergency egress routes',
+                        time: '08:30 AM',
+                      },
+                      { title: 'Monitor venue crowd flow and report incident logs to command center', time: 'Ongoing' },
+                      { title: 'Post-event debrief & facility equipment handover', time: 'Shift Close' },
+                    ].map((duty, dIdx) => (
+                      <label
+                        key={dIdx}
+                        className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-[#111722] border border-slate-200/60 dark:border-slate-800 text-xs hover:border-[#3E6CB5]/40 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            defaultChecked={dIdx === 0}
+                            className="rounded border-slate-300 text-[#3E6CB5] focus:ring-[#3E6CB5]"
+                          />
+                          <span className="font-medium text-slate-800 dark:text-slate-200">
+                            {duty.title}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400 font-semibold shrink-0 ml-2">
+                          {duty.time}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -618,7 +784,110 @@ export const PersonnelPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: Venue & Emergency Dispatch */}
+      {/* TAB 3: Event Crew Roster & Comms Directory (Like a Group Chat / Crew Roster) */}
+      {activeTab === 'crew_group' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-[#171E2B] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+            <div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Users className="w-5 h-5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+                Event Crew Roster & Comms Directory
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                All confirmed personnel on shift for <strong>{selectedEvent?.title || 'Active Event'}</strong>. Direct contact and radio frequencies.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 font-bold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {personnel.length} Crew On Shift
+              </span>
+            </div>
+          </div>
+
+          {/* Master Radio Comms Dispatch */}
+          <div className="p-4 rounded-2xl bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+            <div className="flex items-center gap-3 text-[#244A85] dark:text-[#8BB0E8]">
+              <Radio className="w-5 h-5 shrink-0 animate-pulse text-[#3E6CB5]" />
+              <div>
+                <span className="font-bold block text-sm">Active Crew Radio Channel: VHF CH 04 (Operations & Staging)</span>
+                <span className="text-[11px] opacity-80">Security & Gate Staff on CH 02 • Registration on CH 01 • Medical on CH 09</span>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-xl bg-white dark:bg-[#111722] text-[#244A85] dark:text-[#8BB0E8] font-mono font-bold text-[11px] border border-[#C8DCF7] dark:border-[#2D4160] shrink-0">
+              Station Broadcast Active
+            </span>
+          </div>
+
+          {/* Crew Members Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {personnel.map((p) => {
+              const isSelf =
+                p.email.toLowerCase() === currentUser.email.toLowerCase() ||
+                p.name.toLowerCase() === currentUser.name.toLowerCase();
+
+              return (
+                <div
+                  key={p.id}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    isSelf
+                      ? 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 shadow-xs ring-1 ring-blue-300 dark:ring-blue-700'
+                      : 'bg-white dark:bg-[#171E2B] border-slate-200/80 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#EBF3FC] dark:bg-[#1E293B] border border-[#C8DCF7] dark:border-[#2D4160] flex items-center justify-center font-bold text-sm text-[#244A85] dark:text-[#8BB0E8]">
+                        {p.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join('')}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="font-bold text-xs text-slate-900 dark:text-slate-100">{p.name}</h4>
+                          {isSelf && (
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#3E6CB5] text-white font-bold">
+                              YOU
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold">{p.role}</p>
+                      </div>
+                    </div>
+                    <span
+                      className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 mt-1"
+                      title="Confirmed & Active on Shift"
+                    />
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <a href={`tel:${p.phone}`} className="hover:underline font-mono text-slate-800 dark:text-slate-200 font-medium">
+                        {p.phone}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 truncate">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{p.email}</span>
+                    </div>
+                    {p.can_scan_tickets && (
+                      <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold text-[10px] pt-1">
+                        <QrCode className="w-3 h-3 shrink-0" />
+                        <span>Gate Ticket Scanner Operator</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Venue & Emergency Dispatch */}
       {activeTab === 'venue_contacts' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Venue Info */}
