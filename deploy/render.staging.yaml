@@ -8,7 +8,7 @@ services:
     plan: free
     region: singapore
     repo: https://github.com/db-larpers/Zabay-Event-Planning-Discovery-Operations-Platform
-    branch: chore/render-neon-staging
+    branch: main
     rootDir: backend
     buildCommand: npm ci && npm run build
     startCommand: npm start

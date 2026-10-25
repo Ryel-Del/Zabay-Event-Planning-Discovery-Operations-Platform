@@ -4,7 +4,8 @@ These files prepare the existing Vercel → Render → Neon architecture; **noth
 in this directory is activated by a Git push**. The live root `vercel.json`
 and `frontend/vercel.json` are intentionally unchanged. Do not sync the
 Render Blueprint or enable production Vercel routing without maintainer approval.
-PR #8's security changes require separate review of deployment readiness.
+PR #8's security changes are merged into `main`, but live deployment still
+requires separate security review and maintainer approval.
 
 ## 1. Neon: use schema-only staging
 
@@ -34,6 +35,12 @@ on backend startup.
 
 Use the custom Blueprint path `deploy/render.staging.yaml` in the
 `WhiteTree` workspace **only after staging ingress and security are approved**.
+It targets the security-patched `main` branch rather than this PR's
+`chore/render-neon-staging` branch. Confirm the exact reviewed `main` commit
+before initial Blueprint sync. Disabling automatic deployment only prevents
+subsequent commit-triggered deploys; it does not prevent the initial public
+deployment when the Blueprint is first synced.
+
 It specifies one Singapore-region Node.js web service, built from
 `backend/` with `npm ci && npm run build` and started with `npm start`.
 The backend listens on Render's `PORT`; `/api/health` checks HTTP liveness
