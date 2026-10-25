@@ -81,14 +81,15 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = ({ onOpenScannerWit
 
   // If viewing a single event in Luma-like detail page
   if (selectedEventDetail) {
-    const venue = venues.find((v) => v.id === selectedEventDetail.venue_id);
+    const currentDetailEvent = events.find((event) => event.id === selectedEventDetail.id) || selectedEventDetail;
+    const venue = venues.find((v) => v.id === currentDetailEvent.venue_id);
     return (
       <div className="space-y-6">
         <LumaEventDetailView
-          event={selectedEventDetail}
+          event={currentDetailEvent}
           venue={venue}
           onBack={() => setSelectedEventDetail(null)}
-          onRegister={() => requestRegistration(selectedEventDetail)}
+          onRegister={() => requestRegistration(currentDetailEvent)}
           onViewPass={() => {
             setSelectedEventDetail(null);
             setActiveTab('passes');
