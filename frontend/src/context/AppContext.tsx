@@ -167,6 +167,11 @@ const minutesToTime = (mins: number) => {
   return `${h}:${m}`;
 };
 
+const devDatasetActive = () => typeof window !== 'undefined' &&
+  localStorage.getItem('zabay-clean-slate') !== 'true' &&
+  sessionStorage.getItem('zabay-dev-unlocked') === 'true' &&
+  sessionStorage.getItem('zabay-demo-mode') === 'true';
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User>(() => {
     if (typeof window !== 'undefined' && sessionStorage.getItem('zabay-dev-unlocked') === 'true') {
@@ -262,13 +267,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      if (localStorage.getItem('zabay-clean-slate') === 'true') return false;
-      return sessionStorage.getItem('zabay-dev-unlocked') === 'true' && localStorage.getItem('zabay-demo-mode') === 'true';
-    }
-    return false;
-  });
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(devDatasetActive);
 
   const [isDevModeUnlocked, setIsDevModeUnlocked] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
@@ -286,18 +285,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [events, setEvents] = useState<ZabayEvent[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
-    }
-    return mockEvents;
-  });
+  const [events, setEvents] = useState<ZabayEvent[]>(() => devDatasetActive() ? mockEvents : []);
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') {
         return null;
       }
-      const isDevUnlocked = sessionStorage.getItem('zabay-dev-unlocked') === 'true';
+      const isDevUnlocked = devDatasetActive();
       const savedUserStr = localStorage.getItem('zabay-user');
       let userId = 'usr-guest';
       if (savedUserStr) {
@@ -317,20 +311,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [venues, setVenues] = useState<Venue[]>(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('zabay-clean-slate') === 'true') {
-      return [];
-    }
-    return mockVenues;
-  });
+  const [venues, setVenues] = useState<Venue[]>(() => devDatasetActive() ? mockVenues : []);
   const [venueBookings, setVenueBookings] = useState<VenueBooking[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockVenueBookings;
+      if (devDatasetActive()) return mockVenueBookings;
     }
     return [];
   });
-  const [resources] = useState<Resource[]>(mockResources);
+  const [resources, setResources] = useState<Resource[]>(() => devDatasetActive() ? mockResources : []);
   const [personnel, setPersonnel] = useState<Personnel[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
@@ -342,7 +331,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // ignore parsing error
         }
       }
-      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockPersonnel;
+      if (devDatasetActive()) return mockPersonnel;
     }
     return [];
   });
@@ -358,7 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     }
-    return mockStaffInvitations;
+    return devDatasetActive() ? mockStaffInvitations : [];
   });
 
   const [crewMessages, setCrewMessages] = useState<CrewChatMessage[]>(() => {
@@ -372,27 +361,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     }
-    return mockCrewMessages;
+    return devDatasetActive() ? mockCrewMessages : [];
   });
 
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockTasks;
+      if (devDatasetActive()) return mockTasks;
     }
     return [];
   });
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockRegistrations;
+      if (devDatasetActive()) return mockRegistrations;
     }
     return [];
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
-      if (sessionStorage.getItem('zabay-dev-unlocked') === 'true') return mockAuditLogs;
+      if (devDatasetActive()) return mockAuditLogs;
     }
     return [];
   });
@@ -485,9 +474,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const refreshBackendStatus = async () => {
     try {
+      if (devDatasetActive()) { setIsLiveBackend(false); return; }
       const res = await api.health.check();
       setBackendHealth(res.success ? res.data || null : null);
-      if (!res.success || localStorage.getItem('zabay-demo-mode') === 'true') { setIsLiveBackend(false); return; }
+      if (!res.success) { setIsLiveBackend(false); return; }
       const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
       if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
@@ -498,7 +488,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsLiveBackend(false);
         return;
       }
-      if (localStorage.getItem('zabay-demo-mode') === 'true') return;
+      if (devDatasetActive()) return;
       const liveEvents = eventRes.data.map(adaptEvent);
       setVenues(venueRes.data.map(adaptVenue));
       setEvents(liveEvents);
@@ -594,12 +584,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadDemoData = () => {
     setIsLiveBackend(false);
+    setResources(mockResources);
     setVenues(mockVenues);
     setEvents(mockEvents);
     setSelectedEvent(mockEvents[0]);
     setVenueBookings(mockVenueBookings);
     setTasks(mockTasks);
     setPersonnel(mockPersonnel);
+    setStaffInvitations(mockStaffInvitations);
+    setCrewMessages(mockCrewMessages);
     setRegistrations(mockRegistrations);
     setAuditLogs(mockAuditLogs);
     setIsDemoMode(true);
@@ -618,12 +611,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadRole2DemoData = () => {
     setIsLiveBackend(false);
+    setResources(mockResources);
     setVenues(mockVenues);
     setEvents(mockEvents);
     setSelectedEvent(mockEvents[0]);
     setVenueBookings(mockVenueBookings);
     setTasks(mockTasks);
     setPersonnel(mockPersonnel);
+    setStaffInvitations(mockStaffInvitations);
+    setCrewMessages(mockCrewMessages);
 
     // Seed specialized Role 2 registrations with tested duplicate check-in target
     const role2Registrations: Registration[] = [
@@ -845,7 +841,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser(guestUser);
     setCurrentRole('attendee');
     setTasks([]);
+    setResources([]);
     setPersonnel([]);
+    setStaffInvitations([]);
+    setCrewMessages([]);
     setRegistrations([]);
     sessionStorage.removeItem('zabay-session-pass-ids');
     setVenueBookings([]);
@@ -868,12 +867,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const clearToCleanSlate = () => {
+    setResources([]);
     setVenues([]);
     setEvents([]);
     setSelectedEvent(null);
     setVenueBookings([]);
     setTasks([]);
     setPersonnel([]);
+    setStaffInvitations([]);
+    setCrewMessages([]);
     setRegistrations([]);
     setAuditLogs([]);
     setIsDemoMode(false);
@@ -1620,16 +1622,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (isLiveBackend) {
       try {
-        const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType });
+        const registrationMode = currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator' ? 'guest' : 'account';
+        const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType, registration_mode: registrationMode });
         if (response.success && response.data?.qr_pass_code) {
           const saved = adaptRegistration(response.data, event.title);
           if (saved.attendee_id && saved.attendee_id !== currentUser.id) {
             return { success: false, message: 'Your account session changed. Sign in again to view your saved pass.' };
           }
-          if (!saved.attendee_id && currentUser.id !== 'usr-guest') {
+          if (!saved.attendee_id && registrationMode === 'account') {
             return { success: false, message: 'Your account session expired. Sign in again to register an account pass.' };
           }
           setRegistrations((previous) => [saved, ...previous]);
+          if (registrationMode === 'guest') {
+            let ids: string[] = [];
+            try {
+              const stored = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]');
+              if (Array.isArray(stored)) ids = stored.filter((id): id is string => typeof id === 'string');
+            } catch { /* reset malformed browser state */ }
+            sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...ids, saved.id])]));
+          }
           return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
         }
         if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);

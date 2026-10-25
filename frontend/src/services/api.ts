@@ -23,6 +23,7 @@ export interface AttendeeRegistrationRequest {
   attendee_name: string;
   attendee_email: string;
   ticket_type: string;
+  registration_mode: 'account' | 'guest';
 }
 
 export type DbRegistration = Omit<Registration, 'event_title' | 'attendee_id' | 'amount_paid'> & {
@@ -121,7 +122,7 @@ async function csrf() {
 }
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const mutation = options.method && !['GET', 'HEAD'].includes(options.method);
-  const token = mutation && endpoint !== '/api/attendees/register' ? await csrf().catch(() => undefined) : undefined;
+  const token = mutation ? await csrf().catch(() => undefined) : undefined;
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { 'X-CSRF-Token': token } : {}),

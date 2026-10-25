@@ -22,9 +22,16 @@ export const AttendeePassView: React.FC<AttendeePassViewProps> = ({ onScanPass }
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   // Live account passes are scoped by the backend session; guest passes exist only in this workspace.
+  let guestPassIds: string[] = [];
+  try {
+    const stored = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]');
+    if (Array.isArray(stored)) guestPassIds = stored.filter((id): id is string => typeof id === 'string');
+  } catch { /* ignore malformed browser state */ }
   const userPasses = registrations.filter((reg) => {
     if (!reg) return false;
-    return currentUser.id === 'usr-guest' ? !reg.attendee_id : reg.attendee_id === currentUser.id;
+    if (currentUser.id === 'usr-guest') return !reg.attendee_id;
+    if (currentUser.id === 'zabay-operator') return !reg.attendee_id && guestPassIds.includes(reg.id);
+    return reg.attendee_id === currentUser.id;
   });
 
   const handleDownloadImage = async (reg: any, event: any, venue: any) => {

@@ -30,7 +30,7 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
       [
         `reg-${randomUUID()}`,
         event_id.trim(),
-        authenticatedUserId(req),
+        req.body?.registration_mode === 'guest' ? null : authenticatedUserId(req),
         attendee_name.trim(),
         attendee_email.trim().toLowerCase(),
         ticket_type.trim(),
