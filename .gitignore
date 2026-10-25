@@ -29,12 +29,14 @@ lerna-debug.log*
 # OS & Office Files
 .DS_Store
 Thumbs.db
-# Documents & Guide Notes
+
+# Documents, Internal Guides & Presentation Notes
 *.docx
 *.doc
-ZABAY_ROLE_2_CONTEXT_GUIDE.docx
+*.pdf
+generate_role_2_docx.py
+docs/
 db/ROLE_2_DEFENSE_GUIDE.md
 
 ~$*
-Thumbs.db
 .neon
