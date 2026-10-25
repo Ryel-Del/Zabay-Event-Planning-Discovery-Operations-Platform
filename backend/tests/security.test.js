@@ -87,6 +87,7 @@ test('public registration ignores privileged roles and cannot write operator rec
 test('developer key cannot issue operator authority', async () => {
   const agent = request.agent(app);
   assert.notEqual((await agent.post('/api/auth/verify-key').send({ devKey: 'zabay-operator-secret-2026' })).status, 200);
+  assert.notEqual((await agent.post('/api/auth/verify-key').send({ devKey: 'ZABAY-SECURE-8492-DEV' })).status, 200);
   process.env.DEV_ACCESS_KEY = 'local-only-demo-key';
   const accepted = await agent.post('/api/auth/verify-key').send({ devKey: 'local-only-demo-key' });
   assert.equal(accepted.status, 200);

@@ -329,9 +329,10 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
             <button
               onClick={() => handlePreviewStaff('per-3')}
               className="px-3 py-1.5 rounded-xl bg-white dark:bg-[#171E2B] hover:bg-slate-50 dark:hover:bg-slate-800 border border-[#C8DCF7] dark:border-[#2D4160] text-xs font-semibold text-[#244A85] dark:text-[#8BB0E8] flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Preview the mobile portal from a crew member's perspective"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>Simulate Shift Portal</span>
+              <span>Preview Staff View</span>
             </button>
           </div>
         </div>

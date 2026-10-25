@@ -212,7 +212,16 @@ export const PersonnelPortal: React.FC = () => {
               Test staff clearances, task views, and QR turnstile check-in
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleSimulateInvitation}
+              className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              title="Generate a test incoming crew invitation for the current user"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Simulate Crew Invite</span>
+            </button>
             <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Switch Persona:</span>
             <select
               value={selectedPersonnelId}
@@ -355,15 +364,18 @@ export const PersonnelPortal: React.FC = () => {
             </p>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <button
-              onClick={handleSimulateInvitation}
-              className="px-5 py-2.5 rounded-xl bg-[#3E6CB5] hover:bg-[#325896] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Simulate Incoming Crew Invitation</span>
-            </button>
-          </div>
+          {isDevModeUnlocked && (
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleSimulateInvitation}
+                className="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                <span>[Dev Mode] Simulate Incoming Crew Invitation</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
