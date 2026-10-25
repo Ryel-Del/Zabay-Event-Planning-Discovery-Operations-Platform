@@ -3,10 +3,16 @@ describe('organizer event roster', () => {
   let eventTitle = '';
   let passCode = '';
   let registrationId = '';
-  let attendeeEmail = '';
+  const attendeeEmail = `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`;
+  const password = 'roster-test-secret-long';
+  // One account per suite avoids triggering the shared public signup rate limit.
+  before(() => {
+    cy.request('POST', '/api/auth/register', {
+      name: 'Roster Fixture Guest', email: attendeeEmail, password,
+    }).its('status').should('eq', 201);
+  });
   beforeEach(() => {
     eventTitle = `Organizer roster E2E ${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-    attendeeEmail = `roster-fixture-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.test`;
     cy.get<string>('@csrfToken').then(csrfToken => cy.request({
       method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken },
       body: { title: eventTitle, category: 'Community & Civic', event_type: 'public',
@@ -14,12 +20,9 @@ describe('organizer event roster', () => {
     })).then(({ status, body }) => {
       expect(status).to.eq(201);
       eventId = body.data.id;
-      return cy.request('POST', '/api/auth/register', {
-        name: 'Roster Fixture Guest',
-        email: attendeeEmail,
-        password: 'roster-test-secret-long',
-      }).then(({ status }) => { expect(status).to.eq(201); });
-    }).then(() => cy.request('/api/auth/session')).then(({ body: session }) => {
+      return cy.request('POST', '/api/auth/user-login', { email: attendeeEmail, password });
+    }).then(({ status }) => { expect(status).to.eq(200); return cy.request('/api/auth/session'); })
+      .then(({ body: session }) => {
       return cy.request({
         method: 'POST', url: '/api/attendees/register',
         headers: { 'X-CSRF-Token': session.csrfToken,
