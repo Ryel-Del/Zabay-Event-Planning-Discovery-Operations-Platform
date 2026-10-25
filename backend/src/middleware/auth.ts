@@ -234,22 +234,21 @@ authRouter.post('/firebase-login', limitPublicAuth('firebase-login', 20), async 
   if (!sameOrigin(req)) return res.status(403).json({ success: false, error: 'Request verification failed' });
   const idToken = req.body?.idToken;
   if (typeof idToken !== 'string' || !idToken || idToken.length > 8192) return res.status(400).json({ success: false, error: 'Firebase ID token required' });
+
+  // Identity verification failures are distinct from storage failures.
+  let identity: Awaited<ReturnType<typeof verifyFirebaseIdentity>>;
   try {
-    const identity = await verifyFirebaseIdentity(idToken);
+    identity = await verifyFirebaseIdentity(idToken);
     if (identity.email.length > 255) return res.status(401).json({ success: false, error: 'Invalid Firebase identity' });
-    let result: any;
-    try {
-      result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
-    } catch (queryErr: any) {
-      if (queryErr?.message?.includes('firebase_uid')) {
-        await query('ALTER TABLE users ADD COLUMN IF NOT EXISTS firebase_uid VARCHAR(128)');
-        result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
-      } else {
-        throw queryErr;
-      }
-    }
+  } catch {
+    if (!process.env.FIREBASE_PROJECT_ID) return res.status(503).json({ success: false, error: 'Firebase login unavailable' });
+    return res.status(401).json({ success: false, error: 'Invalid Firebase identity' });
+  }
+
+  try {
+    let result = await query('SELECT id, name, email, role, phone, organization, avatar FROM users WHERE firebase_uid = $1', [identity.uid]);
     if (!result.rows.length) {
-      // Email equality is insufficient to link a Firebase identity to an existing account.
+      // An existing email must never be linked without independent proof of account ownership.
       const existing = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [identity.email]);
       if (existing.rows.length) return res.status(409).json({ success: false, error: 'This email belongs to an existing account. Contact an administrator for account linking.' });
       const userId = `usr-${randomBytes(6).toString('hex')}`;
@@ -265,9 +264,9 @@ authRouter.post('/firebase-login', limitPublicAuth('firebase-login', 20), async 
     res.setHeader('Set-Cookie', `${cookieName}=${id}; ${cookieOptions}`);
     res.json({ success: true, user, data: { user }, csrfToken: csrf });
   } catch (err: any) {
-    console.error('[Firebase Login Error]:', err);
+    console.error('Firebase account database error:', err?.code || 'unknown');
     if (err?.code === '23505') return res.status(409).json({ success: false, error: 'Account already exists' });
-    return res.status(401).json({ success: false, error: 'Invalid Firebase identity', message: err?.message });
+    return res.status(503).json({ success: false, error: 'Account service unavailable. Please try again.' });
   }
 });
 
