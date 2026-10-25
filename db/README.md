@@ -93,5 +93,43 @@ implemented.
 
 Schema initialization creates one `zabay-operator` user for event ownership.
 Operator login uses the server's `OPERATOR_USERNAME` and `OPERATOR_PASSWORD`, not
-this row or the synthetic demonstration users. The API assigns all new events to
-`zabay-operator` regardless of any organizer ID supplied by a browser.
+this row or the synthetic demonstration users. Events created with the operator
+session belong to `zabay-operator`; events created by an authorized organizer
+belong to that organizer's database account.
+
+### Authentication migration
+
+`db/schema.sql` now adds nullable `password_hash`, `password_salt`, and
+`firebase_uid` columns to `users`, plus a unique Firebase UID index. Apply the
+schema to an isolated copy first. For existing environments, take a backup, review
+that copy, and run `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/schema.sql` during
+a maintenance window. The additions preserve existing rows and leave legacy
+passwordless accounts inactive for password login. Do not populate credentials from
+an unverified login attempt. Legacy password activation or Firebase account linking
+requires independently verified ownership and an administrator-controlled process.
+No production migration is performed by this change.
+
+For a legacy account with no password hash, an administrator must first verify the
+person's ownership through an established channel independent of the submitted
+email or password, record the account ID and approval, and use a trusted admin tool
+to collect a new password securely. Generate a random 16-byte hex salt and a
+64-byte `scrypt` hash using the same parameters as `backend/src/middleware/auth.ts`.
+In one database transaction, update that specific account with parameterized SQL:
+
+```sql
+UPDATE users SET password_hash = $1, password_salt = $2
+WHERE id = $3 AND password_hash IS NULL AND password_salt IS NULL
+RETURNING id;
+```
+
+Require exactly one returned row; otherwise roll back and investigate. Never
+derive the password from an unverified login attempt, place it in shell history,
+or overwrite an established hash. The user can then use normal password login.
+
+To link a Firebase account, independently verify account ownership, verify a fresh
+Firebase ID token with Firebase Admin for the configured project and Google provider,
+and use its verified `uid` as the value for `firebase_uid`. In one transaction,
+update only the approved account ID with `WHERE firebase_uid IS NULL`, require one
+returned row, and honor the unique UID index. Matching email alone never authorizes
+linking. Elevated database roles likewise require recorded administrative approval;
+public registration and browser staff invitations cannot assign them.

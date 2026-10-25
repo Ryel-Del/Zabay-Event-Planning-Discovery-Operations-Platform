@@ -76,7 +76,7 @@ describe('attendee registration and check-in', () => {
         expect(state).to.have.property('attendance_count', 0);
       });
     });
-    cy.contains('Close & View My Passes').click();
+    cy.contains('Done & View My Passes').click();
     cy.get('[data-cy="digital-pass"]').should('have.length', 1);
 
     cy.get('[data-cy="browse-events"]').click();
@@ -95,7 +95,7 @@ describe('attendee registration and check-in', () => {
         expect(state).to.include({ id: secondRegistration.id, status: 'confirmed' });
       });
     });
-    cy.contains('Close & View My Passes').click();
+    cy.contains('Done & View My Passes').click();
     cy.get('[data-cy="my-digital-passes"]').click();
     cy.get('[data-cy="digital-pass"]').should('have.length', 2);
     cy.get('[data-cy="digital-pass-code"]').then(($codes) => {
@@ -133,6 +133,7 @@ describe('attendee registration and check-in', () => {
     cy.intercept('POST', '/api/attendees/checkin').as('checkIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();
+    cy.get('[data-cy="qr-scanner"] select').select(eventTitle);
 
     cy.get('[data-cy="manual-pass-code"]').type('E2E-UNKNOWN-PASS');
     cy.get('[data-cy="verify-pass"]').click();
@@ -179,6 +180,7 @@ describe('attendee registration and check-in', () => {
     cy.intercept('POST', '/api/attendees/checkin', { forceNetworkError: true }).as('failedCheckIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();
+    cy.get('[data-cy="qr-scanner"] select').select(eventTitle);
     cy.get('@createdRegistration').then((created: TestRegistration) => {
       cy.get('[data-cy="manual-pass-code"]').type(created.qr_pass_code);
       cy.get('[data-cy="verify-pass"]').click();

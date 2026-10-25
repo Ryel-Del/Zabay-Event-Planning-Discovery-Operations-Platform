@@ -1,6 +1,7 @@
 interface Registration {
   id: string;
   qr_pass_code: string;
+  event_title: string;
 }
 
 describe('camera QR check-in', () => {
@@ -24,7 +25,8 @@ describe('camera QR check-in', () => {
         });
       });
       cy.get('[data-cy="gate-scanner-open"]').click();
-      cy.contains('button', 'Start Webcam Scanner').click();
+      cy.get('[data-cy="qr-scanner"] select').select(registration.event_title);
+      cy.contains('button', 'Start Camera Scanner').click();
       cy.wait('@cameraCheckIn').then(({ request, response }) => {
         expect(request.body.qr_pass_code).to.eq(registration.qr_pass_code);
         expect(response?.statusCode).to.eq(200);
@@ -76,7 +78,7 @@ describe('camera QR check-in', () => {
       });
       cy.spy(win, 'cancelAnimationFrame').as('cancelFrame');
       cy.get('[data-cy="gate-scanner-open"]').click();
-      cy.contains('button', 'Start Webcam Scanner').click();
+      cy.contains('button', 'Start Camera Scanner').click();
       cy.wrap(getUserMedia).should('have.been.calledOnce');
       cy.get('[data-cy="qr-scanner"] video').should(($video) => {
         expect(($video[0] as HTMLVideoElement).readyState).to.eq(4);

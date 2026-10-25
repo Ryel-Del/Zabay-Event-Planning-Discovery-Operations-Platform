@@ -137,6 +137,9 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
 
   const rollbackRegistration = await register();
   assert.equal(rollbackRegistration.status, 201);
+  await pool.query(`CREATE OR REPLACE FUNCTION test_fail_attendance_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.registration_id = '${rollbackRegistration.body.data.id}' THEN RAISE EXCEPTION 'synthetic attendance failure'; END IF; RETURN NEW; END $$`);
+  await pool.query('CREATE TRIGGER test_fail_attendance_insert BEFORE INSERT ON attendance_records FOR EACH ROW EXECUTE FUNCTION test_fail_attendance_insert()');
   const failedAttendanceInsert = await operator.post('/api/attendees/checkin').send({
     qr_pass_code: rollbackRegistration.body.data.qr_pass_code,
     verified_by_id: 'x'.repeat(65),
@@ -148,6 +151,11 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
      WHERE r.id = $1 GROUP BY r.id`, [rollbackRegistration.body.data.id]
   );
   assert.deepEqual(rolledBack.rows, [{ status: 'confirmed', attendance_count: 0 }]);
+  await pool.query('DROP TRIGGER test_fail_attendance_insert ON attendance_records');
+  await pool.query('DROP FUNCTION test_fail_attendance_insert()');
+  const verified = await operator.post('/api/attendees/checkin').send({ qr_pass_code: rollbackRegistration.body.data.qr_pass_code, verified_by_id: 'spoofed-user' });
+  assert.equal(verified.status, 200);
+  assert.equal((await pool.query('SELECT verified_by FROM attendance_records WHERE registration_id = $1', [rollbackRegistration.body.data.id])).rows[0].verified_by, 'zabay-operator');
 
   const taskId = `test-task-${Date.now()}`;
   await pool.query(
@@ -452,6 +460,7 @@ test('readiness reports database failure without infrastructure details', async 
 });
 
 test('verify-key validates developer authorization and rejects invalid keys', async () => {
+  process.env.DEV_ACCESS_KEY = 'isolated-local-demo-key';
   const denied = await request(app).post('/api/auth/verify-key').send({ devKey: 'wrong-key' });
   assert.equal(denied.status, 401);
   assert.equal(denied.body.success, false);
@@ -459,8 +468,12 @@ test('verify-key validates developer authorization and rejects invalid keys', as
   const missing = await request(app).post('/api/auth/verify-key').send({});
   assert.equal(missing.status, 400);
 
-  const allowed = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.OPERATOR_PASSWORD });
+  const operatorPassword = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.OPERATOR_PASSWORD });
+  assert.equal(operatorPassword.status, 401);
+  const allowed = await request(app).post('/api/auth/verify-key').send({ devKey: process.env.DEV_ACCESS_KEY });
   assert.equal(allowed.status, 200);
   assert.equal(allowed.body.success, true);
-  assert.ok(allowed.body.csrfToken);
+  assert.equal(allowed.body.csrfToken, undefined);
+  assert.equal(allowed.headers['set-cookie'], undefined);
+  delete process.env.DEV_ACCESS_KEY;
 });

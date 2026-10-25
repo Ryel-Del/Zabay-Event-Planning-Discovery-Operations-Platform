@@ -33,7 +33,7 @@ export default defineConfig({
     setupNodeEvents(on) {
       const pool = new Pool({ connectionString: assertTestDatabase(testDatabaseUrl), max: 2 });
       const videoPath = join(tmpdir(), `zabay-camera-${process.pid}.y4m`);
-      let cameraRegistration: { id: string; qr_pass_code: string } | null = null;
+      let cameraRegistration: { id: string; qr_pass_code: string; event_title: string } | null = null;
 
       on('before:spec', async (spec) => {
         if (!spec.relative.endsWith('camera.cy.ts')) return;
@@ -63,13 +63,14 @@ export default defineConfig({
           max_capacity: 100,
           ticket_price: 10,
         });
-        cameraRegistration = await post('/api/attendees/register', {
+        const registration = await post('/api/attendees/register', {
           event_id: event.id,
           attendee_name: 'Cypress Camera Attendee',
           attendee_email: `camera-${randomUUID()}@example.test`,
           ticket_type: 'General Admission',
         });
-        writeQrVideo(videoPath, cameraRegistration!.qr_pass_code);
+        cameraRegistration = { ...registration, event_title: event.title };
+        writeQrVideo(videoPath, cameraRegistration.qr_pass_code);
       });
 
       on('before:browser:launch', (browser, launchOptions) => {

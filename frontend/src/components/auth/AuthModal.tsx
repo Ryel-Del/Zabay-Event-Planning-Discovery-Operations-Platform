@@ -5,7 +5,6 @@ import {
   Mail,
   User as UserIcon,
   Building,
-  Shield,
   CheckCircle2,
   ArrowRight,
   Eye,
@@ -14,9 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../../services/api';
 import { useApp } from '../../context/AppContext';
-import { mockUsers } from '../../mock/mockData';
 import type { User, UserRole } from '../../types';
-import { GoogleSignInModal } from './GoogleSignInModal';
 import { isFirebaseConfigured, signInWithGooglePopup } from '../../services/firebase';
 
 interface AuthModalProps {
@@ -32,48 +29,40 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('attendee');
   const [organization, setOrganization] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
   const handleGoogleSignIn = async () => {
     setErrorMessage(null);
     if (!isFirebaseConfigured) {
-      // Open informative dialog with instructions and instant test simulation
-      setIsGoogleModalOpen(true);
+      setErrorMessage('Google sign-in is not configured.');
       return;
     }
 
     try {
       setIsSubmitting(true);
       const credential = await signInWithGooglePopup();
-      const gUser = credential.user;
+      const idToken = await credential.user.getIdToken();
+      const response = await api.auth.firebaseLogin(idToken);
+      if (!response.success || !response.data?.user) throw new Error(response.error || 'Google sign-in was not verified by Zabay.');
+      const gUser = response.data.user;
       const userObj: User = {
-        id: `usr-g-${gUser.uid.slice(0, 10)}`,
-        name: gUser.displayName || gUser.email?.split('@')[0] || 'Google User',
-        email: gUser.email || '',
-        role: 'attendee',
-        roles: ['attendee', 'organizer', 'venue_manager', 'staff'],
-        avatar:
-          gUser.photoURL ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(gUser.displayName || 'User')}&background=3E6CB5&color=fff&bold=true`,
-        organization: 'Google Account',
-        location: 'Bohol, Philippines',
-        bio: `Authenticated with Google Account (${gUser.email})`,
+        id: gUser.id, name: gUser.name, email: gUser.email, role: gUser.role,
+        roles: [gUser.role], avatar: gUser.avatar,
+        organization: gUser.organization || '', location: '', bio: '',
       };
 
       setCurrentUser(userObj);
-      setCurrentRole('attendee');
+      setCurrentRole(userObj.role);
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-user', JSON.stringify(userObj));
-        localStorage.setItem('zabay-role', 'attendee');
+        localStorage.setItem('zabay-role', userObj.role);
       }
       setSuccessMessage(`Welcome back, ${userObj.name}! Signed in via Google.`);
       setTimeout(() => {
@@ -130,7 +119,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           name: name.trim(),
           email: trimmedEmail,
           password: trimmedPass,
-          role: selectedRole,
           organization: organization.trim(),
         });
 
@@ -141,7 +129,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             name: u.name,
             email: u.email,
             role: u.role as UserRole,
-            roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
+            roles: [u.role as UserRole],
             avatar: u.avatar,
             organization: u.organization || 'Zabay Platform User',
             location: u.location || 'Tagbilaran City, Bohol',
@@ -160,27 +148,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             onClose();
           }, 700);
         } else {
-          // Fallback if backend offline: create local session with hash
-          const userObj: User = {
-            id: `usr-${Date.now().toString(36)}`,
-            name: name.trim(),
-            email: trimmedEmail,
-            role: selectedRole,
-            roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name.trim())}&background=3E6CB5&color=fff&bold=true`,
-            organization: organization.trim() || 'Zabay Platform User',
-            location: 'Tagbilaran City, Bohol',
-            bio: 'Registered participant on Zabay Event Platform.',
-          };
-          setCurrentUser(userObj);
-          setCurrentRole(userObj.role);
-          localStorage.setItem('zabay-user', JSON.stringify(userObj));
-          localStorage.setItem('zabay-role', userObj.role);
-          setSuccessMessage(`Account registered successfully! Welcome, ${userObj.name}.`);
-          setTimeout(() => {
-            setSuccessMessage(null);
-            onClose();
-          }, 700);
+          setErrorMessage(res.error || 'Registration failed.');
         }
       } catch (err: any) {
         setErrorMessage(err?.message || 'Registration failed. Please try again.');
@@ -203,7 +171,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           name: u.name,
           email: u.email,
           role: u.role as UserRole,
-          roles: ['organizer', 'venue_manager', 'staff', 'attendee'],
+          roles: [u.role as UserRole],
           avatar: u.avatar,
           organization: u.organization || 'Zabay Platform User',
           location: u.location || 'Tagbilaran City, Bohol',
@@ -222,21 +190,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           onClose();
         }, 700);
       } else {
-        // Fallback for mock demo accounts
-        const matched = mockUsers.find((u) => u.email.toLowerCase() === trimmedEmail);
-        if (matched && (trimmedPass === 'Zabay2026!' || trimmedPass.length >= 6)) {
-          setCurrentUser(matched);
-          setCurrentRole(matched.role);
-          localStorage.setItem('zabay-user', JSON.stringify(matched));
-          localStorage.setItem('zabay-role', matched.role);
-          setSuccessMessage(`Welcome back, ${matched.name}!`);
-          setTimeout(() => {
-            setSuccessMessage(null);
-            onClose();
-          }, 700);
-        } else {
-          setErrorMessage(res.error || 'Invalid email or password. Please try again.');
-        }
+        setErrorMessage(res.error || 'Invalid email or password.');
       }
     } catch {
       setErrorMessage('Authentication request failed. Please check your network or try again.');
@@ -444,23 +398,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-slate-400" />
-                  Primary Role
-                </label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                  className="w-full bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5]"
-                >
-                  <option value="organizer">Event Organizer</option>
-                  <option value="venue_manager">Venue Manager</option>
-                  <option value="attendee">Attendee / Delegate</option>
-                  <option value="staff">Operations Staff</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Building className="w-3.5 h-3.5 text-slate-400" />
                   Organization / School
                 </label>
@@ -508,17 +445,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </form>
       </div>
 
-      <GoogleSignInModal
-        isOpen={isGoogleModalOpen}
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={(user) => {
-          setSuccessMessage(`Signed in as ${user.name} with Google!`);
-          setTimeout(() => {
-            setSuccessMessage(null);
-            onClose();
-          }, 600);
-        }}
-      />
+
     </div>
   );
 };

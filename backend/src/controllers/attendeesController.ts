@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Request, Response, NextFunction } from 'express';
 import { PoolClient } from 'pg';
 import { pool, query } from '../config/db';
+import { trustedUserId } from '../middleware/auth';
 
 export async function registerForEvent(req: Request, res: Response, next: NextFunction) {
   try {
@@ -46,12 +47,9 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
 }
 
 export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
-  const { qr_pass_code, verified_by_id, event_id } = req.body || {};
+  const { qr_pass_code, event_id } = req.body || {};
   if (typeof qr_pass_code !== 'string' || !qr_pass_code.trim() || qr_pass_code.trim().length > 64) {
     return res.status(400).json({ success: false, error: 'qr_pass_code is required' });
-  }
-  if (verified_by_id !== undefined && (typeof verified_by_id !== 'string' || !verified_by_id.trim())) {
-    return res.status(400).json({ success: false, error: 'verified_by_id must be a non-empty string' });
   }
   if (event_id !== undefined && (typeof event_id !== 'string' || !event_id.trim())) {
     return res.status(400).json({ success: false, error: 'event_id must be a non-empty string' });
@@ -71,6 +69,14 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
     }
 
     const registration = regResult.rows[0];
+    const actorId = trustedUserId(req);
+    if (actorId) {
+      const ownership = await client.query('SELECT organizer_id FROM events WHERE id = $1', [registration.event_id]);
+      if (ownership.rows[0]?.organizer_id !== actorId) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ success: false, error: 'Event owner access required' });
+      }
+    }
 
     // Enforce Event Match: Reject ticket if scanned for the wrong event
     if (event_id && registration.event_id !== event_id.trim()) {
@@ -104,7 +110,7 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
        (id, event_id, registration_id, attendee_name, check_in_time, verified_by)
        VALUES ($1, $2, $3, $4, NOW(), $5)`,
       [`att-log-${randomUUID()}`, registration.event_id, registration.id,
-        registration.attendee_name, verified_by_id?.trim() || 'operator']
+        registration.attendee_name, actorId || 'zabay-operator']
     );
     await client.query('COMMIT');
     return res.json({

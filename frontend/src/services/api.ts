@@ -152,6 +152,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       };
     }
 
+    if (data?.csrfToken) csrfToken = data.csrfToken;
     return data as ApiResponse<T>;
   } catch {
     return {
@@ -167,7 +168,7 @@ export const api = {
     session: async () => {
       const response = await fetch('/api/auth/session');
       if (!response.ok) throw new Error('Could not check operator session');
-      const data = await response.json() as { authenticated: boolean; csrfToken?: string };
+      const data = await response.json() as { authenticated: boolean; operator: boolean; csrfToken?: string };
       csrfToken = data.authenticated ? data.csrfToken : undefined;
       return data;
     },
@@ -215,6 +216,10 @@ export const api = {
       request<{ user: any; csrfToken?: string }>('/api/auth/user-login', {
         method: 'POST',
         body: JSON.stringify(payload),
+      }),
+    firebaseLogin: (idToken: string) =>
+      request<{ user: any; csrfToken?: string }>('/api/auth/firebase-login', {
+        method: 'POST', body: JSON.stringify({ idToken }),
       }),
     getMe: () =>
       request<{ user: any; csrfToken?: string }>('/api/auth/me'),

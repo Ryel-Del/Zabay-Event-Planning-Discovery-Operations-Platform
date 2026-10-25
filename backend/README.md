@@ -74,14 +74,43 @@ runs the API checks. Operator authentication is implemented; payments and the pr
 ### Venues & Multi-Hall Booking
 - `GET /api/venues` — Retrieve venue and hall records
 - `GET /api/venues/:id` — Venue details, halls, and bookings
-- `POST /api/venues/:id/book` — Operator: reserve a venue or specific hall (validates references and relies on PostgreSQL booking constraints)
+- `POST /api/venues/:id/book` — Operator or owning organizer: reserve a venue or specific hall
 
 ### Operations & Tasks
-- `GET /api/tasks` — Operator tasks for run-of-show
-- `PATCH /api/tasks/:id/status` — Operator: move task across Kanban states
+- `GET /api/tasks` — Operator tasks or an organizer's own event tasks
+- `PATCH /api/tasks/:id/status` — Operator or owning organizer: move task across Kanban states
 
 ### Attendees & Check-In
 - `POST /api/attendees/register` — Generate digital pass & registration
-- `POST /api/attendees/checkin` — Operator: validate QR pass & prevent duplicate turnstile entries
+- `POST /api/attendees/checkin` — Operator or owning organizer: validate QR pass & prevent duplicate entries
 
 See [deployment setup](../DEPLOYMENT.md) for production variables, TLS, and initialization.
+
+### Authentication setup (security boundary)
+
+Set `FIREBASE_PROJECT_ID` on the Express backend to the Firebase project used by the
+frontend's `VITE_FIREBASE_PROJECT_ID`. The Firebase Admin SDK verifies ID tokens
+against this project; Google sign-in is unavailable when the backend variable is
+absent. Keep Firebase Admin credentials, if required by the hosting environment,
+server-side only. Do not put service account JSON or private keys in frontend
+variables or the repository. The browser supplies only a Firebase ID token to
+`POST /api/auth/firebase-login`; the backend creates or resumes an attendee session
+bound to `users.firebase_uid`. An existing email account is never linked by email
+alone. Account linking and password activation for legacy passwordless accounts
+require an administrator-controlled, independently verified process. No public
+endpoint sets a legacy password or elevates a role.
+
+`OPERATOR_USERNAME` and `OPERATOR_PASSWORD` retain the existing deployment operator
+login. `DEV_ACCESS_KEY` is optional and works only outside production; it authorizes
+local demo UI state and does not create an operator session. If the frontend and
+backend use distinct origins, set `CLIENT_URL` on the backend to the exact frontend
+origin for origin checks. Public registration always creates an attendee account.
+Organizers and venue managers must be assigned through a trusted administrative
+process before their server privileges are available. Browser staff invitations
+remain local workflow data and do not alter database roles.
+Staff sessions cannot perform server check-in or task mutations until an event
+assignment is represented in trusted backend records. Public auth endpoints use
+per-IP, per-route 15-minute attempt limits (10 password or registration attempts,
+20 Firebase token exchanges). Deployments with multiple backend processes need a
+shared limiter before relying on these process-local limits for fleet-wide abuse
+control.
