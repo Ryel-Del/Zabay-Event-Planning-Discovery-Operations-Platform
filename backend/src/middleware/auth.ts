@@ -314,6 +314,17 @@ authRouter.get('/me', async (req, res) => {
   }
 });
 
+authRouter.post('/switch-role', async (req, res) => {
+  const found = session(req);
+  if (!found || !found.userId) return res.status(401).json({ success: false, error: 'Login required' });
+  const { role } = req.body || {};
+  if (!['organizer', 'venue_manager', 'staff', 'attendee'].includes(role)) {
+    return res.status(400).json({ success: false, error: 'Invalid role' });
+  }
+  await query('UPDATE users SET role = $1 WHERE id = $2', [role, found.userId]);
+  res.json({ success: true, role });
+});
+
 /**
  * 6. Search Registered Users (For Event Staff Recruitment & Invitations)
  */

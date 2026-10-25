@@ -62,6 +62,54 @@ export async function getMyRegistrations(req: Request, res: Response, next: Next
   } catch (err) { next(err); }
 }
 
+export async function getRegistrations(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { event_id, email, attendee_id } = req.query;
+    const actorId = trustedUserId(req) || (typeof attendee_id === 'string' && attendee_id.trim() ? attendee_id.trim() : null);
+
+    let sql: string;
+    let params: any[] = [];
+
+    if (typeof event_id === 'string' && event_id.trim()) {
+      sql = `SELECT r.*, e.title as event_title
+             FROM registrations r
+             LEFT JOIN events e ON e.id = r.event_id
+             WHERE r.event_id = $1
+             ORDER BY r.registered_at DESC`;
+      params = [event_id.trim()];
+    } else if (typeof email === 'string' && email.trim()) {
+      sql = `SELECT r.*, e.title as event_title
+             FROM registrations r
+             LEFT JOIN events e ON e.id = r.event_id
+             WHERE LOWER(r.attendee_email) = LOWER($1)
+             ORDER BY r.registered_at DESC`;
+      params = [email.trim()];
+    } else if (actorId) {
+      sql = `SELECT r.*, e.title as event_title
+             FROM registrations r
+             LEFT JOIN events e ON e.id = r.event_id
+             WHERE r.attendee_id = $1
+                OR LOWER(r.attendee_email) = (SELECT LOWER(email) FROM users WHERE id = $1 LIMIT 1)
+                OR e.organizer_id = $1
+             ORDER BY r.registered_at DESC`;
+      params = [actorId];
+    } else {
+      sql = `SELECT r.*, e.title as event_title
+             FROM registrations r
+             LEFT JOIN events e ON e.id = r.event_id
+             ORDER BY r.registered_at DESC LIMIT 100`;
+    }
+
+    const result = await query(sql, params);
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
   const { qr_pass_code, event_id } = req.body || {};
   if (typeof qr_pass_code !== 'string' || !qr_pass_code.trim() || qr_pass_code.trim().length > 64) {

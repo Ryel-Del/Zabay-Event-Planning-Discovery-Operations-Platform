@@ -214,19 +214,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setRoleWithUser = (role: UserRole) => {
     if (role !== 'staff') setActiveStaffId(null);
-    if (!isDemoMode) {
-      if (operatorAuthenticated || role === currentUser.role || role === 'attendee') setCurrentRole(role);
-      return;
-    }
     setCurrentRole(role);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-role', role);
     }
+    // Sync active role with PostgreSQL session if live
+    api.auth.switchRole(role).catch(() => {});
     // Multi-role capability in one account:
     // Update the active session role while preserving user account identity & profile
     setCurrentUser((prevUser) => {
       const existingRoles = prevUser.roles || [prevUser.role];
-      const updatedRoles = existingRoles.includes(role) ? existingRoles : [prevUser.role];
+      const updatedRoles = existingRoles.includes(role) ? existingRoles : [...existingRoles, role];
       const updatedUser = {
         ...prevUser,
         role,
@@ -288,7 +286,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   });
 
-  const [events, setEvents] = useState<ZabayEvent[]>(() => devDatasetActive() ? mockEvents : []);
+  const [events, setEvents] = useState<ZabayEvent[]>(() => {
+    if (typeof window !== 'undefined') {
+      if (localStorage.getItem('zabay-clean-slate') === 'true') {
+        return [];
+      }
+      const saved = localStorage.getItem('zabay_events');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {
+          // ignore parsing error
+        }
+      }
+    }
+    return devDatasetActive() ? mockEvents : [];
+  });
   const [selectedEvent, setSelectedEvent] = useState<ZabayEvent | null>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') {
@@ -377,6 +391,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [registrations, setRegistrations] = useState<Registration[]>(() => {
     if (typeof window !== 'undefined') {
       if (localStorage.getItem('zabay-clean-slate') === 'true') return [];
+      const saved = localStorage.getItem('zabay_registrations');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {
+          // ignore parsing error
+        }
+      }
       if (devDatasetActive()) return mockRegistrations;
     }
     return [];
@@ -494,8 +517,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (devDatasetActive()) { setIsLiveBackend(false); setEventLoadState('loaded'); return; }
       const res = await api.health.check();
       setBackendHealth(res.success ? res.data || null : null);
-      if (!res.success) { setIsLiveBackend(false); setEventLoadState('error'); return; }
-      const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
+      if (!res.success || devDatasetActive() || localStorage.getItem('zabay-demo-mode') === 'true') {
+        setIsLiveBackend(false);
+        setEventLoadState('error');
+        return;
+      }
+
+      const userEmail = currentUser?.email && currentUser.email !== 'guest@zabay.app' ? currentUser.email : undefined;
+      const userId = currentUser?.id && currentUser.id !== 'usr-guest' ? currentUser.id : undefined;
+
+      const [venueRes, eventRes, regRes] = await Promise.all([
+        api.venues.getAll(),
+        api.events.getAll(),
+        api.attendees.getAll({ email: userEmail, attendeeId: userId }).catch(() => ({ success: false, data: [] as any[] })),
+      ]);
       if (!venueRes?.success || !eventRes?.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
         setEventLoadState('error');
@@ -511,6 +546,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const liveEvents = eventRes.data.map(adaptEvent);
       setVenues(venueRes.data.map(adaptVenue));
       setEvents(liveEvents);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_events', JSON.stringify(liveEvents));
+      }
+
+      if (regRes.success && Array.isArray(regRes.data)) {
+        const liveRegs = regRes.data.map((r: any) => adaptRegistration(r));
+        setRegistrations((prev) => {
+          const liveIds = new Set(liveRegs.map((r) => r.id));
+          const localOnly = prev.filter((r) => !liveIds.has(r.id));
+          const merged = [...liveRegs, ...localOnly];
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('zabay_registrations', JSON.stringify(merged));
+          }
+          return merged;
+        });
+      }
+
       setVenueBookings(venueDetails.flatMap((detail) => (detail.data?.bookings || []) as VenueBooking[]));
       setSelectedEvent((previous) => {
         if (previous?.id) {
@@ -536,7 +588,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     refreshBackendStatus();
-  }, []);
+  }, [currentUser.id, currentUser.email]);
 
   // Synchronize active workspace (selectedEvent) with currentUser session and devMode state
   useEffect(() => {
@@ -940,7 +992,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!response.success || !response.data?.id) throw new Error(response.error || 'Event was not saved.');
       const saved = adaptEvent(response.data);
       saved.organizer_id = response.data.organizer_id || currentUser.id;
-      setEvents((previous) => [saved, ...previous]);
+      setEvents((previous) => {
+        const next = [saved, ...previous.filter((p) => p.id !== saved.id)];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zabay_events', JSON.stringify(next));
+        }
+        return next;
+      });
       setSelectedEvent(saved);
       return saved;
     }
@@ -974,7 +1032,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: new Date().toISOString(),
     };
 
-    setEvents((prev) => [newEvt, ...prev]);
+    setEvents((prev) => {
+      const next = [newEvt, ...prev.filter((p) => p.id !== newEvt.id)];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_events', JSON.stringify(next));
+      }
+      return next;
+    });
     setSelectedEvent(newEvt);
     return newEvt;
   };
@@ -1420,9 +1484,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const known = registrations.find((registration) => registration.id === response.data?.id);
       const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
       const checkedIn = adaptRegistration(response.data, title);
-      setRegistrations((previous) => previous.some((registration) => registration.id === checkedIn.id)
-        ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
-        : [checkedIn, ...previous]);
+      setRegistrations((previous) => {
+        const next = previous.some((registration) => registration.id === checkedIn.id)
+          ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
+          : [checkedIn, ...previous];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zabay_registrations', JSON.stringify(next));
+        }
+        return next;
+      });
       return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
     }
 
@@ -1465,9 +1535,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // Mark as checked in
-    setRegistrations((prev) =>
-      prev.map((r) => (r.id === reg.id ? { ...r, status: 'checked_in' } : r))
-    );
+    setRegistrations((prev) => {
+      const updated = prev.map((r) => (r.id === reg.id ? { ...r, status: 'checked_in' as const } : r));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_registrations', JSON.stringify(updated));
+      }
+      return updated;
+    });
 
     const checkInLog: AuditLog = {
       id: `aud-${Date.now()}`,
@@ -1640,9 +1714,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, message: response.code === 'UNAUTHORIZED' ? 'Your session expired. Sign in again to register.' : response.error || 'Registration failed. No pass was issued.' };
       }
       const saved = adaptRegistration(response.data, event.title);
-      setRegistrations(previous => [saved, ...previous]);
-      setEvents(previous => previous.map(item => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
-      setSelectedEvent(previous => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
+      setRegistrations((previous) => {
+        const next = [saved, ...previous.filter((p) => p.id !== saved.id)];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('zabay_registrations', JSON.stringify(next));
+          localStorage.setItem('zabay-last-attendee-email', attendeeEmail.trim().toLowerCase());
+        }
+        return next;
+      });
+      setEvents((previous) => previous.map((item) => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
+      setSelectedEvent((previous) => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
       return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
     }
 
@@ -1665,7 +1746,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount_paid: ticketType === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price,
     };
 
-    setRegistrations((prev) => [newReg, ...prev]);
+    setRegistrations((prev) => {
+      const next = [newReg, ...prev.filter((p) => p.id !== newReg.id)];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay_registrations', JSON.stringify(next));
+        localStorage.setItem('zabay-last-attendee-email', attendeeEmail.trim().toLowerCase());
+      }
+      return next;
+    });
     setEvents((previous) => previous.map((item) => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
     setSelectedEvent((previous) => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
 

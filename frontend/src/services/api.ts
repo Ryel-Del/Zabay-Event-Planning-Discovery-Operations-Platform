@@ -31,10 +31,10 @@ export type DbRegistration = Omit<Registration, 'event_title' | 'attendee_id' | 
   amount_paid: string | number;
 };
 
-export function adaptRegistration(row: DbRegistration, eventTitle: string): Registration {
+export function adaptRegistration(row: any, eventTitle?: string): Registration {
   return {
     ...row,
-    event_title: eventTitle,
+    event_title: row.event_title || eventTitle || 'Event',
     attendee_id: row.attendee_id || '',
     amount_paid: asNumber(row.amount_paid),
   };
@@ -225,6 +225,11 @@ export const api = {
       }),
     getMe: () =>
       request<{ user: any; csrfToken?: string }>('/api/auth/me'),
+    switchRole: (role: string) =>
+      request<{ role: string }>('/api/auth/switch-role', {
+        method: 'POST',
+        body: JSON.stringify({ role }),
+      }),
     searchUsers: (q?: string) =>
       request<{ users: any[] }>(`/api/auth/search-users${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   },
@@ -286,6 +291,19 @@ export const api = {
   // Attendee & Ticket Operations
   attendees: {
     myRegistrations: () => request<(DbRegistration & { event_title: string })[]>('/api/attendees/registrations/me'),
+    getAll: (params?: string | { eventId?: string; email?: string; attendeeId?: string }) => {
+      let queryStr = '';
+      if (typeof params === 'string') {
+        queryStr = `?event_id=${encodeURIComponent(params)}`;
+      } else if (params) {
+        const parts: string[] = [];
+        if (params.eventId) parts.push(`event_id=${encodeURIComponent(params.eventId)}`);
+        if (params.email) parts.push(`email=${encodeURIComponent(params.email)}`);
+        if (params.attendeeId) parts.push(`attendee_id=${encodeURIComponent(params.attendeeId)}`);
+        if (parts.length > 0) queryStr = `?${parts.join('&')}`;
+      }
+      return request<DbRegistration[]>(`/api/attendees${queryStr}`);
+    },
     register: (payload: AttendeeRegistrationRequest) =>
       request<DbRegistration>(`/api/attendees/register`, {
         method: 'POST',
