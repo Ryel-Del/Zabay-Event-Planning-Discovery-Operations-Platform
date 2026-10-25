@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Request, Response, NextFunction } from 'express';
 import { PoolClient } from 'pg';
 import { pool, query } from '../config/db';
-import { authenticatedUserId, trustedUserId } from '../middleware/auth';
+import { trustedUserId } from '../middleware/auth';
 
 export async function registerForEvent(req: Request, res: Response, next: NextFunction) {
   try {
@@ -24,13 +24,12 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
 
     const result = await query(
       `INSERT INTO registrations
-       (id, event_id, attendee_id, attendee_name, attendee_email, status, ticket_type, qr_pass_code, amount_paid)
-       VALUES ($1, $2, $3, $4, $5, 'confirmed', $6, $7, 0)
+       (id, event_id, attendee_name, attendee_email, status, ticket_type, qr_pass_code, amount_paid)
+       VALUES ($1, $2, $3, $4, 'confirmed', $5, $6, 0)
        RETURNING *`,
       [
         `reg-${randomUUID()}`,
         event_id.trim(),
-        req.body?.registration_mode === 'guest' ? null : authenticatedUserId(req),
         attendee_name.trim(),
         attendee_email.trim().toLowerCase(),
         ticket_type.trim(),
@@ -45,18 +44,6 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
   } catch (err) {
     next(err);
   }
-}
-
-export async function getMyRegistrations(req: Request, res: Response, next: NextFunction) {
-  try {
-    const result = await query(
-      `SELECT r.*, e.title AS event_title
-       FROM registrations r JOIN events e ON e.id = r.event_id
-       WHERE r.attendee_id = $1 ORDER BY r.registered_at DESC, r.id DESC`,
-      [authenticatedUserId(req)]
-    );
-    res.json({ success: true, data: result.rows });
-  } catch (err) { next(err); }
 }
 
 export async function checkInAttendee(req: Request, res: Response, next: NextFunction) {
