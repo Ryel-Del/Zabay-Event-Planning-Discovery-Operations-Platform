@@ -37,10 +37,33 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isMobileDrawer,
   onCloseMobile,
 }) => {
-  const { currentRole, setCurrentRole, tasks, registrations, personnel } = useApp();
+  const { currentRole, setCurrentRole, tasks, registrations, personnel, selectedEvent } = useApp();
 
-  const conflictCount = tasks.filter((t) => t.has_conflict).length;
-  const pendingCheckIn = registrations.filter((r) => r.status === 'confirmed').length;
+  // Scope counts strictly to the active selected event:
+  const activeEventTasks = selectedEvent
+    ? tasks.filter((t) => t.event_id === selectedEvent.id)
+    : [];
+
+  const activeEventRegistrations = selectedEvent
+    ? registrations.filter((r) => r.event_id === selectedEvent.id)
+    : [];
+
+  const conflictCount = activeEventTasks.filter((t) => t.has_conflict).length;
+  const pendingCheckIn = activeEventRegistrations.filter((r) => r.status === 'confirmed').length;
+
+  // Active crew members assigned to tasks in this event or registered for this event
+  const activeCrewCount = selectedEvent
+    ? personnel.filter((p) => {
+        if (p.event_id === selectedEvent.id) return true;
+        return activeEventTasks.some((t) =>
+          t.personnel_assignments?.some(
+            (a) =>
+              a.personnel_id === p.id ||
+              a.personnel_name.toLowerCase() === p.name.toLowerCase()
+          )
+        );
+      }).length
+    : 0;
 
   const organizerNav = [
     {
@@ -53,7 +76,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       id: 'kanban',
       label: 'Tasks & Milestones',
       icon: <CheckSquare className="w-4 h-4" />,
-      badge: `${tasks.length}`,
+      badge: activeEventTasks.length > 0 ? `${activeEventTasks.length}` : null,
       badgeColor: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]',
     },
     {
@@ -66,13 +89,13 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       id: 'venues',
       label: 'Venues & Halls',
       icon: <Building2 className="w-4 h-4" />,
-      badge: 'Match',
+      badge: selectedEvent?.venue_id ? 'Booked' : 'Match',
     },
     {
       id: 'personnel',
       label: 'Staff & Team Roster',
       icon: <Users className="w-4 h-4" />,
-      badge: `${personnel.length} crew`,
+      badge: activeCrewCount > 0 ? `${activeCrewCount} crew` : null,
       badgeColor: 'bg-[#EBF3FC] text-[#244A85] dark:bg-[#1E293B] dark:text-[#8BB0E8]',
     },
     {
@@ -92,7 +115,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       id: 'attendees',
       label: 'Guest List & Check-In',
       icon: <UserCheck className="w-4 h-4" />,
-      badge: `${pendingCheckIn} active`,
+      badge: pendingCheckIn > 0 ? `${pendingCheckIn} active` : null,
+      badgeColor: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]',
     },
     {
       id: 'analytics',

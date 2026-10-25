@@ -29,9 +29,10 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onOpenProfile,
   onOpenAuth,
 }) => {
-  const { currentRole, setCurrentRole, tasks, currentUser, isDevModeUnlocked } = useApp();
+  const { currentRole, setCurrentRole, tasks, currentUser, isDevModeUnlocked, selectedEvent } = useApp();
 
-  const conflictCount = tasks.filter((t) => t.has_conflict).length;
+  const activeTasks = selectedEvent ? tasks.filter((t) => t.event_id === selectedEvent.id) : [];
+  const conflictCount = activeTasks.filter((t) => t.has_conflict).length;
 
   return (
     <nav
