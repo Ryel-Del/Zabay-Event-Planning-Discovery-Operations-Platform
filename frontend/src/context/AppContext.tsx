@@ -189,19 +189,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return 'attendee';
   });
 
-  const [activeStaffId, setActiveStaffId] = useState<string | null>('per-3');
+  const [activeStaffId, setActiveStaffId] = useState<string | null>(null);
 
   const previewStaffPortal = (staffId?: string) => {
-    const targetStaffId = staffId || activeStaffId || 'per-3';
+    const targetStaffId = staffId || 'per-3';
     setActiveStaffId(targetStaffId);
     setRoleWithUser('staff');
   };
 
   const exitStaffPreview = () => {
+    setActiveStaffId(null);
     setRoleWithUser('organizer');
   };
 
   const setRoleWithUser = (role: UserRole) => {
+    if (role !== 'staff') {
+      setActiveStaffId(null);
+    }
     setCurrentRole(role);
     if (typeof window !== 'undefined') {
       localStorage.setItem('zabay-role', role);

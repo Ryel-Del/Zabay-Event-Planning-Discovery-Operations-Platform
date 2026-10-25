@@ -71,6 +71,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
     unreadNotificationCount,
     dismissNotification,
     exitStaffPreview,
+    activeStaffId,
   } = useApp();
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -355,8 +356,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </button>
         )}
 
-        {/* Exit Staff Preview CTA (When viewing Staff Shift Portal) */}
-        {currentRole === 'staff' && (
+        {/* Exit Staff Preview CTA (When viewing Staff Shift Portal in preview mode) */}
+        {currentRole === 'staff' && activeStaffId && (
           <button
             onClick={exitStaffPreview}
             className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
