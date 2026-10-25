@@ -46,4 +46,36 @@ describe('application startup', () => {
     cy.get('[data-cy="event-card"]').should('not.exist');
     cy.contains('Sample Mode').should('not.exist');
   });
+
+  it('shows an event API failure and reloads real events when retried', () => {
+    const title = `Retry event ${Date.now()}`;
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({ method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken }, body: {
+      title, category: 'Community & Civic', event_type: 'public', is_private: false,
+      start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100,
+    } }).its('status').should('eq', 201));
+    let failing = true;
+    cy.intercept('GET', '/api/events', req => {
+      if (failing) req.reply({ statusCode: 503, body: { success: false, error: 'Unavailable' } });
+      else req.continue();
+    }).as('eventsRequest');
+    cy.visit('/');
+    cy.wait('@eventsRequest');
+    cy.get('[data-cy="attendee-mode"]').click();
+    cy.get('[data-cy="event-load-error"]').should('be.visible');
+    cy.get('[data-cy="event-card"]').should('not.exist');
+    cy.then(() => { failing = false; });
+    cy.contains('button', 'Retry').click();
+    cy.get('[data-cy="event-load-error"]').should('not.exist');
+    cy.get('[data-cy="event-card"]').should('contain.text', title);
+  });
+
+  it('shows a genuine empty state without production sample events', () => {
+    cy.intercept('GET', '/api/events', { statusCode: 200, body: { success: true, data: [] } }).as('emptyEvents');
+    cy.visit('/');
+    cy.wait('@emptyEvents');
+    cy.get('[data-cy="attendee-mode"]').click();
+    cy.contains('No public events are scheduled right now.').should('be.visible');
+    cy.contains('Load Bohol Sample Events').should('not.exist');
+    cy.get('[data-cy="event-load-error"]').should('not.exist');
+  });
 });

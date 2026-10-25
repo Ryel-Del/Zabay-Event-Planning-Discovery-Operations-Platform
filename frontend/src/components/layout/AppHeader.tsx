@@ -434,7 +434,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bell className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Live Notifications</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">Local Activity</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-mono">
                   {notifications.length} total
@@ -444,7 +444,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
                 {notifications.length === 0 ? (
                   <div className="p-6 text-center text-xs text-slate-400">
-                    No active notifications
+                    No local activity
                   </div>
                 ) : (
                   notifications.map((notif) => (

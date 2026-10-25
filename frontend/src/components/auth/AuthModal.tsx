@@ -19,9 +19,10 @@ import { isFirebaseConfigured, signInWithGooglePopup } from '../../services/fire
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  intent?: string;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, intent }) => {
   const { setCurrentUser, setCurrentRole } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
@@ -263,6 +264,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+          {intent && <p role="status" data-cy="registration-signin-prompt" className="rounded-xl bg-blue-50 p-3 text-blue-900 dark:bg-blue-950/30 dark:text-blue-200">{intent}</p>}
           {/* Google SSO Login Action */}
           <div className="space-y-3 pb-1">
             <button

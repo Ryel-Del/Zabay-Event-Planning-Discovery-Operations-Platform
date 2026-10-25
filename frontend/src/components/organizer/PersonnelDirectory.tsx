@@ -176,7 +176,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       ? Math.round(personnel.reduce((acc, p) => acc + p.hourly_rate, 0) / totalCrew)
       : 0;
 
-  // Handle adding personnel & sending shift invitation
+  // Add personnel to the local planning roster.
   const handleAddPersonnel = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
@@ -198,7 +198,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       .map((s) => s.trim())
       .filter(Boolean);
 
-    // 1. Dispatch staff shift invitation so user sees it in their Staff Portal
+    // Keep a local planning invitation for the demo staff portal.
     const matchedVenue = venues.find((v) => v.id === selectedEvent?.venue_id);
     sendStaffInvitation({
       event_id: selectedEvent?.id || 'evt-1',
@@ -227,9 +227,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
       can_scan_tickets: canScanTickets,
     });
 
-    setInviteSuccessToast(
-      `🎉 Shift invitation sent to ${name.trim()}! They can now accept their slot and view run-of-show duties in their Staff Portal.`
-    );
+    setInviteSuccessToast(`Added ${name.trim()} to this browser's planning roster. No invitation was sent.`);
     setTimeout(() => setInviteSuccessToast(null), 6000);
 
     // Reset Form
@@ -251,7 +249,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
 
   return (
     <div className="space-y-6">
-      {/* Shift Invitation Sent Alert Toast */}
+          {/* Local roster feedback */}
       {inviteSuccessToast && (
         <div className="bg-emerald-600 text-white p-4 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-md animate-in slide-in-from-top-2">
           <div className="flex items-center gap-2.5">
@@ -429,7 +427,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
               }`}
             >
               <Clock className="w-3.5 h-3.5 text-amber-400" />
-              <span>Pending Invites ({personnel.filter((p) => p.invitation_status === 'pending').length})</span>
+              <span>Local Pending ({personnel.filter((p) => p.invitation_status === 'pending').length})</span>
             </button>
           </div>
         </div>
@@ -516,7 +514,7 @@ export const PersonnelDirectory: React.FC<PersonnelDirectoryProps> = ({ onSwitch
                             </span>
                           ) : (
                             <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-bold flex items-center gap-1 font-mono">
-                              <Clock className="w-2.5 h-2.5 animate-pulse" /> Invite Pending
+                              <Clock className="w-2.5 h-2.5 animate-pulse" /> Local draft
                             </span>
                           )
                         ) : null}

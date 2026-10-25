@@ -51,12 +51,11 @@ export function verifyRegistrationMode(req: Request, res: Response, next: NextFu
   if (mode !== undefined && mode !== 'account' && mode !== 'guest') {
     return res.status(400).json({ success: false, error: 'Invalid registration mode' });
   }
-  if (mode !== 'account') return next();
   const found = session(req);
   if (found?.identity !== 'user' || !found.userId) {
     return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
   }
-  if (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf) {
+  if (!req.get('origin') || !sameOrigin(req) || req.get('x-csrf-token') !== found.csrf) {
     return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
   }
   next();

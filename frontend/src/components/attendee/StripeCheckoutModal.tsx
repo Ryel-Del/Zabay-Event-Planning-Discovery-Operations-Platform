@@ -31,7 +31,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   onSuccess,
 }) => {
-  const { registerForEvent, currentUser, venues } = useApp();
+  const { registerForEvent, currentUser, venues, isDemoMode } = useApp();
 
   const getStoredEmail = () => {
     if (currentUser.email && currentUser.id !== 'usr-guest') {
@@ -93,21 +93,19 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isStoredEmail = Boolean(
-    (currentUser.email && currentUser.id !== 'usr-guest' && email.toLowerCase() === currentUser.email.toLowerCase()) ||
-    (typeof window !== 'undefined' && email && email.toLowerCase() === (localStorage.getItem('zabay-last-attendee-email') || '').toLowerCase())
-  );
+  const isStoredEmail = !isDemoMode && Boolean(currentUser.email);
 
   const price = ticketTier === 'VIP Access' ? Math.round(event.ticket_price * 1.4) : event.ticket_price;
 
   const handlePay = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isProcessing) return;
+    if (!isDemoMode && currentUser.id === 'usr-guest') { setSubmitError('Sign in to register for this event.'); return; }
     setSubmitError('');
     setIsProcessing(true);
     try {
-      const trimmedName = name.trim();
-      const trimmedEmail = email.trim();
+      const trimmedName = isDemoMode ? name.trim() : currentUser.name.trim();
+      const trimmedEmail = isDemoMode ? email.trim() : currentUser.email.trim();
       const res = await registerForEvent(event.id, ticketTier, trimmedName, trimmedEmail);
       if (!res.success || !res.registration) {
         setSubmitError(res.message);
@@ -115,7 +113,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
       }
 
       // Persist entered email and name for 1-click future checkouts
-      if (typeof window !== 'undefined') {
+      if (isDemoMode && typeof window !== 'undefined') {
         localStorage.setItem('zabay-last-attendee-email', trimmedEmail);
         localStorage.setItem('zabay-last-attendee-name', trimmedName);
       }
@@ -214,7 +212,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                   data-cy="registration-name"
                   type="text"
                   required
-                  value={name}
+                  readOnly={!isDemoMode}
+                  value={isDemoMode ? name : currentUser.name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Maria Elena Santos"
                   className="w-full bg-white dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-2 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
@@ -224,7 +223,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                    Ticket Confirmation Email
+                    Account Email
                   </label>
                   {isStoredEmail && (
                     <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
@@ -237,7 +236,8 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                     data-cy="registration-email"
                     type="email"
                     required
-                    value={email}
+                    readOnly={!isDemoMode}
+                    value={isDemoMode ? email : currentUser.email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. attendee@gmail.com"
                     className={`w-full bg-white dark:bg-[#171513] border ${
@@ -255,9 +255,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 flex items-center gap-1.5">
                   <Mail className="w-3 h-3 text-[#B68366] dark:text-[#D4A58C] shrink-0" />
                   <span>
-                    {isStoredEmail
-                      ? 'Digital pass & QR admission ticket will automatically be sent to your verified account email.'
-                      : 'Digital pass & QR admission ticket will be sent to this email address.'}
+                    Your confirmed QR pass will appear in your account wallet. Live pass details use your signed-in account.
                   </span>
                 </p>
               </div>

@@ -60,6 +60,9 @@ interface AppContextType {
 
   // Live Database & API Status (Member 3 Connector)
   isLiveBackend: boolean;
+  eventLoadState: 'loading' | 'loaded' | 'error';
+  walletLoadState: 'loading' | 'loaded' | 'error';
+  retryWallet: () => void;
   backendHealth: HealthStatus | null;
   refreshBackendStatus: () => Promise<void>;
 
@@ -417,6 +420,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Live Backend & PostgreSQL Connection State (Member 3 Connector)
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
+  const [eventLoadState, setEventLoadState] = useState<'loading' | 'loaded' | 'error'>(devDatasetActive() ? 'loaded' : 'loading');
+  const [walletLoadState, setWalletLoadState] = useState<'loading' | 'loaded' | 'error'>('loaded');
+  const [walletRetry, setWalletRetry] = useState(0);
+  const retryWallet = () => setWalletRetry(previous => previous + 1);
   const [backendHealth, setBackendHealth] = useState<HealthStatus | null>(null);
   const [operatorAuthenticated, setOperatorAuthenticated] = useState(false);
 
@@ -454,10 +461,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isDemoMode]);
 
   useEffect(() => {
-    if (isDevModeUnlocked || currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') return;
+    if (isDevModeUnlocked || currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') {
+      setWalletLoadState('loaded');
+      return;
+    }
     let active = true;
     const accountId = currentUser.id;
-    setRegistrations([]);
+    setWalletLoadState('loading');
     api.attendees.myRegistrations().then((response) => {
       if (!active) return;
       if (response.success && response.data) {
@@ -467,25 +477,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const savedIds = new Set(saved.map(registration => registration.id));
           return [...previous.filter(registration => registration.attendee_id === accountId && !savedIds.has(registration.id)), ...saved];
         });
+        setWalletLoadState('loaded');
+      } else {
+        setWalletLoadState('error');
       }
+    }).catch((error) => {
+      console.error('Could not load account passes', error);
+      if (active) setWalletLoadState('error');
     });
     return () => { active = false; };
-  }, [currentUser.id, isDevModeUnlocked]);
+  }, [currentUser.id, isDevModeUnlocked, walletRetry]);
 
   const refreshBackendStatus = async () => {
+    setEventLoadState('loading');
     try {
-      if (devDatasetActive()) { setIsLiveBackend(false); return; }
+      if (devDatasetActive()) { setIsLiveBackend(false); setEventLoadState('loaded'); return; }
       const res = await api.health.check();
       setBackendHealth(res.success ? res.data || null : null);
-      if (!res.success) { setIsLiveBackend(false); return; }
+      if (!res.success) { setIsLiveBackend(false); setEventLoadState('error'); return; }
       const [venueRes, eventRes] = await Promise.all([api.venues.getAll(), api.events.getAll()]);
-      if (!venueRes.success || !eventRes.success || !venueRes.data || !eventRes.data) {
+      if (!venueRes?.success || !eventRes?.success || !venueRes.data || !eventRes.data) {
         setIsLiveBackend(false);
+        setEventLoadState('error');
         return;
       }
       const venueDetails = await Promise.all(venueRes.data.map((venue) => api.venues.getById(venue.id)));
-      if (venueDetails.some((detail) => !detail.success || !detail.data)) {
+      if (venueDetails.some((detail) => !detail?.success || !detail.data)) {
         setIsLiveBackend(false);
+        setEventLoadState('error');
         return;
       }
       if (devDatasetActive()) return;
@@ -507,8 +526,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return null;
       });
       setIsLiveBackend(true);
-    } catch {
+      setEventLoadState('loaded');
+    } catch (error) {
+      console.error('Could not load live events', error);
       setIsLiveBackend(false);
+      setEventLoadState('error');
     }
   };
 
@@ -1563,31 +1585,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addVenue = async (venueData: Omit<Venue, 'id'>): Promise<Venue> => {
     let newVenue: Venue;
 
-    if (!isDemoMode && isLiveBackend) {
-      try {
-        const res = await api.venues.create(venueData);
-        if (res.success && res.data) {
-          newVenue = adaptVenue(res.data);
-        } else {
-          const newId = `ven-${Date.now().toString(36)}`;
-          newVenue = {
-            ...venueData,
-            id: newId,
-          };
-        }
-      } catch {
-        const newId = `ven-${Date.now().toString(36)}`;
-        newVenue = {
-          ...venueData,
-          id: newId,
-        };
+    if (!isDemoMode) {
+      if (!isLiveBackend) throw new Error('Server is unavailable. Venue was not saved. Retry after checking your connection.');
+      const res = await api.venues.create(venueData);
+      if (!res.success || !res.data?.id) {
+        throw new Error(res.error || 'Venue was not saved. Check your connection and verify before retrying.');
       }
+      newVenue = adaptVenue(res.data);
     } else {
-      const newId = `ven-${Date.now().toString(36)}`;
-      newVenue = {
-        ...venueData,
-        id: newId,
-      };
+      newVenue = { ...venueData, id: `ven-${Date.now().toString(36)}` };
     }
 
     setVenues((prev) => [newVenue, ...prev]);
@@ -1620,39 +1626,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: 'Event not found.' };
     }
 
-    if (isLiveBackend) {
-      try {
-        const registrationMode = currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator' ? 'guest' : 'account';
-        const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType, registration_mode: registrationMode });
-        if (response.success && response.data?.qr_pass_code) {
-          const saved = adaptRegistration(response.data, event.title);
-          if (saved.attendee_id && saved.attendee_id !== currentUser.id) {
-            return { success: false, message: 'Your account session changed. Sign in again to view your saved pass.' };
-          }
-          if (!saved.attendee_id && registrationMode === 'account') {
-            return { success: false, message: 'Your account session expired. Sign in again to register an account pass.' };
-          }
-          setRegistrations((previous) => [saved, ...previous]);
-          setEvents((previous) => previous.map((item) => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
-          setSelectedEvent((previous) => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
-          if (registrationMode === 'guest') {
-            let ids: string[] = [];
-            try {
-              const stored = JSON.parse(sessionStorage.getItem('zabay-session-pass-ids') || '[]');
-              if (Array.isArray(stored)) ids = stored.filter((id): id is string => typeof id === 'string');
-            } catch { /* reset malformed browser state */ }
-            sessionStorage.setItem('zabay-session-pass-ids', JSON.stringify([...new Set([...ids, saved.id])]));
-          }
-          return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
-        }
-        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return { success: false, message: response.error || 'Registration failed. No pass was issued.' };
-      } catch {
-        return { success: false, message: 'Registration could not be saved. No pass was issued.' };
+    if (!isDemoMode) {
+      if (currentUser.id === 'usr-guest' || currentUser.id === 'zabay-operator') {
+        return { success: false, message: 'Sign in to register for this event.' };
       }
+      if (!isLiveBackend) return { success: false, message: 'Server is unavailable. No pass was issued.' };
+      const session = await api.auth.getMe();
+      if (!session.success || session.data?.user?.id !== currentUser.id) {
+        return { success: false, message: 'Your session expired. Sign in again to register.' };
+      }
+      const response = await api.attendees.register({ event_id: eventId, attendee_name: attendeeName, attendee_email: attendeeEmail, ticket_type: ticketType, registration_mode: 'account' });
+      if (!response.success || !response.data?.qr_pass_code || response.data.attendee_id !== currentUser.id) {
+        return { success: false, message: response.code === 'UNAUTHORIZED' ? 'Your session expired. Sign in again to register.' : response.error || 'Registration failed. No pass was issued.' };
+      }
+      const saved = adaptRegistration(response.data, event.title);
+      setRegistrations(previous => [saved, ...previous]);
+      setEvents(previous => previous.map(item => item.id === eventId ? { ...item, tickets_sold: item.tickets_sold + 1 } : item));
+      setSelectedEvent(previous => previous?.id === eventId ? { ...previous, tickets_sold: previous.tickets_sold + 1 } : previous);
+      return { success: true, registration: saved, message: 'Registration confirmed! Digital pass generated.' };
     }
 
-    if (!isDevModeUnlocked) return { success: false, message: 'Registration is unavailable until the database connection returns.' };
+    if (!isDevModeUnlocked) return { success: false, message: 'Developer simulation is unavailable.' };
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const qrCode = `ZABAY-PASS-${randomSuffix}-${(attendeeName || 'GUEST').split(' ')[0].toUpperCase()}`;
@@ -1961,6 +1955,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lockDevMode,
       loadRole2DemoData,
       isLiveBackend,
+      eventLoadState,
+      walletLoadState,
+      retryWallet,
       backendHealth,
       refreshBackendStatus,
       notifications,
@@ -2021,6 +2018,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isDevModeUnlocked,
       unlockedDevCode,
       isLiveBackend,
+      eventLoadState,
+      walletLoadState,
       backendHealth,
       notifications,
       unreadNotificationCount,

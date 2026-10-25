@@ -57,10 +57,27 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal(book.status, 201, JSON.stringify(book.body));
     assert.equal((await pool.query('SELECT venue_id FROM events WHERE id = $1', [eventId])).rows[0].venue_id, venueId);
 
-    const registration = await request(app).post('/api/attendees/register').send({
-      event_id: eventId, attendee_name: 'Synthetic Guest', attendee_email: 'guest@example.test', ticket_type: 'General Admission',
-    });
+    const registrationPayload0 = {
+      event_id: eventId, attendee_name: 'Spoofed Guest', attendee_email: 'spoofed@example.test', ticket_type: 'General Admission',
+    };
+    assert.equal((await request(app).post('/api/attendees/register').send(registrationPayload0)).status, 401);
+    assert.equal((await request(app).post('/api/attendees/register').send({ ...registrationPayload0, registration_mode: 'guest' })).status, 401);
+    assert.equal((await request(app).post('/api/attendees/register').send({ ...registrationPayload0, registration_mode: 'account' })).status, 401);
+    assert.equal((await agent.post('/api/attendees/register').set('X-CSRF-Token', csrf).send(registrationPayload0)).status, 401);
+    assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, 0);
+    const firstAttendee = request.agent(app);
+    const firstAccount = await firstAttendee.post('/api/auth/register').send({ name: 'Synthetic Attendee', email: 'synthetic-attendee@example.test', password: 'synthetic-account-secret' });
+    assert.equal(firstAccount.status, 201);
+    assert.equal((await firstAttendee.post('/api/attendees/register').send(registrationPayload0)).status, 403);
+    assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', 'invalid').send(registrationPayload0)).status, 403);
+    assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0)).status, 403);
+    assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).set('Origin', 'https://untrusted.example').send(registrationPayload0)).status, 403);
+    assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, 0);
+    const registration = await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).set('Origin', 'http://localhost:5173').send(registrationPayload0);
     assert.equal(registration.status, 201, JSON.stringify(registration.body));
+    assert.equal(registration.body.data.attendee_id, firstAccount.body.user.id);
+    assert.equal(registration.body.data.attendee_name, 'Synthetic Attendee');
+    assert.equal(registration.body.data.attendee_email, 'synthetic-attendee@example.test');
     const pass = registration.body.data.qr_pass_code;
     const listedEvent = (await request(app).get('/api/events')).body.data.find(row => row.id === eventId);
     assert.equal(listedEvent.registration_count, 1, 'list endpoint reports persisted active registrations');
@@ -130,10 +147,13 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await attendee.post('/api/attendees/register').send({ ...registrationPayload, registration_mode: 'account' })).status, 403);
     const signedInRegistration = await attendee.post('/api/attendees/register')
       .set('X-CSRF-Token', registered.body.csrfToken)
+      .set('Origin', 'http://localhost:5173')
       .send({ ...registrationPayload, registration_mode: 'account' });
     assert.equal(signedInRegistration.status, 201, JSON.stringify(signedInRegistration.body));
     assert.equal(signedInRegistration.body.data.attendee_id, registered.body.user.id);
     assert.equal((await pool.query('SELECT attendee_id FROM registrations WHERE id = $1', [signedInRegistration.body.data.id])).rows[0].attendee_id, registered.body.user.id);
+    assert.equal(signedInRegistration.body.data.attendee_name, 'Fresh Attendee');
+    assert.equal(signedInRegistration.body.data.attendee_email, 'fresh-attendee@example.test');
     const sameAccountOtherSession = request.agent(app);
     assert.equal((await sameAccountOtherSession.post('/api/auth/user-login').send({ email: 'fresh-attendee@example.test', password: 'fresh-account-secret' })).status, 200);
     const restoredPasses = await sameAccountOtherSession.get('/api/attendees/registrations/me');
@@ -143,15 +163,20 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await otherOrganizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
     assert.equal((await request(app).get('/api/attendees/registrations/me')).status, 401);
     assert.equal((await organizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === signedInRegistration.body.data.id), false);
+    const claimedGuestMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken).set('Origin', 'http://localhost:5173')
+      .send({ ...registrationPayload, registration_mode: 'guest', attendee_id: secondRegistration.body.user.id });
+    assert.equal(claimedGuestMode.status, 201);
+    assert.equal(claimedGuestMode.body.data.attendee_id, registered.body.user.id);
+    const omittedMode = await attendee.post('/api/attendees/register').set('X-CSRF-Token', registered.body.csrfToken).set('Origin', 'http://localhost:5173')
+      .send({ ...registrationPayload, attendee_id: secondRegistration.body.user.id });
+    assert.equal(omittedMode.status, 201);
+    assert.equal(omittedMode.body.data.attendee_id, registered.body.user.id);
     const guestRegistration = await attendee.post('/api/attendees/register').send({ ...registrationPayload, registration_mode: 'guest' });
-    assert.equal(guestRegistration.status, 201);
-    assert.equal(guestRegistration.body.data.attendee_id, null);
-    // A request omitting registration_mode must remain guest-owned, even with a valid user session.
+    assert.equal(guestRegistration.status, 403);
+    // Omitting registration_mode does not bypass CSRF or account ownership.
     const implicitGuest = await attendee.post('/api/attendees/register').send({ ...registrationPayload, attendee_email: 'implicit-guest@example.test' });
-    assert.equal(implicitGuest.status, 201);
-    assert.equal(implicitGuest.body.data.attendee_id, null);
-    assert.equal((await pool.query('SELECT attendee_id FROM registrations WHERE id = $1', [implicitGuest.body.data.id])).rows[0].attendee_id, null);
-    assert.equal((await otherOrganizer.get('/api/attendees/registrations/me')).body.data.some(row => row.id === guestRegistration.body.data.id), false);
+    assert.equal(implicitGuest.status, 403);
+    assert.equal((await pool.query("SELECT count(*)::int AS count FROM registrations WHERE attendee_email = 'implicit-guest@example.test'")).rows[0].count, 0);
     const expiredCookie = registered.headers['set-cookie'][0].split(';')[0];
     assert.equal((await attendee.post('/api/auth/logout').set('X-CSRF-Token', registered.body.csrfToken)).status, 200);
     const expiredRegistration = await request(app).post('/api/attendees/register')
@@ -159,12 +184,19 @@ test('schema-only database supports the complete operator workflow', async () =>
       .send({ ...registrationPayload, registration_mode: 'account', attendee_email: 'expired-session@example.test' });
     assert.equal(expiredRegistration.status, 401);
     assert.equal((await pool.query("SELECT count(*)::int AS count FROM registrations WHERE attendee_email = 'expired-session@example.test'")).rows[0].count, 0);
-    const ownRegistration = await request(app).post('/api/attendees/register').send({ event_id: publicEvent.body.data.id, attendee_name: 'Owned Guest', attendee_email: 'owned-guest@example.test', ticket_type: 'General Admission' });
+    const ownRegistration = await organizer.post('/api/attendees/register').set('X-CSRF-Token', organizerLogin.body.csrfToken).set('Origin', 'http://localhost:5173').send({ event_id: publicEvent.body.data.id, attendee_name: 'Owned Guest', attendee_email: 'owned-guest@example.test', ticket_type: 'General Admission' });
     assert.equal(ownRegistration.status, 201);
     const passCode = ownRegistration.body.data.qr_pass_code;
     assert.equal((await otherOrganizer.post('/api/attendees/checkin').set('X-CSRF-Token', otherLogin.body.csrfToken).send({ qr_pass_code: passCode })).status, 403);
     assert.equal((await organizer.post('/api/attendees/checkin').set('X-CSRF-Token', organizerLogin.body.csrfToken).send({ qr_pass_code: passCode, verified_by_id: secondRegistration.body.user.id })).status, 200);
     assert.equal((await pool.query('SELECT verified_by FROM attendance_records WHERE registration_id = $1', [ownRegistration.body.data.id])).rows[0].verified_by, organizerRegistration.body.user.id);
+    const beforeExpiry = (await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count;
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 9 * 60 * 60 * 1000;
+      assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0)).status, 401);
+    } finally { Date.now = realNow; }
+    assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, beforeExpiry);
     await pool.query("UPDATE users SET role = 'staff' WHERE email = 'fresh-attendee@example.test'");
     assert.equal((await venueManager.get('/api/tasks')).status, 403);
     assert.equal((await venueManager.post('/api/attendees/checkin').set('X-CSRF-Token', managerLogin.body.csrfToken).send({ qr_pass_code: passCode })).status, 403);
@@ -172,6 +204,7 @@ test('schema-only database supports the complete operator workflow', async () =>
     await pool.query("DELETE FROM events WHERE title = 'Owned public event'");
     await pool.query("DELETE FROM events WHERE title = 'Owned private event'");
     await pool.query("DELETE FROM venues WHERE name = 'Managed test venue'");
+    await pool.query("DELETE FROM users WHERE email = 'synthetic-attendee@example.test'");
     await pool.query("DELETE FROM users WHERE email = 'fresh-attendee@example.test'");
     await pool.query("DELETE FROM users WHERE email = 'fresh-organizer@example.test'");
     await pool.query("DELETE FROM users WHERE email = 'other-organizer@example.test'");

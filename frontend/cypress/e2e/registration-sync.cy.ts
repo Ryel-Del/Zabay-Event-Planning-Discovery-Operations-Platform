@@ -1,4 +1,62 @@
 describe('database-backed registration wallet', () => {
+  it('prompts guests to sign in and continues registration for the chosen event', () => {
+    const unique = Date.now();
+    const title = `Guest sign-in event ${unique}`;
+    const email = `guest-flow-${unique}@example.test`;
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({
+      method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken },
+      body: { title, category: 'Community & Civic', event_type: 'public', is_private: false,
+        start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100 },
+    }).its('status').should('eq', 201));
+    cy.request('POST', '/api/auth/register', { name: 'Guest Flow Owner', email, password: 'guest-flow-secret' });
+    cy.request('/api/auth/session').then(({ body }) => cy.request({ method: 'POST', url: '/api/auth/logout', headers: { 'X-CSRF-Token': body.csrfToken } }));
+    cy.visit('/');
+    cy.get('[data-cy="event-search"]').type(title);
+    cy.get('[data-cy="event-card"]').contains(title).closest('[data-cy="event-card"]').find('[data-cy="event-register"]').click();
+    cy.get('[data-cy="registration-signin-prompt"]').should('contain.text', title);
+    cy.get('[data-cy="registration-form"]').should('not.exist');
+    cy.get('input[placeholder="name@organization.ph"]').type(email);
+    cy.get('input[placeholder="Enter secure password..."]').type('guest-flow-secret');
+    cy.contains('button', 'Sign In to Workspace').click();
+    cy.get('[data-cy="registration-form"]').should('contain.text', title);
+  });
+
+  it('does not resume a discarded registration after signing in later', () => {
+    const unique = Date.now();
+    const title = `Discarded registration ${unique}`;
+    const email = `discarded-flow-${unique}@example.test`;
+    const password = 'discarded-flow-secret';
+    cy.get<string>('@csrfToken').then(csrfToken => cy.request({
+      method: 'POST', url: '/api/events', headers: { 'X-CSRF-Token': csrfToken },
+      body: { title, category: 'Community & Civic', event_type: 'public', is_private: false,
+        start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100 },
+    }).its('status').should('eq', 201));
+    cy.request('POST', '/api/auth/register', { name: 'Later Sign-In Attendee', email, password });
+    cy.request('/api/auth/session').then(({ body }) => cy.request({
+      method: 'POST', url: '/api/auth/logout', headers: { 'X-CSRF-Token': body.csrfToken },
+    }));
+
+    cy.visit('/');
+    cy.get('[data-cy="event-search"]').type(title);
+    cy.get('[data-cy="event-card"]').contains(title).closest('[data-cy="event-card"]')
+      .find('[data-cy="event-register"]').click();
+    cy.get('[data-cy="registration-signin-prompt"]').should('contain.text', title)
+      .closest('div.fixed').find('button').first().click();
+    cy.get('[data-cy="registration-signin-prompt"]').should('not.exist');
+
+    cy.get('header').contains('button', 'Sign In').click();
+    cy.get('input[placeholder="name@organization.ph"]').type(email);
+    cy.get('input[placeholder="Enter secure password..."]').type(password);
+    cy.contains('button', 'Sign In to Workspace').click();
+    cy.get('[data-cy="registration-form"]').should('not.exist');
+    cy.get('[data-cy="registration-signin-prompt"]').should('not.exist');
+
+    // Registration still opens when this signed-in user explicitly requests it again.
+    cy.get('[data-cy="event-card"]').contains(title).closest('[data-cy="event-card"]')
+      .find('[data-cy="event-register"]').click();
+    cy.get('[data-cy="registration-form"]').should('be.visible');
+  });
+
   it('retrieves a pass in a second browser session and hides it from another account', () => {
     const unique = Date.now();
     const email = `wallet-${unique}@example.test`;
@@ -32,8 +90,8 @@ describe('database-backed registration wallet', () => {
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]').contains(eventTitle).closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]').click();
-    cy.get('[data-cy="registration-name"]').clear().type('A Different Display Name');
-    cy.get('[data-cy="registration-email"]').clear().type(otherEmail);
+    cy.get('[data-cy="registration-name"]').should('have.value', 'Wallet Owner').and('have.attr', 'readonly');
+    cy.get('[data-cy="registration-email"]').should('have.value', email).and('have.attr', 'readonly');
     cy.get('[data-cy="registration-submit"]').click();
     cy.wait('@registration').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
@@ -67,14 +125,13 @@ describe('database-backed registration wallet', () => {
         start_date: '2035-12-10T08:00:00Z', end_date: '2035-12-10T17:00:00Z', max_capacity: 100 },
     }));
     cy.clearCookie('zabay_session');
+    cy.request('POST', '/api/auth/register', { name: 'Wallet Failure', email: `wallet-failure-${Date.now()}@example.test`, password: 'wallet-test-secret' });
     cy.intercept('POST', '/api/attendees/register', { forceNetworkError: true }).as('failedWrite');
     cy.visit('/');
     cy.get('[data-cy="backend-status"]').should('have.text', 'Postgres Live');
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]').contains(eventTitle).closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]').click();
-    cy.get('[data-cy="registration-name"]').clear().type('Wallet Failure');
-    cy.get('[data-cy="registration-email"]').clear().type('failure@example.test');
     cy.get('[data-cy="registration-submit"]').click();
     cy.wait('@failedWrite');
     cy.get('[data-cy="registration-error"]').should('be.visible');
@@ -100,15 +157,12 @@ describe('database-backed registration wallet', () => {
       expect(body.authenticated).to.eq(true);
       return cy.request({ method: 'POST', url: '/api/auth/logout', headers: { 'X-CSRF-Token': body.csrfToken } });
     });
-    cy.intercept('POST', '/api/attendees/register').as('expiredRegistration');
-    cy.get('[data-cy="registration-name"]').clear().type('Expiring Wallet Owner');
-    cy.get('[data-cy="registration-email"]').clear().type(email);
+    cy.intercept('GET', '/api/auth/me').as('expiredSessionCheck');
     cy.get('[data-cy="registration-submit"]').click();
-    cy.wait('@expiredRegistration').then(({ request, response }) => {
-      expect(request.body.registration_mode).to.eq('account');
+    cy.wait('@expiredSessionCheck').then(({ response }) => {
       expect(response?.statusCode).to.eq(401);
     });
-    cy.get('[data-cy="registration-error"]').should('be.visible');
+    cy.get('[data-cy="registration-error"]').should('contain.text', 'session expired');
     cy.get('[data-cy="registered-pass-code"]').should('not.exist');
     cy.task('db:registrationCountByEmail', { email }).should('eq', 0);
   });
@@ -118,6 +172,25 @@ describe('database-backed registration wallet', () => {
     cy.visit('/', { onBeforeLoad(window) { window.localStorage.removeItem('zabay-clean-slate'); } });
     cy.wait('@offlineHealth');
     cy.get('[data-cy="backend-status"]').should('have.text', 'Offline');
+    cy.get('[data-cy="event-load-error"]').should('be.visible').contains('Retry');
     cy.get('[data-cy="event-card"]').should('not.exist');
+  });
+
+  it('reports a wallet retrieval failure and reloads passes on retry', () => {
+    const email = `wallet-retry-${Date.now()}@example.test`;
+    cy.request('POST', '/api/auth/register', { name: 'Wallet Retry Owner', email, password: 'wallet-test-secret' });
+    let failing = true;
+    cy.intercept('GET', '/api/attendees/registrations/me', req => {
+      if (failing) req.reply({ statusCode: 503, body: { success: false, error: 'Unavailable' } });
+      else req.continue();
+    }).as('walletRequest');
+    cy.visit('/');
+    cy.get('[data-cy="my-digital-passes"]').click();
+    cy.get('[data-cy="wallet-load-error"]').should('be.visible');
+    cy.contains('No Registered Passes').should('not.exist');
+    cy.then(() => { failing = false; });
+    cy.get('[data-cy="wallet-load-error"]').contains('button', 'Retry').click();
+    cy.get('[data-cy="wallet-load-error"]').should('not.exist');
+    cy.contains('No Registered Passes').should('be.visible');
   });
 });

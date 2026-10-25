@@ -9,6 +9,12 @@ interface TestRegistration {
 describe('attendee registration and check-in', () => {
   let eventId = '';
   let eventTitle = '';
+  const attendeeEmail = `attendee-suite-${Date.now()}@example.test`;
+
+  before(() => {
+    cy.request('POST', '/api/auth/register', { name: 'Cypress Attendee', email: attendeeEmail, password: 'attendee-test-secret' })
+      .its('status').should('eq', 201);
+  });
 
   beforeEach(() => {
     eventTitle = `E2E public attendee event ${Date.now()}`;
@@ -30,9 +36,23 @@ describe('attendee registration and check-in', () => {
     }));
   });
 
+  function signInAttendee() {
+    cy.request('POST', '/api/auth/user-login', { email: attendeeEmail, password: 'attendee-test-secret' })
+      .its('status').should('eq', 200);
+  }
+
+  function signInOperator() {
+    cy.env<{ OPERATOR_USERNAME: string; OPERATOR_PASSWORD: string }>(['OPERATOR_USERNAME', 'OPERATOR_PASSWORD'])
+      .then(({ OPERATOR_USERNAME, OPERATOR_PASSWORD }) => {
+        cy.request('POST', '/api/auth/login', { username: OPERATOR_USERNAME, password: OPERATOR_PASSWORD });
+      });
+  }
+
   function openEventRegistration() {
     cy.get('[data-cy="backend-status"]').should('have.text', 'Postgres Live');
-    cy.get('[data-cy="attendee-mode"]').click();
+    cy.get('body').then($body => {
+      if ($body.find('[data-cy="attendee-mode"]').length) cy.get('[data-cy="attendee-mode"]').click();
+    });
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]')
       .contains(eventTitle)
@@ -41,29 +61,23 @@ describe('attendee registration and check-in', () => {
       .click();
   }
 
-  function submitRegistration(name: string, email: string) {
-    cy.get('[data-cy="registration-name"]').clear().type(name);
-    cy.get('[data-cy="registration-email"]').clear().type(email);
+  function submitRegistration() {
     cy.get('[data-cy="registration-submit"]').click();
   }
 
-  it('rejects invalid email, issues distinct PostgreSQL passes, and shows both in the session wallet', () => {
+  it('uses account details, issues distinct PostgreSQL passes, and shows both in the wallet', () => {
     let firstRegistration: TestRegistration;
     let secondRegistration: TestRegistration;
-    const unique = Date.now();
     cy.intercept('POST', '/api/attendees/register').as('register');
+    signInAttendee();
     cy.visit('/');
     openEventRegistration();
 
-    cy.get('[data-cy="registration-name"]').clear().type('Cypress Attendee One');
-    cy.get('[data-cy="registration-email"]').clear().type('invalid-email');
-    cy.get('[data-cy="registration-submit"]').click();
-    cy.get('[data-cy="registration-email"]').should(($input) => {
-      expect(($input[0] as HTMLInputElement).validity.typeMismatch).to.eq(true);
-    });
+    cy.get('[data-cy="registration-name"]').should('have.value', 'Cypress Attendee').and('have.attr', 'readonly');
+    cy.get('[data-cy="registration-email"]').should('have.value', attendeeEmail).and('have.attr', 'readonly');
     cy.get('@register.all').should('have.length', 0);
 
-    submitRegistration('Cypress Attendee One', `cypress-${unique}-one@example.test`);
+    submitRegistration();
     cy.wait('@register').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
       firstRegistration = response?.body.data;
@@ -86,7 +100,7 @@ describe('attendee registration and check-in', () => {
       .closest('[data-cy="event-card"]')
       .find('[data-cy="event-register"]')
       .click();
-    submitRegistration('Cypress Attendee Two', `cypress-${unique}-two@example.test`);
+    submitRegistration();
     cy.wait('@register').then(({ response }) => {
       expect(response?.statusCode).to.eq(201);
       secondRegistration = response?.body.data;
@@ -104,32 +118,34 @@ describe('attendee registration and check-in', () => {
   });
 
   it('shows a registration network failure without displaying a pass or success', () => {
-    const email = `cypress-failure-${Date.now()}@example.test`;
     cy.intercept('POST', '/api/attendees/register', { forceNetworkError: true }).as('failedRegistration');
+    signInAttendee();
     cy.visit('/');
     openEventRegistration();
-    submitRegistration('Cypress Network Failure', email);
+    submitRegistration();
     cy.wait('@failedRegistration');
     cy.get('[data-cy="registration-error"]').should('be.visible');
     cy.get('[data-cy="registered-pass-code"]').should('not.exist');
     cy.contains('Registration Saved').should('not.exist');
-    cy.task('db:registrationCountByEmail', { email }).should('eq', 0);
+    cy.request(`/api/events/${eventId}`).its('body.data.registration_count').should('eq', 0);
   });
 
   it('admits valid passes once, rejects duplicates and unknown codes, and admits another registration independently', () => {
     const unique = Date.now();
-    const createRegistration = (number: number) => cy.request('POST', '/api/attendees/register', {
+    signInAttendee();
+    const createRegistration = (number: number) => cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken, Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' }, body: {
       event_id: eventId,
       attendee_name: `Cypress Check In ${number}`,
       attendee_email: `cypress-checkin-${unique}-${number}@example.test`,
       ticket_type: 'General Admission',
-    }).then(({ status, body }) => {
+    } })).then(({ status, body }) => {
       expect(status).to.eq(201);
       return body.data as TestRegistration;
     });
 
     createRegistration(1).as('firstRegistration');
     createRegistration(2).as('secondRegistration');
+    signInOperator();
     cy.intercept('POST', '/api/attendees/checkin').as('checkIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();
@@ -168,15 +184,17 @@ describe('attendee registration and check-in', () => {
   });
 
   it('does not admit a pass when the check-in request fails on the network', () => {
-    cy.request('POST', '/api/attendees/register', {
+    signInAttendee();
+    cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken, Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' }, body: {
       event_id: eventId,
       attendee_name: 'Cypress Check In Network Failure',
       attendee_email: `cypress-checkin-failure-${Date.now()}@example.test`,
       ticket_type: 'General Admission',
-    }).then(({ status, body }) => {
+    } })).then(({ status, body }) => {
       expect(status).to.eq(201);
       cy.wrap(body.data).as('createdRegistration');
     });
+    signInOperator();
     cy.intercept('POST', '/api/attendees/checkin', { forceNetworkError: true }).as('failedCheckIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();

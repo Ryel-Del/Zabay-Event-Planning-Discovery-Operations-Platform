@@ -57,6 +57,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
     if (planningId) await pool.query('DELETE FROM events WHERE id = $1', [planningId]);
     if (privateId) await pool.query('DELETE FROM events WHERE id = $1', [privateId]);
     await pool.query('DELETE FROM events WHERE id = $1', [eventId]);
+    await pool.query("DELETE FROM users WHERE email = 'presentation-attendee@example.test'");
     await pool.end();
   });
 
@@ -75,16 +76,23 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
   assert.equal((await agent.get(`/api/events/${privateId}`)).status, 200);
   assert.equal((await request(app).post('/api/attendees/register').send({
     event_id: privateId, attendee_name: 'Guest', attendee_email: 'guest@example.test', ticket_type: 'General Admission',
-  })).status, 404);
+  })).status, 401);
 
-  const register = (overrides = {}) => request(app).post('/api/attendees/register').send({
-    event_id: eventId,
-    attendee_name: 'Presentation Attendee',
-    attendee_email: 'attendee@example.test',
-    ticket_type: 'General Admission',
-    ...overrides,
+  const attendee = request.agent(app);
+  const attendeeAccount = await attendee.post('/api/auth/register').send({
+    name: 'Presentation Attendee', email: 'presentation-attendee@example.test', password: 'presentation-account-secret',
   });
-  assert.equal((await register({ attendee_email: '' })).status, 400);
+  assert.equal(attendeeAccount.status, 201);
+  const register = (overrides = {}) => attendee.post('/api/attendees/register')
+    .set('X-CSRF-Token', attendeeAccount.body.csrfToken).set('Origin', 'http://localhost:5173').send({
+      event_id: eventId,
+      attendee_name: 'Spoofed Name',
+      attendee_email: 'spoofed@example.test',
+      ticket_type: 'General Admission',
+      ...overrides,
+    });
+  assert.equal((await request(app).post('/api/attendees/register').send({ event_id: eventId, ticket_type: 'General Admission' })).status, 401);
+  assert.equal((await register({ ticket_type: '' })).status, 400);
   assert.equal((await register({ event_id: 'missing-event' })).status, 404);
   const firstRegistration = await register({ amount_paid: 999 });
   const secondRegistration = await register();
@@ -427,7 +435,7 @@ test('database-backed API behavior uses the schema and seed', { skip: !testDatab
 test('operator sessions enforce CSRF, expiry, logout, and public access', async () => {
   const agent = request.agent(app);
   assert.equal((await request(app).get('/api/health')).status, 200);
-  assert.equal((await request(app).post('/api/attendees/register').send({})).status, 400);
+  assert.equal((await request(app).post('/api/attendees/register').send({})).status, 401);
   assert.equal((await request(app).get('/api/tasks')).status, 401);
   assert.equal((await request(app).post('/api/attendees/checkin').send({ qr_pass_code: 'x' })).status, 401);
   assert.equal((await request(app).post('/api/venues/ven-6/book').send({})).status, 401);
