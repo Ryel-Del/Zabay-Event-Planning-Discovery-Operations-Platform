@@ -571,7 +571,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loadDemoData = () => {
-    if (import.meta.env.PROD) return;
     setIsLiveBackend(false);
     setVenues(mockVenues);
     setEvents(mockEvents);
@@ -596,7 +595,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const loadRole2DemoData = () => {
-    if (import.meta.env.PROD) return;
     setIsLiveBackend(false);
     setVenues(mockVenues);
     setEvents(mockEvents);
@@ -702,7 +700,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const unlockDevMode = async (code: string): Promise<{ success: boolean; message: string; devCode?: string }> => {
-    if (import.meta.env.PROD) return { success: false, message: 'Demo access is unavailable in production.' };
     const raw = (code || '').trim();
     if (!raw) {
       return {
