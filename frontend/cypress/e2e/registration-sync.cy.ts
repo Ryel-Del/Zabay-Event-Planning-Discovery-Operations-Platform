@@ -143,4 +143,22 @@ describe('database-backed registration wallet', () => {
     cy.get('[data-cy="event-load-error"]').should('be.visible').contains('Retry');
     cy.get('[data-cy="event-card"]').should('not.exist');
   });
+
+  it('reports a wallet retrieval failure and reloads passes on retry', () => {
+    const email = `wallet-retry-${Date.now()}@example.test`;
+    cy.request('POST', '/api/auth/register', { name: 'Wallet Retry Owner', email, password: 'wallet-test-secret' });
+    let failing = true;
+    cy.intercept('GET', '/api/attendees/registrations/me', req => {
+      if (failing) req.reply({ statusCode: 503, body: { success: false, error: 'Unavailable' } });
+      else req.continue();
+    }).as('walletRequest');
+    cy.visit('/');
+    cy.get('[data-cy="my-digital-passes"]').click();
+    cy.get('[data-cy="wallet-load-error"]').should('be.visible');
+    cy.contains('No Registered Passes').should('not.exist');
+    cy.then(() => { failing = false; });
+    cy.get('[data-cy="wallet-load-error"]').contains('button', 'Retry').click();
+    cy.get('[data-cy="wallet-load-error"]').should('not.exist');
+    cy.contains('No Registered Passes').should('be.visible');
+  });
 });
