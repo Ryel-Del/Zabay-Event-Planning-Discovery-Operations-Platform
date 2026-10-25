@@ -30,9 +30,24 @@ describe('attendee registration and check-in', () => {
     }));
   });
 
+  function signInAttendee() {
+    const email = `attendee-${Date.now()}-${Math.random().toString(36).slice(2)}@example.test`;
+    cy.request('POST', '/api/auth/register', { name: 'Cypress Attendee', email, password: 'attendee-test-secret' })
+      .its('status').should('eq', 201);
+  }
+
+  function signInOperator() {
+    cy.env<{ OPERATOR_USERNAME: string; OPERATOR_PASSWORD: string }>(['OPERATOR_USERNAME', 'OPERATOR_PASSWORD'])
+      .then(({ OPERATOR_USERNAME, OPERATOR_PASSWORD }) => {
+        cy.request('POST', '/api/auth/login', { username: OPERATOR_USERNAME, password: OPERATOR_PASSWORD });
+      });
+  }
+
   function openEventRegistration() {
     cy.get('[data-cy="backend-status"]').should('have.text', 'Postgres Live');
-    cy.get('[data-cy="attendee-mode"]').click();
+    cy.get('body').then($body => {
+      if ($body.find('[data-cy="attendee-mode"]').length) cy.get('[data-cy="attendee-mode"]').click();
+    });
     cy.get('[data-cy="event-search"]').type(eventTitle);
     cy.get('[data-cy="event-card"]')
       .contains(eventTitle)
@@ -52,6 +67,7 @@ describe('attendee registration and check-in', () => {
     let secondRegistration: TestRegistration;
     const unique = Date.now();
     cy.intercept('POST', '/api/attendees/register').as('register');
+    signInAttendee();
     cy.visit('/');
     openEventRegistration();
 
@@ -106,6 +122,7 @@ describe('attendee registration and check-in', () => {
   it('shows a registration network failure without displaying a pass or success', () => {
     const email = `cypress-failure-${Date.now()}@example.test`;
     cy.intercept('POST', '/api/attendees/register', { forceNetworkError: true }).as('failedRegistration');
+    signInAttendee();
     cy.visit('/');
     openEventRegistration();
     submitRegistration('Cypress Network Failure', email);
@@ -118,18 +135,20 @@ describe('attendee registration and check-in', () => {
 
   it('admits valid passes once, rejects duplicates and unknown codes, and admits another registration independently', () => {
     const unique = Date.now();
-    const createRegistration = (number: number) => cy.request('POST', '/api/attendees/register', {
+    signInAttendee();
+    const createRegistration = (number: number) => cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken }, body: {
       event_id: eventId,
       attendee_name: `Cypress Check In ${number}`,
       attendee_email: `cypress-checkin-${unique}-${number}@example.test`,
       ticket_type: 'General Admission',
-    }).then(({ status, body }) => {
+    } })).then(({ status, body }) => {
       expect(status).to.eq(201);
       return body.data as TestRegistration;
     });
 
     createRegistration(1).as('firstRegistration');
     createRegistration(2).as('secondRegistration');
+    signInOperator();
     cy.intercept('POST', '/api/attendees/checkin').as('checkIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();
@@ -168,15 +187,17 @@ describe('attendee registration and check-in', () => {
   });
 
   it('does not admit a pass when the check-in request fails on the network', () => {
-    cy.request('POST', '/api/attendees/register', {
+    signInAttendee();
+    cy.request('/api/auth/session').then(({ body: session }) => cy.request({ method: 'POST', url: '/api/attendees/register', headers: { 'X-CSRF-Token': session.csrfToken }, body: {
       event_id: eventId,
       attendee_name: 'Cypress Check In Network Failure',
       attendee_email: `cypress-checkin-failure-${Date.now()}@example.test`,
       ticket_type: 'General Admission',
-    }).then(({ status, body }) => {
+    } })).then(({ status, body }) => {
       expect(status).to.eq(201);
       cy.wrap(body.data).as('createdRegistration');
     });
+    signInOperator();
     cy.intercept('POST', '/api/attendees/checkin', { forceNetworkError: true }).as('failedCheckIn');
     cy.visit('/');
     cy.get('[data-cy="gate-scanner-open"]').click();
