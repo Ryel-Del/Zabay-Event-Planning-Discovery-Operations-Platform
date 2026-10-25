@@ -278,7 +278,7 @@ export const api = {
 
   // Task Operations
   tasks: {
-    getAll: () => request<Task[]>('/api/tasks'),
+    getAll: (eventId?: string) => request<Task[]>(`/api/tasks${eventId ? `?event_id=${encodeURIComponent(eventId)}` : ''}`),
     updateStatus: (taskId: string, status: string) =>
       request<{ id: string; status: string }>(`/api/tasks/${taskId}/status`, {
         method: 'PATCH',
