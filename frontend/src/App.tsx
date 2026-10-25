@@ -9,6 +9,7 @@ import { StaffPage } from './pages/staff/StaffPage';
 import { AttendeePage } from './pages/attendee/AttendeePage';
 import { AuditLogViewer, QRCheckInScanner, ProfileView, DevCodeModal } from './components/modals';
 import { AuthModal } from './components/auth/AuthModal';
+import { MobileBottomNav } from './components/layout/MobileBottomNav';
 
 const MainContent: React.FC = () => {
   const { currentRole, setCurrentRole, selectedEvent } = useApp();
@@ -96,7 +97,7 @@ const MainContent: React.FC = () => {
         )}
 
         {/* Dynamic Center Work Area with Page-Level Architecture */}
-        <main className="flex-1 overflow-y-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-6 space-y-6">
+        <main className="flex-1 overflow-y-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-6 space-y-6 pb-24 md:pb-6">
           {/* 1. Organizer Mode: Operations Studio */}
           {currentRole === 'organizer' && (
             <OrganizerPage
@@ -126,6 +127,18 @@ const MainContent: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* Mobile Ergonomic Bottom Navigation Bar (< md screens) */}
+      <MobileBottomNav
+        currentView={currentRole === 'venue_manager' ? venueView : organizerView}
+        onSelectView={(v) => {
+          if (currentRole === 'venue_manager') setVenueView(v);
+          else setOrganizerView(v);
+        }}
+        onOpenScanner={() => handleOpenScannerWithCode()}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
 
       {/* Global Modals */}
       <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />

@@ -384,13 +384,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           </button>
         )}
 
-        {/* Operational Fast Tools (Active inside Studio) */}
+        {/* Operational Fast Tools (Active inside Studio - desktop & tablet; mobile has bottom nav) */}
         {currentRole === 'organizer' && (
           <>
             <button
               onClick={onOpenScanner}
               data-cy="gate-scanner-open"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 bg-[#F8FAFD] dark:bg-[#111722] border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs cursor-pointer"
               title="Open Webcam QR Gate Scanner"
             >
               <QrCode className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
@@ -399,7 +399,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
             <button
               onClick={onOpenAudit}
-              className="relative p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
+              className="hidden sm:flex relative p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors border border-slate-200 dark:border-slate-800 cursor-pointer"
               title="View Live DB Audit Logs"
             >
               <History className="w-4 h-4" />

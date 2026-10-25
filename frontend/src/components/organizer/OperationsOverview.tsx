@@ -24,7 +24,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
   if (!selectedEvent) {
     return (
-      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center space-y-4 shadow-xs">
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 sm:p-12 text-center space-y-4 shadow-xs">
         <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
           <Calendar className="w-8 h-8" />
         </div>
@@ -71,7 +71,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   return (
     <div className="space-y-6">
       {/* Event Identity Hero Banner */}
-      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
