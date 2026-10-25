@@ -40,14 +40,48 @@ export const LumaEventDetailView: React.FC<LumaEventDetailViewProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleShare = () => {
-    const url = window.location.href;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
-      showToast('Event link copied to clipboard!');
-    } else {
-      showToast('Link ready to share!');
+  const getShareUrl = () => {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('event', event.id);
+      return url.toString();
+    } catch {
+      return `${window.location.origin}/?event=${event.id}`;
     }
+  };
+
+  const handleShare = async () => {
+    const url = getShareUrl();
+    try {
+      window.history.replaceState({}, '', url);
+    } catch {
+      // ignore
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: event.title,
+          text: `Check out ${event.title} on Zabay!`,
+          url,
+        });
+        showToast('Event link shared!');
+        return;
+      } catch {
+        // Fall back to clipboard if user dismissed native share dialog
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Event deep-link copied to clipboard!');
+        return;
+      } catch {
+        // ignore
+      }
+    }
+    showToast('Event link ready: ' + url);
   };
 
   const occupancyPercent = Math.round((event.tickets_sold / event.max_capacity) * 100);

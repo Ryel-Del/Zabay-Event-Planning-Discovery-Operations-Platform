@@ -17,6 +17,7 @@ import { StripeCheckoutModal } from './StripeCheckoutModal';
 import { AttendeePassView } from './AttendeePassView';
 import { LumaEventDetailView } from './LumaEventDetailView';
 import { formatTicketPrice } from '../../utils/currency';
+import { api } from '../../services/api';
 
 interface EventDiscoveryProps {
   onOpenScannerWithPass?: (code: string) => void;
@@ -50,11 +51,71 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = () => {
     }
   }, [pendingEvent, signedIn]);
 
+  const openEventDetail = (event: ZabayEvent) => {
+    setSelectedEventDetail(event);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('event', event.id);
+      window.history.pushState({ eventId: event.id }, '', url.toString());
+    } catch {
+      // ignore
+    }
+  };
+
+  const closeEventDetail = () => {
+    setSelectedEventDetail(null);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('event');
+      window.history.pushState({}, '', url.pathname + (url.search ? url.search : ''));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Synchronize deep link URL (?event=<id>) with active event detail view
+  React.useEffect(() => {
+    const syncFromUrl = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const eventId = params.get('event');
+        if (eventId) {
+          const match = events.find((e) => e.id === eventId);
+          if (match) {
+            setSelectedEventDetail(match);
+          } else if (events.length > 0) {
+            try {
+              const res = await api.events.getById(eventId);
+              if (res.success && res.data) {
+                setSelectedEventDetail(res.data);
+              }
+            } catch {
+              // ignore
+            }
+          }
+        } else if (selectedEventDetail) {
+          setSelectedEventDetail(null);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    syncFromUrl();
+
+    const handlePopState = () => {
+      syncFromUrl();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [events]);
+
   React.useEffect(() => {
     const handleSetTab = (e: any) => {
       if (e.detail?.tab) setActiveTab(e.detail.tab);
       if (e.detail?.view) setViewMode(e.detail.view);
-      setSelectedEventDetail(null);
+      closeEventDetail();
     };
     window.addEventListener('zabay:set-attendee-tab', handleSetTab);
     return () => window.removeEventListener('zabay:set-attendee-tab', handleSetTab);
@@ -92,10 +153,10 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = () => {
         <LumaEventDetailView
           event={currentDetailEvent}
           venue={venue}
-          onBack={() => setSelectedEventDetail(null)}
+          onBack={closeEventDetail}
           onRegister={() => requestRegistration(currentDetailEvent)}
           onViewPass={() => {
-            setSelectedEventDetail(null);
+            closeEventDetail();
             setActiveTab('passes');
           }}
         />
@@ -234,7 +295,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = () => {
             <EventMapView
               events={filteredEvents}
               venues={venues}
-              onSelectEvent={(evt) => setSelectedEventDetail(evt)}
+              onSelectEvent={(evt) => openEventDetail(evt)}
             />
           ) : filteredEvents.length === 0 ? (
             <div className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl p-12 text-center space-y-4 shadow-xs">
@@ -257,7 +318,7 @@ export const EventDiscovery: React.FC<EventDiscoveryProps> = () => {
                   <div
                     key={event.id}
                     data-cy="event-card"
-                    onClick={() => setSelectedEventDetail(event)}
+                    onClick={() => openEventDetail(event)}
                     className="bg-white dark:bg-[#171E2B] border border-slate-200/80 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
                   >
                     <div>

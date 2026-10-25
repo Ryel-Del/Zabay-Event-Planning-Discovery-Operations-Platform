@@ -42,6 +42,18 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
+  // When a user opens a shared event deep link (?event=<id>), switch to attendee discovery view so the event story opens
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('event')) {
+        setCurrentRole('attendee');
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const handleOpenScannerWithCode = (code?: string) => {
     setActiveScanCode(code);
     setIsScannerOpen(true);

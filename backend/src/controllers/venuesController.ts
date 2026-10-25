@@ -91,8 +91,14 @@ export async function bookVenue(req: Request, res: Response, next: NextFunction)
       return res.status(404).json({ success: false, error: 'Event not found' });
     }
     const actorId = trustedUserId(req);
-    if (actorId && eventResult.rows[0].organizer_id !== actorId) {
-      return res.status(403).json({ success: false, error: 'Event owner access required' });
+    if (actorId) {
+      const userRes = await query('SELECT role FROM users WHERE id = $1', [actorId]);
+      const userRole = userRes.rows[0]?.role;
+      const isOwner = eventResult.rows[0].organizer_id === actorId;
+      const isVenueManager = userRole === 'venue_manager';
+      if (!isOwner && !isVenueManager) {
+        return res.status(403).json({ success: false, error: 'Event owner or venue manager access required' });
+      }
     }
 
     if (hall_id !== undefined && hall_id !== null) {

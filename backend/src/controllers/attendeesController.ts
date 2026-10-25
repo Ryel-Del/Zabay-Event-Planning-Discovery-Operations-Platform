@@ -20,7 +20,12 @@ export async function registerForEvent(req: Request, res: Response, next: NextFu
     const account = await query('SELECT name, email FROM users WHERE id = $1', [accountId]);
     if (!account.rows[0]) return res.status(401).json({ success: false, error: 'Account login required', code: 'UNAUTHORIZED' });
 
-    const event = await query("SELECT id FROM events WHERE id = $1 AND is_private = false AND event_type = 'public' AND status != $2", [event_id.trim(), 'cancelled']);
+    const event = await query(
+      `SELECT id, organizer_id FROM events WHERE id = $1 AND status != $2 AND (
+        (is_private = false AND event_type = 'public') OR organizer_id = $3
+      )`,
+      [event_id.trim(), 'cancelled', accountId]
+    );
     if (event.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Event not found' });
     }

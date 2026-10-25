@@ -31,7 +31,7 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   currentView = 'overview',
   onSelectView,
 }) => {
-  const { venues, venueBookings, bookVenue, selectedEvent, currentUser, currentRole, isDevModeUnlocked, forkVenueLayout } = useApp();
+  const { venues, venueBookings, bookVenue, selectedEvent, events, currentUser, currentRole, isDevModeUnlocked, forkVenueLayout } = useApp();
   const [internalView, setInternalView] = useState<VenueView>('overview');
   const activeView = currentView || internalView;
 
@@ -76,13 +76,14 @@ export const VenueManagerPortal: React.FC<VenueManagerPortalProps> = ({
   const [testHallId, setTestHallId] = useState<string>('');
 
   const handleTestBooking = async () => {
-    if (!selectedEvent || !selectedVenue) {
+    const targetEvent = selectedEvent || events.find((e) => e.venue_id === selectedVenue?.id) || events[0];
+    if (!targetEvent || !selectedVenue) {
       setBookingStatus({ success: false, message: 'Select a saved event and venue first.' });
       return;
     }
     const res = await bookVenue(
       selectedVenue.id,
-      selectedEvent.id,
+      targetEvent.id,
       testStart,
       testEnd,
       testHallId || undefined

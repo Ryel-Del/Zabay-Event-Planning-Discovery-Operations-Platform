@@ -87,6 +87,18 @@ export async function requireOrganizerOrOperator(req: Request, res: Response, ne
     next();
   } catch (err) { next(err); }
 }
+export async function requireOrganizerOrVenueManagerOrOperator(req: Request, res: Response, next: NextFunction) {
+  const found = session(req);
+  if (!found) return res.status(401).json({ success: false, error: 'Login required', code: 'UNAUTHORIZED' });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf)) return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
+  if (found.identity === 'operator') return next();
+  try {
+    const result = await query('SELECT role FROM users WHERE id = $1', [found.userId]);
+    const role = result.rows[0]?.role;
+    if (role !== 'organizer' && role !== 'venue_manager') return res.status(403).json({ success: false, error: 'Organizer or venue manager access required', code: 'FORBIDDEN' });
+    next();
+  } catch (err) { next(err); }
+}
 export const requireEventCreator = requireOrganizerOrOperator;
 export function trustedEventOwner(req: Request) {
   const found = session(req);

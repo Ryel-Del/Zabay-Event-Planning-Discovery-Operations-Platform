@@ -11,6 +11,8 @@ import {
   Plus,
   Pencil,
   Trash2,
+  ExternalLink,
+  Share2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
@@ -22,10 +24,11 @@ interface OperationsOverviewProps {
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent, setCurrentRole } = useApp();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [shareToast, setShareToast] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const canManageSelectedEvent = Boolean(
@@ -51,6 +54,29 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleShareEvent = () => {
+    if (!selectedEvent) return;
+    const url = `${window.location.origin}/?event=${selectedEvent.id}`;
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(() => {
+        setShareToast(true);
+        setTimeout(() => setShareToast(false), 3000);
+      }).catch(() => {});
+    }
+  };
+
+  const handleViewPublicPage = () => {
+    if (!selectedEvent) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('event', selectedEvent.id);
+      window.history.pushState({}, '', url.toString());
+    } catch {
+      // ignore
+    }
+    setCurrentRole('attendee');
   };
 
   if (!selectedEvent) {
@@ -164,6 +190,23 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               className="px-3.5 py-2 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold transition-all cursor-pointer"
             >
               Verify Venue Match
+            </button>
+
+            <button
+              onClick={handleViewPublicPage}
+              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              title="View public event page and register passes"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              Public View & Tickets
+            </button>
+            <button
+              onClick={handleShareEvent}
+              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              title="Copy deep-link to share this event"
+            >
+              <Share2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+              {shareToast ? 'Link Copied!' : 'Share Event'}
             </button>
 
             {canManageSelectedEvent && (
