@@ -19,6 +19,19 @@ import type {
   WorkflowTemplateKit,
 } from '../types';
 
+export const guestUser: User = {
+  id: 'usr-guest',
+  name: 'Guest Explorer',
+  email: 'guest@zabay.ph',
+  role: 'attendee',
+  roles: ['attendee'],
+  phone: '',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+  organization: 'Bohol Community Hub',
+  location: 'Tagbilaran City, Bohol',
+  bio: 'Exploring public Bohol events, venues, and digital QR passes.',
+};
+
 export const mockCurrentUser: User = {
   id: 'usr-org-1',
   name: 'Mark Bautista',

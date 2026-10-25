@@ -493,15 +493,26 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {isDark ? <Sun className="w-4 h-4 text-[#7EA6E0]" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
 
-        {/* Sign In / Switch Account CTA */}
-        <button
-          onClick={() => (onOpenAuth ? onOpenAuth() : setIsAuthModalOpen(true))}
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer"
-          title="Sign in or switch evaluation persona"
-        >
-          <Lock className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
-          <span>Sign In</span>
-        </button>
+        {/* Sign In CTA */}
+        {currentUser.id === 'usr-guest' ? (
+          <button
+            onClick={() => (onOpenAuth ? onOpenAuth() : setIsAuthModalOpen(true))}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-[#3E6CB5] hover:bg-[#325896] dark:bg-[#4E80CD] dark:hover:bg-[#3E6CB5] rounded-xl transition-all shadow-xs cursor-pointer"
+            title="Sign In with Google or Email"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => (onOpenAuth ? onOpenAuth() : setIsAuthModalOpen(true))}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-[#F8FAFD] dark:bg-[#111722] hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl transition-all cursor-pointer"
+            title="Sign in or switch persona"
+          >
+            <Lock className="w-3.5 h-3.5 text-[#3E6CB5] dark:text-[#7EA6E0]" />
+            <span>Sign In</span>
+          </button>
+        )}
 
         {/* User Account & Workspace Dropdown Menu */}
         <div className="relative" ref={menuRef}>
@@ -728,22 +739,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setIsProfileMenuOpen(false);
-                      if (onOpenDevConsole) onOpenDevConsole();
-                    }}
-                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
-                    title="Enter developer passcode"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Terminal className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300" />
-                      <span>Developer Access</span>
-                    </span>
-                    <span className="text-[10px] text-slate-400 group-hover:text-slate-500 font-mono">Code</span>
-                  </button>
-                )}
+                ) : null}
               </div>
             </div>
           )}

@@ -76,13 +76,13 @@ const DEMO_PERSONAS = [
 ];
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { setCurrentUser, setCurrentRole, previewStaffPortal } = useApp();
+  const { setCurrentUser, setCurrentRole, previewStaffPortal, isDevModeUnlocked, unlockDevMode } = useApp();
 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
-  const [email, setEmail] = useState('mark.bautista@zabay.ph');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('organizer');
+  const [selectedRole, setSelectedRole] = useState<UserRole>('attendee');
   const [organization, setOrganization] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -90,6 +90,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleGoogleSignIn = () => {
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    setTimeout(() => {
+      const googleUser: User = {
+        id: 'usr-att-1',
+        name: 'Sofia Ramos',
+        email: 'sofia.ramos@bisu.edu.ph',
+        role: 'attendee',
+        roles: ['attendee'],
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+        organization: 'Bohol Island State University (BISU)',
+        location: 'Tagbilaran City, Bohol',
+        bio: 'BISU student attendee participating in sports, academic conferences, and cultural summits.',
+      };
+      setCurrentUser(googleUser);
+      setCurrentRole('attendee');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-user', JSON.stringify(googleUser));
+        localStorage.setItem('zabay-role', 'attendee');
+      }
+      setSuccessMessage('Signed in successfully with Google (sofia.ramos@bisu.edu.ph)!');
+      setTimeout(() => {
+        setIsSubmitting(false);
+        onClose();
+      }, 600);
+    }, 450);
+  };
 
   const handleSelectPersona = (persona: (typeof DEMO_PERSONAS)[0]) => {
     setEmail(persona.email);
@@ -170,11 +199,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedPass = password.trim();
+
+    // Secret passcode entry in AuthModal: entering ZABAY2026 in either field unlocks developer mode
+    if (trimmedEmail.toUpperCase() === 'ZABAY2026' || trimmedPass.toUpperCase() === 'ZABAY2026') {
+      const devRes = unlockDevMode('ZABAY2026');
+      if (devRes.success) {
+        setSuccessMessage('Developer Mode unlocked! Master dataset and evaluation personas activated.');
+        setTimeout(() => {
+          setSuccessMessage(null);
+          onClose();
+        }, 800);
+        return;
+      }
+    }
+
+    if (!trimmedEmail) {
       setErrorMessage('Please enter an email address.');
       return;
     }
-    if (!password.trim() || password.length < 6) {
+    if (!trimmedPass || trimmedPass.length < 6) {
       setErrorMessage('Password must be at least 6 characters.');
       return;
     }
@@ -213,41 +258,43 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* 1-Click Demo Personas Bar */}
-        <div className="p-3 sm:p-4 shrink-0 bg-blue-50/60 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/40 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              1-Click Demo Personas (Evaluation Ready)
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">Instant Sign-In</span>
-          </div>
+        {/* 1-Click Demo Personas Bar (Unlocked exclusively via DevCode / Secret Developer Mode) */}
+        {isDevModeUnlocked && (
+          <div className="p-3 sm:p-4 shrink-0 bg-blue-50/60 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#244A85] dark:text-[#8BB0E8] uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                1-Click Demo Personas (Evaluation Ready)
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Instant Sign-In</span>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {DEMO_PERSONAS.map((persona) => (
-              <button
-                key={persona.id}
-                type="button"
-                onClick={() => handleSelectPersona(persona)}
-                className="p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-white/90 dark:bg-[#111722] hover:border-blue-400 hover:shadow-xs transition-all text-left flex items-center gap-2.5 group cursor-pointer"
-              >
-                <img
-                  src={persona.avatar}
-                  alt={persona.name}
-                  className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-[#3E6CB5]">
-                    {persona.name}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {DEMO_PERSONAS.map((persona) => (
+                <button
+                  key={persona.id}
+                  type="button"
+                  onClick={() => handleSelectPersona(persona)}
+                  className="p-2.5 rounded-xl border border-blue-200/80 dark:border-blue-900/50 bg-white/90 dark:bg-[#111722] hover:border-blue-400 hover:shadow-xs transition-all text-left flex items-center gap-2.5 group cursor-pointer"
+                >
+                  <img
+                    src={persona.avatar}
+                    alt={persona.name}
+                    className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate group-hover:text-[#3E6CB5]">
+                      {persona.name}
+                    </div>
+                    <div className="text-[10px] text-slate-500 truncate">
+                      {persona.title}
+                    </div>
                   </div>
-                  <div className="text-[10px] text-slate-500 truncate">
-                    {persona.title}
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Tab Switcher */}
         <div className="flex shrink-0 border-b border-slate-200/80 dark:border-slate-800">
@@ -283,6 +330,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
+          {/* Google SSO Login Action */}
+          <div className="space-y-3 pb-1">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isSubmitting}
+              className="w-full py-2.5 px-4 bg-white dark:bg-[#111722] border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-100 flex items-center justify-center gap-3 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
+              <span className="text-[10px] uppercase font-bold text-slate-400">or sign in with email</span>
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-800" />
+            </div>
+          </div>
           {mode === 'register' && (
             <div className="space-y-1">
               <label className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -401,23 +483,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* Quick Demo Credential Hint */}
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-1.5">
-              <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-              <span>Demo Access: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
+          {isDevModeUnlocked && (
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>Demo Access: <strong className="text-slate-700 dark:text-slate-300 font-mono">operator</strong></span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('operator');
+                  setPassword('zabay-operator-secret-2026');
+                  setSelectedRole('organizer');
+                }}
+                className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+              >
+                Fill Demo Account
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setEmail('operator');
-                setPassword('zabay-operator-secret-2026');
-                setSelectedRole('organizer');
-              }}
-              className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-            >
-              Fill Demo Account
-            </button>
-          </div>
+          )}
 
           <div className="pt-1 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
             <Lock className="w-3 h-3 text-slate-400" />

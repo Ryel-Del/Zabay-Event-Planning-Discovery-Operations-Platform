@@ -17,6 +17,7 @@ import type {
   EventCommitteeRoleMap,
 } from '../types';
 import {
+  guestUser,
   mockCurrentUser,
   mockEvents,
   mockVenues,
@@ -148,8 +149,28 @@ const minutesToTime = (mins: number) => {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
-  const [currentRole, setCurrentRole] = useState<UserRole>('organizer');
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('zabay-user');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore
+        }
+      }
+    }
+    return guestUser;
+  });
+
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
+    if (typeof window !== 'undefined') {
+      const savedRole = localStorage.getItem('zabay-role') as UserRole;
+      if (savedRole) return savedRole;
+    }
+    return 'attendee';
+  });
+
   const [activeStaffId, setActiveStaffId] = useState<string | null>('per-3');
 
   const previewStaffPortal = (staffId?: string) => {
@@ -164,16 +185,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setRoleWithUser = (role: UserRole) => {
     setCurrentRole(role);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('zabay-role', role);
+    }
     // Multi-role capability in one account:
-    // Update the active session role while preserving user account identity & profile (Mark Bautista stays Mark Bautista!)
+    // Update the active session role while preserving user account identity & profile
     setCurrentUser((prevUser) => {
       const existingRoles = prevUser.roles || ['organizer', 'venue_manager', 'staff', 'attendee'];
       const updatedRoles = existingRoles.includes(role) ? existingRoles : [...existingRoles, role];
-      return {
+      const updatedUser = {
         ...prevUser,
         role,
         roles: updatedRoles,
       };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('zabay-user', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
     });
   };
 
@@ -520,13 +548,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       loadDemoData();
       setIsDevModeUnlocked(true);
       setUnlockedDevCode(normalized);
+      setCurrentUser(mockCurrentUser);
+      setCurrentRole('organizer');
       if (typeof window !== 'undefined') {
         localStorage.setItem('zabay-dev-unlocked', 'true');
         localStorage.setItem('zabay-dev-code', normalized);
+        localStorage.setItem('zabay-user', JSON.stringify(mockCurrentUser));
+        localStorage.setItem('zabay-role', 'organizer');
       }
       return {
         success: true,
-        message: `DevCode "${normalized}" verified! Bohol Master dataset loaded.`,
+        message: `DevCode "${normalized}" verified! Bohol Master dataset & evaluation persona loaded.`,
         devCode: normalized,
       };
     }
@@ -557,16 +589,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return {
       success: false,
-      message: 'Invalid devcode. Try "ZABAY2026" or "ROLE2-SEED".',
+      message: 'Invalid developer passcode. Try "ZABAY2026".',
     };
   };
 
   const lockDevMode = () => {
     setIsDevModeUnlocked(false);
     setUnlockedDevCode(null);
+    setCurrentUser(guestUser);
+    setCurrentRole('attendee');
     if (typeof window !== 'undefined') {
       localStorage.removeItem('zabay-dev-unlocked');
       localStorage.removeItem('zabay-dev-code');
+      localStorage.removeItem('zabay-user');
+      localStorage.removeItem('zabay-role');
     }
   };
 
