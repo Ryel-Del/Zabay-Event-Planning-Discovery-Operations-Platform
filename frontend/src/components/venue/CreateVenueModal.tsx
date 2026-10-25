@@ -740,7 +740,7 @@ export const CreateVenueModal: React.FC<CreateVenueModalProps> = ({
 
           {/* Feedback messages */}
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 font-medium">
+            <div role="alert" data-cy="venue-create-error" className="p-3 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 font-medium">
               {errorMessage}
             </div>
           )}
