@@ -62,6 +62,7 @@ test('schema-only database supports the complete operator workflow', async () =>
     };
     assert.equal((await request(app).post('/api/attendees/register').send(registrationPayload0)).status, 401);
     assert.equal((await request(app).post('/api/attendees/register').send({ ...registrationPayload0, registration_mode: 'guest' })).status, 401);
+    assert.equal((await request(app).post('/api/attendees/register').send({ ...registrationPayload0, registration_mode: 'account' })).status, 401);
     assert.equal((await agent.post('/api/attendees/register').set('X-CSRF-Token', csrf).send(registrationPayload0)).status, 401);
     assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, 0);
     const firstAttendee = request.agent(app);
@@ -69,6 +70,8 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal(firstAccount.status, 201);
     assert.equal((await firstAttendee.post('/api/attendees/register').send(registrationPayload0)).status, 403);
     assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', 'invalid').send(registrationPayload0)).status, 403);
+    assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).set('Origin', 'https://untrusted.example').send(registrationPayload0)).status, 403);
+    assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, 0);
     const registration = await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0);
     assert.equal(registration.status, 201, JSON.stringify(registration.body));
     assert.equal(registration.body.data.attendee_id, firstAccount.body.user.id);
@@ -147,6 +150,8 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal(signedInRegistration.status, 201, JSON.stringify(signedInRegistration.body));
     assert.equal(signedInRegistration.body.data.attendee_id, registered.body.user.id);
     assert.equal((await pool.query('SELECT attendee_id FROM registrations WHERE id = $1', [signedInRegistration.body.data.id])).rows[0].attendee_id, registered.body.user.id);
+    assert.equal(signedInRegistration.body.data.attendee_name, 'Fresh Attendee');
+    assert.equal(signedInRegistration.body.data.attendee_email, 'fresh-attendee@example.test');
     const sameAccountOtherSession = request.agent(app);
     assert.equal((await sameAccountOtherSession.post('/api/auth/user-login').send({ email: 'fresh-attendee@example.test', password: 'fresh-account-secret' })).status, 200);
     const restoredPasses = await sameAccountOtherSession.get('/api/attendees/registrations/me');
@@ -175,6 +180,13 @@ test('schema-only database supports the complete operator workflow', async () =>
     assert.equal((await otherOrganizer.post('/api/attendees/checkin').set('X-CSRF-Token', otherLogin.body.csrfToken).send({ qr_pass_code: passCode })).status, 403);
     assert.equal((await organizer.post('/api/attendees/checkin').set('X-CSRF-Token', organizerLogin.body.csrfToken).send({ qr_pass_code: passCode, verified_by_id: secondRegistration.body.user.id })).status, 200);
     assert.equal((await pool.query('SELECT verified_by FROM attendance_records WHERE registration_id = $1', [ownRegistration.body.data.id])).rows[0].verified_by, organizerRegistration.body.user.id);
+    const beforeExpiry = (await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count;
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 9 * 60 * 60 * 1000;
+      assert.equal((await firstAttendee.post('/api/attendees/register').set('X-CSRF-Token', firstAccount.body.csrfToken).send(registrationPayload0)).status, 401);
+    } finally { Date.now = realNow; }
+    assert.equal((await pool.query('SELECT count(*)::int AS count FROM registrations')).rows[0].count, beforeExpiry);
     await pool.query("UPDATE users SET role = 'staff' WHERE email = 'fresh-attendee@example.test'");
     assert.equal((await venueManager.get('/api/tasks')).status, 403);
     assert.equal((await venueManager.post('/api/attendees/checkin').set('X-CSRF-Token', managerLogin.body.csrfToken).send({ qr_pass_code: passCode })).status, 403);
