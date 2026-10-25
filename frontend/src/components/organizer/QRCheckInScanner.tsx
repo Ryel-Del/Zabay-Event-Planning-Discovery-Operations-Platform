@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   QrCode,
   X,
@@ -20,20 +20,39 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose, eventId }) => {
-  const { checkInAttendee, events, selectedEvent } = useApp();
-  const [activeEventId, setActiveEventId] = useState<string>(eventId || selectedEvent?.id || (events[0]?.id ?? ''));
+  const { checkInAttendee, events, selectedEvent, currentUser, isDevModeUnlocked, registrations } = useApp();
+
+  // Scope available events to the current organizer's managed events
+  const availableEvents = useMemo(() => {
+    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
+      return events;
+    }
+    if (currentUser.id && currentUser.id !== 'usr-guest') {
+      const owned = events.filter((e) => e.organizer_id === currentUser.id);
+      if (owned.length > 0) return owned;
+      if (selectedEvent) return [selectedEvent];
+    }
+    if (selectedEvent) {
+      return [selectedEvent];
+    }
+    return events.length > 0 ? [events[0]] : [];
+  }, [events, currentUser.id, isDevModeUnlocked, selectedEvent]);
+
+  const [activeEventId, setActiveEventId] = useState<string>(
+    eventId || selectedEvent?.id || availableEvents[0]?.id || ''
+  );
 
   useEffect(() => {
     if (eventId) {
       setActiveEventId(eventId);
-    } else if (selectedEvent?.id) {
+    } else if (selectedEvent?.id && availableEvents.some((e) => e.id === selectedEvent.id)) {
       setActiveEventId(selectedEvent.id);
-    } else if (events.length > 0 && !activeEventId) {
-      setActiveEventId(events[0].id);
+    } else if (availableEvents.length > 0 && !availableEvents.some((e) => e.id === activeEventId)) {
+      setActiveEventId(availableEvents[0].id);
     }
-  }, [eventId, selectedEvent?.id, events]);
+  }, [eventId, selectedEvent?.id, availableEvents]);
 
-  const currentGateEvent = events.find((e) => e.id === activeEventId) || selectedEvent || events[0];
+  const currentGateEvent = availableEvents.find((e) => e.id === activeEventId) || selectedEvent || availableEvents[0] || events[0];
 
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
@@ -249,14 +268,38 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
 
   if (!isOpen) return null;
 
-  const sampleCodes = [
-    { label: 'Sofia Ramos (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-9042-SOFIA' },
-    { label: 'Liam Mendoza (Duplicate Pass - Already Admitted)', code: 'ZABAY-PASS-3108-LIAM' },
-    { label: 'Sandugo Festival Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-7731-SANDUGO-CULTURE' },
-    { label: 'Bohol DevCon Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-4412-DEVCON-YOUTH' },
-    { label: 'Kenji Tan (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-1029-KENJI' },
-    { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
-  ];
+  const activeRegistrations = useMemo(() => {
+    if (!currentGateEvent) return [];
+    return registrations.filter((r) => r.event_id === currentGateEvent.id);
+  }, [registrations, currentGateEvent?.id]);
+
+  const sampleCodes = useMemo(() => {
+    // If real registrations exist for this event, show them as 1-click test passes
+    if (activeRegistrations.length > 0) {
+      const realPasses = activeRegistrations.slice(0, 4).map((reg) => ({
+        label: `${reg.attendee_name} (${reg.status === 'checked_in' ? 'Already Admitted' : reg.ticket_type})`,
+        code: reg.qr_pass_code,
+      }));
+      return [
+        ...realPasses,
+        { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
+      ];
+    }
+    // In developer demo mode, show the full multi-event collision test suite
+    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
+      return [
+        { label: 'Sofia Ramos (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-9042-SOFIA' },
+        { label: 'Liam Mendoza (Duplicate Pass - Already Admitted)', code: 'ZABAY-PASS-3108-LIAM' },
+        { label: 'Sandugo Festival Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-7731-SANDUGO-CULTURE' },
+        { label: 'Bohol DevCon Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-4412-DEVCON-YOUTH' },
+        { label: 'Kenji Tan (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-1029-KENJI' },
+        { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
+      ];
+    }
+    return [
+      { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
+    ];
+  }, [activeRegistrations, isDevModeUnlocked, currentUser.id]);
 
   return (
     <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
@@ -308,20 +351,26 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
             </div>
             <div className="flex items-center gap-1.5 shrink-0 w-full sm:w-auto">
               <span className="text-[10px] text-slate-500 whitespace-nowrap">Gate:</span>
-              <select
-                value={activeEventId}
-                onChange={(e) => {
-                  setActiveEventId(e.target.value);
-                  setResult(null);
-                }}
-                className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] w-full sm:w-auto sm:max-w-[180px] truncate cursor-pointer"
-              >
-                {events.map((evt) => (
-                  <option key={evt.id} value={evt.id}>
-                    {evt.title}
-                  </option>
-                ))}
-              </select>
+              {availableEvents.length > 1 ? (
+                <select
+                  value={activeEventId}
+                  onChange={(e) => {
+                    setActiveEventId(e.target.value);
+                    setResult(null);
+                  }}
+                  className="text-xs font-medium bg-slate-50 dark:bg-[#1A2232] border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-[#3E6CB5] w-full sm:w-auto sm:max-w-[180px] truncate cursor-pointer"
+                >
+                  {availableEvents.map((evt) => (
+                    <option key={evt.id} value={evt.id}>
+                      {evt.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#1A2232] border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
+                  {currentGateEvent?.title || 'Active Event'}
+                </span>
+              )}
             </div>
           </div>
         </div>
