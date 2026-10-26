@@ -78,11 +78,11 @@ export function announceAdmission(eventId: string): void {
 
 // In live mode never use the shared context's local fallback: a lost HTTP response
 // is not proof of admission. The database is authoritative.
-export async function admitLivePass(code: string, eventId: string): Promise<{ success: boolean; message: string }> {
+export async function admitLivePass(code: string, eventId: string): Promise<{ success: boolean; message: string; isDuplicate?: boolean; isWrongEvent?: boolean }> {
   const reply = await api.attendees.checkIn(code, eventId);
   if (reply.success && reply.data?.status === 'checked_in' && reply.data.event_id === eventId) {
     announceAdmission(eventId);
     return { success: true, message: 'Admission confirmed in PostgreSQL.' };
   }
-  return { success: false, message: reply.error || 'Admission was not confirmed by the database.' };
+  return { success: false, message: reply.error || 'Admission was not confirmed by the database.', isDuplicate: reply.code === 'DUPLICATE_CHECK_IN', isWrongEvent: reply.code === 'WRONG_EVENT' };
 }
