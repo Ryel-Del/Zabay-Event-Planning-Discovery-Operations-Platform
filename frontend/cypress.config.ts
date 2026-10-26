@@ -98,6 +98,21 @@ export default defineConfig({
           if (!cameraRegistration) throw new Error('Camera registration was not created before the camera spec');
           return cameraRegistration;
         },
+        // Synthetic fixtures use ONLY the disposable Cypress test DB, never API auth rate limits.
+        async 'db:createSyntheticRosterPass'({ eventId }: { eventId: string }) {
+          if (typeof eventId !== 'string' || eventId.length > 64 || !eventId) {
+            throw new Error('A valid event ID is required for test roster fixtures');
+          }
+          const id = 'reg-e2e-' + randomUUID();
+          const code = 'ZABAY-E2E-' + randomUUID().replaceAll('-', '').slice(0, 20);
+          const email = 'roster-' + randomUUID() + '@example.test';
+          const name = 'Browser Roster Attendee';
+          await pool.query(
+            'INSERT INTO registrations (id, event_id, attendee_name, attendee_email, ticket_type, qr_pass_code, status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [id, eventId, name, email, 'VIP Access', code, 'confirmed']
+          );
+          return { id, event_id: eventId, attendee_name: name, attendee_email: email, qr_pass_code: code };
+        },
         async 'db:registrationState'({ registrationId }: { registrationId: string }) {
           const result = await pool.query(
             `SELECT r.id, r.event_id, r.status, r.qr_pass_code,
