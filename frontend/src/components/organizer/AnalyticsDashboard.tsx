@@ -226,14 +226,14 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     if (liveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
       return liveData.revenue_tiers.map((t: any, index: number) => ({
-        name: `${t.name} (${getCurrencySymbol(selectedEvent.currency)}${t.value > 0 ? Math.round(t.value / Math.max(1, t.count)) : selectedEvent.ticket_price})`,
-        value: Number(t.value) || (selectedEvent.ticket_price <= 0 ? t.count || 1 : 0),
+        name: `${t.name} (${getCurrencySymbol(selectedEvent.currency)}${selectedEvent.ticket_price})`,
+        value: selectedEvent.ticket_price <= 0 ? Number(t.count) || 0 : (Number(t.count) || 0) * selectedEvent.ticket_price,
         count: Number(t.count) || 0,
         color: colors[index % colors.length],
       }));
     }
 
-    if (activeRegistrations.length > 0) {
+    if (!isLiveBackend && activeRegistrations.length > 0) {
       const tierMap: Record<string, { count: number; total: number }> = {};
       activeRegistrations.forEach((r) => {
         const type = r.ticket_type || 'General Admission';
@@ -241,7 +241,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
           tierMap[type] = { count: 0, total: 0 };
         }
         tierMap[type].count += 1;
-        tierMap[type].total += Number(r.amount_paid) || selectedEvent.ticket_price || 0;
+        tierMap[type].total += selectedEvent.ticket_price || 0;
       });
 
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
@@ -251,17 +251,6 @@ const ActiveAnalyticsDashboard: React.FC = () => {
         count: info.count,
         color: colors[index % colors.length],
       }));
-    }
-
-    if (selectedEvent.ticket_price <= 0) {
-      return [
-        {
-          name: `Free Admission (${selectedEvent.expected_attendance} Expected)`,
-          value: selectedEvent.expected_attendance || 100,
-          count: 0,
-          color: '#5F7D5B',
-        },
-      ];
     }
 
     if (ticketsSold > 0) {
