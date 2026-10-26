@@ -483,11 +483,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <div>
                 <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
                 <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                  {registrations.filter((r) => r.status === 'checked_in').length} / {registrations.length} Checked In
+                  {checkedInCount === null || registeredCount === null ? 'Unavailable' : `${checkedInCount} / ${registeredCount} Checked In`}
                 </p>
               </div>
               <span className="text-[10px] px-2 py-1 bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] rounded-lg font-bold">
-                Zero Duplicates
+                {live ? 'Database-verified admissions' : 'Browser-local demo'}
               </span>
             </div>
           </div>
