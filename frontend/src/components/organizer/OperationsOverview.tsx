@@ -416,7 +416,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
           {/* Clean Dense Task Row List (NOT bulky cards!) */}
           <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
-            {tasks.map((task) => (
+            {eventTasks.map((task) => (
               <div
                 key={task.id}
                 className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/40 px-2 rounded-xl transition-colors"
