@@ -57,7 +57,8 @@ test('event registration roster protects attendee data and reports admission int
   const otherLogin = await login(other, otherId + '@example.test');
   assert.equal(ownLogin.status, 200);
   assert.equal(otherLogin.status, 200);
-  assert.equal((await operator.post('/api/auth/login').send({ username: process.env.OPERATOR_USERNAME, password: process.env.OPERATOR_PASSWORD })).status, 200);
+  const operatorLogin = await operator.post('/api/auth/login').send({ username: process.env.OPERATOR_USERNAME, password: process.env.OPERATOR_PASSWORD });
+  assert.equal(operatorLogin.status, 200);
 
   const rosterPath = '/api/events/' + firstEvent + '/registrations';
   const summaryPath = '/api/events/' + firstEvent + '/registration-summary';
@@ -96,7 +97,7 @@ test('event registration roster protects attendee data and reports admission int
   const foreign = await other.post('/api/attendees/checkin').set('X-CSRF-Token', otherLogin.body.csrfToken)
     .send({ qr_pass_code: passes[0].code });
   assert.equal(foreign.status, 403);
-  const incorrectEvent = await operator.post('/api/attendees/checkin').send({
+  const incorrectEvent = await operator.post('/api/attendees/checkin').set('X-CSRF-Token', operatorLogin.body.csrfToken).send({
     qr_pass_code: passes[0].code, event_id: secondEvent
   });
   assert.equal(incorrectEvent.status, 400);
