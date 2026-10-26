@@ -78,14 +78,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const maxCapacity = Math.max(0, Number(selectedEvent.max_capacity) || 0);
   const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.max(0, Math.round((ticketsSold / maxCapacity) * 100))) : 0;
 
-  const totalRevenue = useMemo(() => {
-    if (selectedEvent.ticket_price <= 0) return 0;
-    if (liveData?.gross_revenue !== undefined) return Number(liveData.gross_revenue) || 0;
-    if (activeRegistrations.length > 0) {
-      return activeRegistrations.reduce((sum, r) => sum + (Number(r.amount_paid) || selectedEvent.ticket_price), 0);
-    }
-    return ticketsSold * selectedEvent.ticket_price;
-  }, [selectedEvent.ticket_price, liveData?.gross_revenue, activeRegistrations, ticketsSold]);
+  const totalRevenue = useMemo(() => Math.max(0, ticketsSold) * Math.max(0, Number(selectedEvent.ticket_price) || 0), [selectedEvent.ticket_price, ticketsSold]);
 
   const completedTasks = liveData?.task_metrics?.completed_tasks ?? eventTasks.filter((t) => t.status === 'completed').length;
   const totalTasksCount = liveData?.task_metrics?.total_tasks ?? eventTasks.length;
@@ -228,7 +221,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     return [];
   }, [personnel, eventTasks]);
 
-  // Chart 4: Real Revenue by Tier
+  // Chart 4: Estimated Ticket Value by Tier
   const revenueTierData = useMemo(() => {
     if (liveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
@@ -333,7 +326,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
         {/* KPI 2 */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
           <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
-            <span>Gross Ticket Revenue</span>
+            <span>Potential Ticket Value (Uncollected)</span>
             <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">{getCurrencySymbol(selectedEvent.currency)}</span>
           </div>
           <div className="flex items-baseline justify-between">
@@ -343,7 +336,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
                 : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
             </span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">
-              {selectedEvent.ticket_price <= 0 ? 'Free Event' : `${ticketsSold} Sold`}
+              {selectedEvent.ticket_price <= 0 ? 'Free Event' : `${ticketsSold} Registered`}
             </span>
           </div>
           <p className="text-[11px] text-stone-500">
@@ -484,7 +477,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
         {/* Chart 4: Revenue Distribution */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Gross Revenue Stream</span>
+            <span>Potential Ticket Value by Tier</span>
             <span className="text-[10px] text-stone-400">
               {selectedEvent.ticket_price <= 0 ? 'Free Event' : 'Tiers Breakdown'}
             </span>
@@ -521,9 +514,9 @@ const ActiveAnalyticsDashboard: React.FC = () => {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-stone-400 dark:text-stone-500">
                 <BarChart3 className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">No Ticket Sales Yet</p>
+                <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">No Registrations Yet</p>
                 <p className="text-[11px] max-w-xs mt-1">
-                  Ticket tiers and sales volume will plot dynamically as attendees register for this event.
+                  Estimated ticket value will display when attendees register. No payments have been collected.
                 </p>
               </div>
             )}
