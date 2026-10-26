@@ -24,26 +24,30 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getCurrencySymbol } from '../../utils/currency';
 import { api } from '../../services/api';
+import { useEventRegistrationSummary } from '../../hooks/useEventRegistrationSummary';
 
-export const AnalyticsDashboard: React.FC = () => {
+const ActiveAnalyticsDashboard: React.FC = () => {
   const {
-    selectedEvent,
+    selectedEvent: selectedEventMaybe,
     tasks,
     resources,
     registrations,
     auditLogs,
     personnel,
     venues,
-    isDevModeUnlocked,
-    loadDemoData,
     isLiveBackend,
+    isDemoMode,
   } = useApp();
+  const selectedEvent = selectedEventMaybe!;
+  const admission = useEventRegistrationSummary(selectedEvent.id, isLiveBackend && !isDemoMode);
 
   const [liveData, setLiveData] = useState<any>(null);
+  // An earlier request must never paint another event's metrics after switching workspaces.
+  const currentLiveData = liveData?.event_id === selectedEvent.id ? liveData : null;
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
   useEffect(() => {
-    if (!selectedEvent?.id || !isLiveBackend) {
+    if (!selectedEvent?.id || !isLiveBackend || isDemoMode) {
       setLiveData(null);
       return;
     }
@@ -65,61 +69,31 @@ export const AnalyticsDashboard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedEvent?.id, isLiveBackend]);
-
-  if (!selectedEvent) {
-    return (
-      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
-        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
-          <BarChart3 className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">Live Analytics Pending</h2>
-          <p className="text-xs text-stone-500 max-w-md mx-auto">
-            Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
-          </p>
-        </div>
-        {isDevModeUnlocked && (
-          <button
-            onClick={loadDemoData}
-            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Load Bohol Sample Data</span>
-          </button>
-        )}
-      </div>
-    );
-  }
+  }, [selectedEvent?.id, isLiveBackend, isDemoMode]);
 
   // Real scoped data derivations
   const eventTasks = useMemo(() => tasks.filter((t) => t.event_id === selectedEvent.id), [tasks, selectedEvent.id]);
   const eventRegistrations = useMemo(() => registrations.filter((r) => r.event_id === selectedEvent.id), [registrations, selectedEvent.id]);
   const activeRegistrations = useMemo(() => eventRegistrations.filter((r) => r.status !== 'cancelled'), [eventRegistrations]);
 
-  const ticketsSold = liveData?.tickets_sold ?? Math.max(selectedEvent.tickets_sold, activeRegistrations.length);
-  const maxCapacity = Number(selectedEvent.max_capacity) || 200;
-  const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.round((ticketsSold / maxCapacity) * 100)) : 0;
+  const liveRegistrationMetrics = isLiveBackend && !isDemoMode;
+  const countsAvailable = !liveRegistrationMetrics || admission.data !== null;
+  const ticketsSold = liveRegistrationMetrics ? admission.data?.registered_count ?? 0 : Math.max(0, selectedEvent.tickets_sold, activeRegistrations.length);
+  const maxCapacity = Math.max(0, Number(selectedEvent.max_capacity) || 0);
+  const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.max(0, Math.round((ticketsSold / maxCapacity) * 100))) : 0;
 
-  const totalRevenue = useMemo(() => {
-    if (selectedEvent.ticket_price <= 0) return 0;
-    if (liveData?.gross_revenue !== undefined) return Number(liveData.gross_revenue) || 0;
-    if (activeRegistrations.length > 0) {
-      return activeRegistrations.reduce((sum, r) => sum + (Number(r.amount_paid) || selectedEvent.ticket_price), 0);
-    }
-    return ticketsSold * selectedEvent.ticket_price;
-  }, [selectedEvent.ticket_price, liveData?.gross_revenue, activeRegistrations, ticketsSold]);
+  const totalRevenue = useMemo(() => Math.max(0, ticketsSold) * Math.max(0, Number(selectedEvent.ticket_price) || 0), [selectedEvent.ticket_price, ticketsSold]);
 
-  const completedTasks = liveData?.task_metrics?.completed_tasks ?? eventTasks.filter((t) => t.status === 'completed').length;
-  const totalTasksCount = liveData?.task_metrics?.total_tasks ?? eventTasks.length;
+  const completedTasks = currentLiveData?.task_metrics?.completed_tasks ?? eventTasks.filter((t) => t.status === 'completed').length;
+  const totalTasksCount = currentLiveData?.task_metrics?.total_tasks ?? eventTasks.length;
   const taskReadiness = totalTasksCount > 0 ? Math.round((completedTasks / totalTasksCount) * 100) : 0;
 
-  const checkedInCount = liveData?.checked_in_count ?? eventRegistrations.filter((r) => r.status === 'checked_in').length;
-  const attendanceRate = ticketsSold > 0 ? Math.round((checkedInCount / ticketsSold) * 100) : (activeRegistrations.length > 0 ? Math.round((checkedInCount / activeRegistrations.length) * 100) : 0);
+  const checkedInCount = liveRegistrationMetrics ? admission.data?.checked_in_count ?? 0 : eventRegistrations.filter((r) => r.status === 'checked_in').length;
+  const attendanceRate = ticketsSold > 0 ? Math.min(100, Math.max(0, Math.round((checkedInCount / ticketsSold) * 100))) : 0;
 
   // Chart 1: Real Hourly Check-in Flow
   const hourlyFlowData = useMemo(() => {
-    if (liveData?.hourly_arrivals && Array.isArray(liveData.hourly_arrivals) && liveData.hourly_arrivals.length > 0) {
+    if (currentLiveData?.hourly_arrivals && Array.isArray(liveData.hourly_arrivals) && liveData.hourly_arrivals.length > 0) {
       let cumulative = 0;
       return liveData.hourly_arrivals.map((row: any) => {
         const arrivals = Number(row.arrivals) || 0;
@@ -174,7 +148,7 @@ export const AnalyticsDashboard: React.FC = () => {
         cumulative: running,
       };
     });
-  }, [liveData?.hourly_arrivals, auditLogs, eventRegistrations, selectedEvent.id]);
+  }, [currentLiveData?.hourly_arrivals, auditLogs, eventRegistrations, selectedEvent.id]);
 
   // Chart 2: Real Equipment & Resource Allocation
   const resourceData = useMemo(() => {
@@ -251,19 +225,19 @@ export const AnalyticsDashboard: React.FC = () => {
     return [];
   }, [personnel, eventTasks]);
 
-  // Chart 4: Real Revenue by Tier
+  // Chart 4: Estimated Ticket Value by Tier
   const revenueTierData = useMemo(() => {
-    if (liveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
+    if (currentLiveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
       return liveData.revenue_tiers.map((t: any, index: number) => ({
-        name: `${t.name} (${getCurrencySymbol(selectedEvent.currency)}${t.value > 0 ? Math.round(t.value / Math.max(1, t.count)) : selectedEvent.ticket_price})`,
-        value: Number(t.value) || (selectedEvent.ticket_price <= 0 ? t.count || 1 : 0),
+        name: `${t.name} (${getCurrencySymbol(selectedEvent.currency)}${selectedEvent.ticket_price})`,
+        value: selectedEvent.ticket_price <= 0 ? Number(t.count) || 0 : (Number(t.count) || 0) * selectedEvent.ticket_price,
         count: Number(t.count) || 0,
         color: colors[index % colors.length],
       }));
     }
 
-    if (activeRegistrations.length > 0) {
+    if (!isLiveBackend && activeRegistrations.length > 0) {
       const tierMap: Record<string, { count: number; total: number }> = {};
       activeRegistrations.forEach((r) => {
         const type = r.ticket_type || 'General Admission';
@@ -271,7 +245,7 @@ export const AnalyticsDashboard: React.FC = () => {
           tierMap[type] = { count: 0, total: 0 };
         }
         tierMap[type].count += 1;
-        tierMap[type].total += Number(r.amount_paid) || selectedEvent.ticket_price || 0;
+        tierMap[type].total += selectedEvent.ticket_price || 0;
       });
 
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
@@ -281,17 +255,6 @@ export const AnalyticsDashboard: React.FC = () => {
         count: info.count,
         color: colors[index % colors.length],
       }));
-    }
-
-    if (selectedEvent.ticket_price <= 0) {
-      return [
-        {
-          name: `Free Admission (${selectedEvent.expected_attendance} Expected)`,
-          value: selectedEvent.expected_attendance || 100,
-          count: 0,
-          color: '#5F7D5B',
-        },
-      ];
     }
 
     if (ticketsSold > 0) {
@@ -306,7 +269,7 @@ export const AnalyticsDashboard: React.FC = () => {
     }
 
     return [];
-  }, [liveData?.revenue_tiers, activeRegistrations, selectedEvent, ticketsSold]);
+  }, [currentLiveData?.revenue_tiers, activeRegistrations, selectedEvent, ticketsSold]);
 
   return (
     <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-6 transition-colors">
@@ -328,11 +291,21 @@ export const AnalyticsDashboard: React.FC = () => {
               </span>
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Key indicators derived from live registrations, task readiness, and crew assignments for {selectedEvent.title}.
+              Event-specific registration, task, and resource indicators for {selectedEvent.title}.
             </p>
           </div>
         </div>
       </div>
+
+      {liveRegistrationMetrics && admission.error && (
+        <p role="alert" className="text-xs text-rose-700">
+          Registration metrics unavailable: {admission.error}{' '}
+          <button type="button" className="underline" onClick={admission.retry}>Retry metrics</button>
+        </p>
+      )}
+      {liveRegistrationMetrics && admission.loading && (
+        <p role="status" className="text-xs text-stone-500">Loading event registration totals from PostgreSQL...</p>
+      )}
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -343,9 +316,9 @@ export const AnalyticsDashboard: React.FC = () => {
             <Users className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{capacityPercent}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{countsAvailable ? `${capacityPercent}%` : '—'}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {ticketsSold} / {maxCapacity}
+              {countsAvailable ? ticketsSold : '—'} / {maxCapacity}
             </span>
           </div>
           <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
@@ -356,17 +329,17 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* KPI 2 */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-2">
           <div className="flex items-center justify-between text-stone-500 dark:text-stone-400 text-xs">
-            <span>Gross Ticket Revenue</span>
+            <span>Potential Ticket Value (Uncollected)</span>
             <span className="font-bold text-xs text-[#5F7D5B] dark:text-[#97B394]">{getCurrencySymbol(selectedEvent.currency)}</span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
               {selectedEvent.ticket_price <= 0
                 ? 'Free'
-                : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                : countsAvailable ? `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}` : 'Unavailable'}
             </span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">
-              {selectedEvent.ticket_price <= 0 ? 'Free Event' : `${ticketsSold} Sold`}
+              {selectedEvent.ticket_price <= 0 ? 'Free Event' : countsAvailable ? `${ticketsSold} Registered` : 'Pending data'}
             </span>
           </div>
           <p className="text-[11px] text-stone-500">
@@ -398,13 +371,13 @@ export const AnalyticsDashboard: React.FC = () => {
             <Clock className="w-4 h-4 text-[#C28E3A] dark:text-[#E5BE7E]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{attendanceRate}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{countsAvailable ? `${attendanceRate}%` : '—'}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {checkedInCount} checked in
+              {countsAvailable ? checkedInCount : '—'} checked in
             </span>
           </div>
           <p className="text-[11px] text-stone-500">
-            {checkedInCount > 0 ? `${checkedInCount} verified turnstile admissions` : 'Awaiting gate turnstile check-ins'}
+            {!countsAvailable ? 'Attendance metrics unavailable' : checkedInCount > 0 ? `${checkedInCount} verified admissions` : 'Awaiting gate check-ins'}
           </p>
         </div>
       </div>
@@ -507,7 +480,7 @@ export const AnalyticsDashboard: React.FC = () => {
         {/* Chart 4: Revenue Distribution */}
         <div className="bg-[#FAF9F5] dark:bg-[#171513] p-4 rounded-xl border border-stone-200/80 dark:border-stone-800/80 space-y-3">
           <h3 className="text-xs font-semibold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Gross Revenue Stream</span>
+            <span>Potential Ticket Value by Tier</span>
             <span className="text-[10px] text-stone-400">
               {selectedEvent.ticket_price <= 0 ? 'Free Event' : 'Tiers Breakdown'}
             </span>
@@ -544,9 +517,9 @@ export const AnalyticsDashboard: React.FC = () => {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-center p-4 text-stone-400 dark:text-stone-500">
                 <BarChart3 className="w-8 h-8 mb-2 opacity-40" />
-                <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">No Ticket Sales Yet</p>
+                <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">No Registrations Yet</p>
                 <p className="text-[11px] max-w-xs mt-1">
-                  Ticket tiers and sales volume will plot dynamically as attendees register for this event.
+                  Estimated ticket value will display when attendees register. No payments have been collected.
                 </p>
               </div>
             )}
@@ -555,4 +528,34 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const AnalyticsDashboard: React.FC = () => {
+  const { selectedEvent, isDevModeUnlocked, loadDemoData } = useApp();
+  if (!selectedEvent) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <BarChart3 className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">Live Analytics Pending</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
+          </p>
+        </div>
+        {isDevModeUnlocked && (
+          <button
+            onClick={loadDemoData}
+            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Load Bohol Sample Data</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return <ActiveAnalyticsDashboard />;
 };

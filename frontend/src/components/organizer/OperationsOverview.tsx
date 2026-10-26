@@ -18,18 +18,21 @@ import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
 import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
+import { useEventRegistrationSummary } from '../../hooks/useEventRegistrationSummary';
 
 interface OperationsOverviewProps {
   onNavigate: (view: OrganizerView) => void;
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent, setCurrentRole } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent, setCurrentRole, isLiveBackend, isDemoMode } = useApp();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const live = isLiveBackend && !isDemoMode;
+  const admission = useEventRegistrationSummary(selectedEvent?.id, live);
 
   const canManageSelectedEvent = Boolean(
     selectedEvent && (
@@ -131,7 +134,16 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = eventTasks.filter((t) => t.has_conflict);
   const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
+  const eventRegistrations = registrations.filter(reg => reg.event_id === selectedEvent.id);
+  const localActive = eventRegistrations.filter(reg => reg.status !== 'cancelled');
+  const registeredCount = live ? admission.data?.registered_count ?? null : isDemoMode ? localActive.length : null;
+  const checkedInCount = live ? admission.data?.checked_in_count ?? null : isDemoMode ? localActive.filter(reg => reg.status === 'checked_in').length : null;
+  const maxCapacity = Number(selectedEvent.max_capacity);
+  const capacityPercent = registeredCount !== null && Number.isFinite(maxCapacity) && maxCapacity > 0
+    ? Math.min(100, Math.max(0, Math.round(registeredCount / maxCapacity * 100))) : null;
+  const estimatedTicketValue = registeredCount === null ? null : Math.max(0, Number(selectedEvent.ticket_price) || 0) * registeredCount;
+  const eventEntityIds = new Set([selectedEvent.id, ...eventTasks.map(task => task.id), ...eventRegistrations.map(reg => reg.id)]);
+  const localEventAuditLogs = auditLogs.filter(log => eventEntityIds.has(log.entity_id));
 
   return (
     <div className="space-y-6">
@@ -256,24 +268,24 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Capacity Registered</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
+                {capacityPercent === null ? '—' : `${capacityPercent}%`}
               </span>
-              <span className="text-slate-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+              <span className="text-slate-500">{registeredCount === null ? 'Unavailable' : `${registeredCount} / ${Math.max(0, maxCapacity || 0)}`}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${capacityPercent ?? 0}%` }} />
             </div>
           </div>
 
           <div>
-            <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
+            <span className="text-slate-500 block mb-1">Potential Ticket Value (Not Collected)</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {selectedEvent.ticket_price <= 0
                   ? 'Free'
-                  : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                  : estimatedTicketValue === null ? 'Unavailable' : `${getCurrencySymbol(selectedEvent.currency)}${estimatedTicketValue.toLocaleString()}`}
               </span>
-              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">No payments collected</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               {selectedEvent.ticket_price <= 0
@@ -416,7 +428,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
 
           {/* Clean Dense Task Row List (NOT bulky cards!) */}
           <div className="divide-y divide-stone-100 dark:divide-stone-800/80">
-            {tasks.map((task) => (
+            {eventTasks.map((task) => (
               <div
                 key={task.id}
                 className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-stone-50/60 dark:hover:bg-stone-800/40 px-2 rounded-xl transition-colors"
@@ -469,15 +481,18 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               </button>
             </div>
 
+            {live && admission.error && <p role="alert" className="text-xs text-rose-700">{admission.error} <button className="underline" onClick={admission.retry}>Retry</button></p>}
+            {live && admission.loading && <p className="text-xs text-stone-500">Loading PostgreSQL admission totals...</p>}
+            {live && admission.data?.integrity_warning_count ? <p role="alert" className="text-xs text-amber-700">{admission.data.integrity_warning_count} historical attendance inconsistency record(s).</p> : null}
             <div className="bg-[#FAF9F5] dark:bg-[#171513] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex justify-between items-center text-xs">
               <div>
                 <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
                 <p className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                  {registrations.filter((r) => r.status === 'checked_in').length} / {registrations.length} Checked In
+                  {checkedInCount === null || registeredCount === null ? 'Unavailable' : `${checkedInCount} / ${registeredCount} Checked In`}
                 </p>
               </div>
               <span className="text-[10px] px-2 py-1 bg-[#EEF3ED] dark:bg-[#222D21] text-[#455C42] dark:text-[#A7C2A4] rounded-lg font-bold">
-                Zero Duplicates
+                {live ? 'Database-verified admissions' : 'Browser-local demo'}
               </span>
             </div>
           </div>
@@ -488,11 +503,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
                 Recent Audit Trail
               </h3>
-              <span className="text-[10px] text-stone-400">Live Activity Stream</span>
+              <span className="text-[10px] text-stone-400">Browser-local activity only</span>
             </div>
 
             <div className="space-y-2.5">
-              {auditLogs.slice(0, 3).map((log) => (
+              {localEventAuditLogs.length === 0 && <p className="text-xs text-stone-500">No browser-local activity for this event.</p>}
+              {localEventAuditLogs.slice(0, 3).map((log) => (
                 <div
                   key={log.id}
                   className="p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 text-xs space-y-1"

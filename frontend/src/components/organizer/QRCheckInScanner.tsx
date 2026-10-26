@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { useApp } from '../../context/AppContext';
+import { admitLivePass } from '../../services/eventRosterApi';
 
 interface QRCheckInScannerProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose, eventId }) => {
-  const { checkInAttendee, events, selectedEvent, registrations } = useApp();
+  const { checkInAttendee, events, selectedEvent, registrations, isDemoMode, isLiveBackend } = useApp();
 
   // Scope available events to all active events in the workspace so gate staff can admit any event
   const safeEvents = useMemo(() => (Array.isArray(events) ? events.filter((e) => Boolean(e && e.id)) : []), [events]);
@@ -34,15 +35,17 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     eventId || selectedEvent?.id || availableEvents[0]?.id || ''
   );
 
+  // External event changes and modal opening select an initial gate. A manual
+  // selection must NOT be reset by the activeEventId dependency on every render.
   useEffect(() => {
-    if (eventId) {
-      setActiveEventId(eventId);
-    } else if (selectedEvent?.id && availableEvents.some((e) => e?.id === selectedEvent.id)) {
-      setActiveEventId(selectedEvent.id);
-    } else if (availableEvents.length > 0 && !availableEvents.some((e) => e?.id === activeEventId)) {
-      setActiveEventId(availableEvents[0]?.id || '');
-    }
-  }, [eventId, selectedEvent?.id, availableEvents, activeEventId]);
+    if (isOpen && eventId) setActiveEventId(eventId);
+  }, [isOpen, eventId]);
+
+  useEffect(() => {
+    if (!isOpen || availableEvents.some((event) => event.id === activeEventId)) return;
+    const preferred = [eventId, selectedEvent?.id].find(id => availableEvents.some(event => event.id === id));
+    setActiveEventId(preferred || availableEvents[0]?.id || '');
+  }, [isOpen, eventId, selectedEvent?.id, availableEvents, activeEventId]);
 
   const currentGateEvent = availableEvents.find((e) => e?.id === activeEventId) || selectedEvent || availableEvents[0] || safeEvents[0];
 
@@ -155,7 +158,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setResult(null);
     setVerifying(true);
     try {
-      const res = await checkInAttendee(rawCode, activeEventId);
+      const res = isDemoMode
+        ? await checkInAttendee(rawCode, activeEventId)
+        : isLiveBackend && activeEventId
+          ? await admitLivePass(rawCode, activeEventId)
+          : { success: false, message: 'Live admission unavailable. No gate entry was recorded.' };
       setResult(res);
       if (res?.success) {
         playAudioFeedback('success');

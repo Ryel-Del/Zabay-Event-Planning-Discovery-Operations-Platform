@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useEventRegistrationSummary } from '../../hooks/useEventRegistrationSummary';
 
 export type OrganizerView = 'overview' | 'kanban' | 'top_calendar' | 'venues' | 'personnel' | 'impact' | 'schedule' | 'attendees' | 'analytics';
 export type VenueView = 'overview' | 'calendar' | 'inventory';
@@ -37,7 +38,9 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   isMobileDrawer,
   onCloseMobile,
 }) => {
-  const { currentRole, setCurrentRole, tasks, registrations, personnel, selectedEvent } = useApp();
+  const { currentRole, setCurrentRole, tasks, registrations, personnel, selectedEvent, isLiveBackend, isDemoMode } = useApp();
+  const liveRoster = !isDemoMode && isLiveBackend && currentRole === 'organizer';
+  const admission = useEventRegistrationSummary(selectedEvent?.id, liveRoster);
 
   // Scope counts strictly to the active selected event:
   const activeEventTasks = selectedEvent
@@ -49,7 +52,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     : [];
 
   const conflictCount = activeEventTasks.filter((t) => t.has_conflict).length;
-  const pendingCheckIn = activeEventRegistrations.filter((r) => r.status === 'confirmed').length;
+  const pendingCheckIn = liveRoster ? admission.data?.pending_count ?? null
+    : isDemoMode ? activeEventRegistrations.filter(r => r.status === 'confirmed').length : null;
 
   // Active crew members assigned to tasks in this event or registered for this event
   const activeCrewCount = selectedEvent
@@ -115,7 +119,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
       id: 'attendees',
       label: 'Guest List & Check-In',
       icon: <UserCheck className="w-4 h-4" />,
-      badge: pendingCheckIn > 0 ? `${pendingCheckIn} active` : null,
+      badge: pendingCheckIn !== null && pendingCheckIn > 0 ? `${pendingCheckIn} pending` : null,
       badgeColor: 'bg-[#EDF7F2] text-[#2B6149] dark:bg-[#17271F] dark:text-[#81B89B]',
     },
     {
