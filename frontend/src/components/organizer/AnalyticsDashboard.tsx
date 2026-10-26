@@ -25,9 +25,9 @@ import { useApp } from '../../context/AppContext';
 import { getCurrencySymbol } from '../../utils/currency';
 import { api } from '../../services/api';
 
-export const AnalyticsDashboard: React.FC = () => {
+const ActiveAnalyticsDashboard: React.FC = () => {
   const {
-    selectedEvent,
+    selectedEvent: selectedEventMaybe,
     tasks,
     resources,
     registrations,
@@ -38,6 +38,7 @@ export const AnalyticsDashboard: React.FC = () => {
     loadDemoData,
     isLiveBackend,
   } = useApp();
+  const selectedEvent = selectedEventMaybe!;
 
   const [liveData, setLiveData] = useState<any>(null);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
@@ -66,31 +67,6 @@ export const AnalyticsDashboard: React.FC = () => {
       isMounted = false;
     };
   }, [selectedEvent?.id, isLiveBackend]);
-
-  if (!selectedEvent) {
-    return (
-      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
-        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
-          <BarChart3 className="w-8 h-8" />
-        </div>
-        <div className="space-y-1">
-          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">Live Analytics Pending</h2>
-          <p className="text-xs text-stone-500 max-w-md mx-auto">
-            Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
-          </p>
-        </div>
-        {isDevModeUnlocked && (
-          <button
-            onClick={loadDemoData}
-            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Load Bohol Sample Data</span>
-          </button>
-        )}
-      </div>
-    );
-  }
 
   // Real scoped data derivations
   const eventTasks = useMemo(() => tasks.filter((t) => t.event_id === selectedEvent.id), [tasks, selectedEvent.id]);
@@ -555,4 +531,34 @@ export const AnalyticsDashboard: React.FC = () => {
       </div>
     </div>
   );
+};
+
+export const AnalyticsDashboard: React.FC = () => {
+  const { selectedEvent, isDevModeUnlocked, loadDemoData } = useApp();
+  if (!selectedEvent) {
+    return (
+      <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-12 text-center space-y-4 shadow-sm">
+        <div className="w-16 h-16 bg-[#EBF3FC] dark:bg-[#1E293B] text-[#3E6CB5] dark:text-[#7EA6E0] rounded-2xl flex items-center justify-center mx-auto">
+          <BarChart3 className="w-8 h-8" />
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100">Live Analytics Pending</h2>
+          <p className="text-xs text-stone-500 max-w-md mx-auto">
+            Metric rollups, attendance arrivals, and resource utilization will appear once an event is active in your workspace.
+          </p>
+        </div>
+        {isDevModeUnlocked && (
+          <button
+            onClick={loadDemoData}
+            className="px-4 py-2.5 bg-[#3E6CB5] hover:bg-[#325896] text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Load Bohol Sample Data</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return <ActiveAnalyticsDashboard />;
 };
