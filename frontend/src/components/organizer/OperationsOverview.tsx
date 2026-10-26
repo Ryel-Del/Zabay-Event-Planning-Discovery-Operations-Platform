@@ -266,12 +266,12 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             <span className="text-slate-500 block mb-1">Capacity Registered</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                {Math.round((selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100)}%
+                {capacityPercent === null ? '—' : `${capacityPercent}%`}
               </span>
-              <span className="text-slate-500">{selectedEvent.tickets_sold} / {selectedEvent.max_capacity}</span>
+              <span className="text-slate-500">{registeredCount === null ? 'Unavailable' : `${registeredCount} / ${Math.max(0, maxCapacity || 0)}`}</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1.5">
-              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${(selectedEvent.tickets_sold / selectedEvent.max_capacity) * 100}%` }} />
+              <div className="bg-[#3E6CB5] dark:bg-[#7EA6E0] h-full rounded-full" style={{ width: `${capacityPercent ?? 0}%` }} />
             </div>
           </div>
 
