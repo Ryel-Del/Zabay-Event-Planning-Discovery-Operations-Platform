@@ -55,7 +55,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
   const canPageForward = live && roster.offset + 50 < total;
 
   return (
-    <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4">
+    <div data-cy="organizer-roster" className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 dark:border-stone-800 pb-4">
         <div>
           <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
@@ -71,7 +71,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
       {feedback && <div role="status" className={feedback.success ? 'text-sm text-green-700' : 'text-sm text-red-700'}>{feedback.message}</div>}
       {selectedEvent && live && roster.loading && <p role="status" className="text-sm text-stone-500">Loading this event's registrations...</p>}
       {selectedEvent && live && roster.error && (
-        <div role="alert" className="text-sm text-rose-700">
+        <div role="alert" data-cy="roster-error" className="text-sm text-rose-700">
           {roster.error} <button type="button" className="underline" onClick={roster.retry}>Retry roster</button>
         </div>
       )}
@@ -112,7 +112,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
           </thead>
           <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
             {filtered.map(reg => (
-              <tr key={reg.id}>
+              <tr data-cy="roster-row" key={reg.id}>
                 <td className="p-3"><div className="font-semibold">{reg.attendee_name}</div><div className="text-stone-500">{reg.attendee_email}</div></td>
                 <td className="p-3">{reg.ticket_type}</td>
                 <td className="p-3 font-mono break-all">{reg.qr_pass_code}</td>
@@ -129,7 +129,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
                 <td className="p-3 text-right whitespace-nowrap">
                   <button className="underline mr-3" onClick={() => onScanPassModal(reg.qr_pass_code)}>Inspect</button>
                   {reg.status === 'confirmed' && (
-                    <button disabled={Boolean(busyCode)} onClick={() => void handleQuickAdmit(reg.qr_pass_code)}
+                    <button data-cy="roster-admit" disabled={Boolean(busyCode)} onClick={() => void handleQuickAdmit(reg.qr_pass_code)}
                       className="bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 rounded px-3 py-1 disabled:opacity-50">
                       {busyCode === reg.qr_pass_code ? 'Verifying...' : 'Admit'}
                     </button>
@@ -138,7 +138,7 @@ export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps>
               </tr>
             ))}
             {!filtered.length && !roster.loading && !roster.error && (live ? Boolean(roster.page) : isDemoMode) && (
-              <tr><td colSpan={6} className="p-10 text-center text-stone-500">
+              <tr data-cy="roster-empty"><td colSpan={6} className="p-10 text-center text-stone-500">
                 {total === 0 ? 'No registrations for this event.' : 'No registrations on this page match the filters.'}
               </td></tr>
             )}
