@@ -276,14 +276,14 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
           </div>
 
           <div>
-            <span className="text-slate-500 block mb-1">Gross Ticket Revenue</span>
+            <span className="text-slate-500 block mb-1">Potential Ticket Value (Not Collected)</span>
             <div className="flex items-baseline gap-2">
               <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {selectedEvent.ticket_price <= 0
                   ? 'Free'
-                  : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                  : estimatedTicketValue === null ? 'Unavailable' : `${getCurrencySymbol(selectedEvent.currency)}${estimatedTicketValue.toLocaleString()}`}
               </span>
-              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">Estimate only</span>
+              <span className="text-[#2B6149] dark:text-[#81B89B] font-semibold">No payments collected</span>
             </div>
             <p className="text-[11px] text-slate-400 mt-1">
               {selectedEvent.ticket_price <= 0
