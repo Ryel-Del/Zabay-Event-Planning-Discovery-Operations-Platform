@@ -30,7 +30,8 @@ export interface RosterPage {
 }
 
 export class RosterRequestError extends Error {
-  constructor(message: string, public readonly status?: number) { super(message); }
+  readonly status?: number;
+  constructor(message: string, status?: number) { super(message); this.status = status; }
 }
 
 async function read<T>(url: string): Promise<T> {
