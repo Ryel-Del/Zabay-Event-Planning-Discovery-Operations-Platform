@@ -481,6 +481,9 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               </button>
             </div>
 
+            {live && admission.error && <p role="alert" className="text-xs text-rose-700">{admission.error} <button className="underline" onClick={admission.retry}>Retry</button></p>}
+            {live && admission.loading && <p className="text-xs text-stone-500">Loading PostgreSQL admission totals...</p>}
+            {live && admission.data?.integrity_warning_count ? <p role="alert" className="text-xs text-amber-700">{admission.data.integrity_warning_count} historical attendance inconsistency record(s).</p> : null}
             <div className="bg-[#FAF9F5] dark:bg-[#171513] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800/80 flex justify-between items-center text-xs">
               <div>
                 <span className="text-stone-500 text-[11px]">Admitted Through Gate</span>
@@ -504,6 +507,7 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
             </div>
 
             <div className="space-y-2.5">
+              {localEventAuditLogs.length === 0 && <p className="text-xs text-stone-500">No browser-local activity for this event.</p>}
               {localEventAuditLogs.slice(0, 3).map((log) => (
                 <div
                   key={log.id}
