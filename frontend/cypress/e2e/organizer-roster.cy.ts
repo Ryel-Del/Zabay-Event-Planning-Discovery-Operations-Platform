@@ -12,29 +12,8 @@ describe('organizer PostgreSQL attendee directory', () => {
   }
 
   function registerSyntheticGuest() {
-    const email = 'roster-browser-' + Date.now() + '@example.test';
-    cy.request('POST', '/api/auth/register', {
-      name: 'Browser Roster Attendee',
-      email,
-      password: 'roster-browser-secret',
-    }).then(({ body }) => {
-      expect(body.csrfToken).to.match(/^[a-f0-9]{64}$/);
-      cy.request({
-        method: 'POST',
-        url: '/api/attendees/register',
-        headers: { 'X-CSRF-Token': body.csrfToken, Origin: Cypress.config('baseUrl') || 'http://127.0.0.1:5174' },
-        body: { event_id: eventId, attendee_name: 'Spoofed', attendee_email: 'spoofed@example.test', ticket_type: 'VIP Access' },
-      }).then(({ status, body: registration }) => {
-        expect(status).to.eq(201);
-        expect(registration.data.attendee_name).to.eq('Browser Roster Attendee');
-        cy.wrap(registration.data).as('createdRosterPass');
-      });
-    });
-    cy.env<{ OPERATOR_USERNAME: string; OPERATOR_PASSWORD: string }>(['OPERATOR_USERNAME', 'OPERATOR_PASSWORD'])
-      .then(({ OPERATOR_USERNAME, OPERATOR_PASSWORD }) => {
-        cy.request('POST', '/api/auth/login', { username: OPERATOR_USERNAME, password: OPERATOR_PASSWORD })
-          .its('status').should('eq', 200);
-      });
+    cy.task('db:createSyntheticRosterPass', { eventId })
+      .then(registration => cy.wrap(registration).as('createdRosterPass'));
   }
 
   beforeEach(() => {
