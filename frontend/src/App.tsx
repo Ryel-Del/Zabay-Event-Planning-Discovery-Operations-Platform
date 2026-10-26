@@ -11,6 +11,7 @@ import { AttendeePage } from './pages/attendee/AttendeePage';
 import { AuditLogViewer, QRCheckInScanner, ProfileView, DevCodeModal } from './components/modals';
 import { AuthModal } from './components/auth/AuthModal';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import api from './services/api';
 
 const MainContent: React.FC = () => {
@@ -282,15 +283,17 @@ const MainContent: React.FC = () => {
         onOpenDevConsole={() => setIsDevModalOpen(true)}
       />
       <AuditLogViewer isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
-      <QRCheckInScanner
-        isOpen={isScannerOpen}
-        initialCode={activeScanCode}
-        eventId={selectedEvent?.id}
-        onClose={() => {
-          setIsScannerOpen(false);
-          setActiveScanCode(undefined);
-        }}
-      />
+      <ErrorBoundary fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
+        <QRCheckInScanner
+          isOpen={isScannerOpen}
+          initialCode={activeScanCode}
+          eventId={selectedEvent?.id}
+          onClose={() => {
+            setIsScannerOpen(false);
+            setActiveScanCode(undefined);
+          }}
+        />
+      </ErrorBoundary>
       <ProfileView
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}

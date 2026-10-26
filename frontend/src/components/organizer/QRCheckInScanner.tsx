@@ -23,11 +23,12 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   const { checkInAttendee, events, selectedEvent, registrations } = useApp();
 
   // Scope available events to all active events in the workspace so gate staff can admit any event
+  const safeEvents = useMemo(() => (Array.isArray(events) ? events.filter((e) => Boolean(e && e.id)) : []), [events]);
   const availableEvents = useMemo(() => {
-    if (events.length > 0) return events;
-    if (selectedEvent) return [selectedEvent];
+    if (safeEvents.length > 0) return safeEvents;
+    if (selectedEvent && selectedEvent.id) return [selectedEvent];
     return [];
-  }, [events, selectedEvent]);
+  }, [safeEvents, selectedEvent]);
 
   const [activeEventId, setActiveEventId] = useState<string>(
     eventId || selectedEvent?.id || availableEvents[0]?.id || ''
@@ -36,14 +37,14 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   useEffect(() => {
     if (eventId) {
       setActiveEventId(eventId);
-    } else if (selectedEvent?.id && availableEvents.some((e) => e.id === selectedEvent.id)) {
+    } else if (selectedEvent?.id && availableEvents.some((e) => e?.id === selectedEvent.id)) {
       setActiveEventId(selectedEvent.id);
-    } else if (availableEvents.length > 0 && !availableEvents.some((e) => e.id === activeEventId)) {
-      setActiveEventId(availableEvents[0].id);
+    } else if (availableEvents.length > 0 && !availableEvents.some((e) => e?.id === activeEventId)) {
+      setActiveEventId(availableEvents[0]?.id || '');
     }
-  }, [eventId, selectedEvent?.id, availableEvents]);
+  }, [eventId, selectedEvent?.id, availableEvents, activeEventId]);
 
-  const currentGateEvent = availableEvents.find((e) => e.id === activeEventId) || selectedEvent || availableEvents[0] || events[0];
+  const currentGateEvent = availableEvents.find((e) => e?.id === activeEventId) || selectedEvent || availableEvents[0] || safeEvents[0];
 
   const [passCodeInput, setPassCodeInput] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
@@ -79,8 +80,15 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   // Handle initial code pre-fill
   useEffect(() => {
     if (initialCode) {
-      setPassCodeInput(initialCode);
+      const clean = String(initialCode).trim();
+      setPassCodeInput(clean);
       setResult(null);
+      if (clean && isOpen) {
+        const timer = setTimeout(() => {
+          void handleManualVerify(clean);
+        }, 80);
+        return () => clearTimeout(timer);
+      }
     } else {
       setPassCodeInput('');
       setResult(null);
@@ -139,17 +147,19 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   };
 
   const handleManualVerify = async (code: string) => {
+    const rawCode = (code || passCodeInput || '').trim();
+    if (!rawCode) return;
     if (verificationInFlight.current) return;
     stopCamera();
     verificationInFlight.current = true;
     setResult(null);
     setVerifying(true);
     try {
-      const res = await checkInAttendee(code, activeEventId);
+      const res = await checkInAttendee(rawCode, activeEventId);
       setResult(res);
-      if (res.success) {
+      if (res?.success) {
         playAudioFeedback('success');
-      } else if (res.isDuplicate) {
+      } else if (res?.isDuplicate) {
         playAudioFeedback('duplicate');
       } else {
         playAudioFeedback('error');
@@ -298,45 +308,64 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
   if (!isOpen) return null;
 
   const sampleCodes = useMemo(() => {
-    // 1. Get confirmed passes matching the currently selected gate event
-    const eventPasses = registrations.filter((r) => r.event_id === currentGateEvent?.id);
-    const confirmedForEvent = eventPasses.filter((r) => r.status === 'confirmed');
-    const checkedInForEvent = eventPasses.filter((r) => r.status === 'checked_in');
+    const list = Array.isArray(registrations) ? registrations.filter(Boolean) : [];
+    const eventPasses = list.filter((r) => r && r.event_id === currentGateEvent?.id);
+    const confirmedForEvent = eventPasses.filter((r) => r && r.status === 'confirmed');
+    const checkedInForEvent = eventPasses.filter((r) => r && r.status === 'checked_in');
 
-    const otherEventPass = registrations.find((r) => r.event_id !== currentGateEvent?.id);
+    const otherEventPass = list.find((r) => r && currentGateEvent?.id && r.event_id !== currentGateEvent.id);
 
     const items: { label: string; code: string; isWrong?: boolean; isDuplicate?: boolean }[] = [];
+
+    // Helper to get safe pass code string
+    const getCode = (reg: any): string => {
+      return String(reg?.qr_pass_code || reg?.qr_code || reg?.passCode || reg?.id || 'ZABAY-PASS-SAMPLE');
+    };
 
     // Confirmed pass for this event (valid admission test)
     if (confirmedForEvent.length > 0) {
       confirmedForEvent.slice(0, 2).forEach((reg) => {
+        const attendee = reg?.attendee_name || 'Attendee';
+        const tier = reg?.ticket_type || 'Pass';
         items.push({
-          label: `${reg.attendee_name} (Valid Pass • ${reg.ticket_type})`,
-          code: reg.qr_pass_code,
+          label: `${attendee} (Valid Pass • ${tier})`,
+          code: getCode(reg),
         });
       });
     } else if (eventPasses.length > 0) {
+      const p = eventPasses[0];
       items.push({
-        label: `${eventPasses[0].attendee_name} (${eventPasses[0].ticket_type})`,
-        code: eventPasses[0].qr_pass_code,
+        label: `${p?.attendee_name || 'Attendee'} (${p?.ticket_type || 'Pass'})`,
+        code: getCode(p),
       });
     } else {
       // If active event has no registrations, provide the global demo pass
-      const demoPass = registrations.find((r) => r.status === 'confirmed');
+      const demoPass = list.find((r) => r && r.status === 'confirmed') || list[0];
       if (demoPass) {
         items.push({
-          label: `${demoPass.attendee_name} (Demo Pass • ${demoPass.event_title || 'Demo'})`,
-          code: demoPass.qr_pass_code,
+          label: `${demoPass?.attendee_name || 'Demo Attendee'} (Demo Pass • ${demoPass?.event_title || 'Demo'})`,
+          code: getCode(demoPass),
+        });
+      } else {
+        items.push({
+          label: 'Sofia Ramos (Valid Pass • Courtside Reserved)',
+          code: 'ZABAY-PASS-9042-SOFIA',
         });
       }
     }
 
     // Duplicate pass test (already checked in)
-    const duplicateTarget = checkedInForEvent[0] || registrations.find((r) => r.status === 'checked_in');
+    const duplicateTarget = checkedInForEvent[0] || list.find((r) => r && r.status === 'checked_in');
     if (duplicateTarget) {
       items.push({
-        label: `${duplicateTarget.attendee_name} (Duplicate Pass • Already Admitted)`,
-        code: duplicateTarget.qr_pass_code,
+        label: `${duplicateTarget?.attendee_name || 'Liam Mendoza'} (Duplicate Pass • Already Admitted)`,
+        code: getCode(duplicateTarget),
+        isDuplicate: true,
+      });
+    } else {
+      items.push({
+        label: 'Liam Mendoza (Duplicate Pass • Already Admitted)',
+        code: 'ZABAY-PASS-3108-LIAM',
         isDuplicate: true,
       });
     }
@@ -344,8 +373,14 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     // Wrong event pass test
     if (otherEventPass) {
       items.push({
-        label: `${otherEventPass.attendee_name} (${otherEventPass.event_title || 'Other Event'} • Wrong Event Test)`,
-        code: otherEventPass.qr_pass_code,
+        label: `${otherEventPass?.attendee_name || 'Guest'} (${otherEventPass?.event_title || 'Other Event'} • Wrong Event Test)`,
+        code: getCode(otherEventPass),
+        isWrong: true,
+      });
+    } else {
+      items.push({
+        label: 'Carlos Tan (Sandugo Arts Festival • Wrong Event Test)',
+        code: 'ZABAY-PASS-7731-MARK-VIP',
         isWrong: true,
       });
     }
@@ -537,39 +572,41 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
 
             {showTestPresets && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2 animate-in fade-in duration-150">
-                {sampleCodes.map((item, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => {
-                      setPassCodeInput(item.code);
-                      handleManualVerify(item.code);
-                    }}
-                    className={`text-left px-2.5 py-1.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
-                      item.code.includes('LIAM')
-                        ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
-                        : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                        ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                        : item.code.includes('FORGED')
-                        ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
-                        : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
-                    }`}
-                  >
-                    <div className="font-semibold text-[11px] truncate flex items-center gap-1 text-slate-800 dark:text-slate-200">
-                      <span className="text-[10px]">
-                        {item.code.includes('LIAM')
-                          ? '⚠️'
-                          : item.code.includes('SANDUGO') || item.code.includes('DEVCON')
-                          ? '⛔'
-                          : item.code.includes('FORGED')
-                          ? '🚫'
-                          : '🎟️'}
-                      </span>
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.code}</div>
-                  </button>
-                ))}
+                {sampleCodes.map((item, i) => {
+                  const codeStr = String(item?.code || '');
+                  const labelStr = String(item?.label || 'Test Pass');
+                  const isLiam = codeStr.includes('LIAM') || Boolean(item?.isDuplicate);
+                  const isWrong = codeStr.includes('SANDUGO') || codeStr.includes('DEVCON') || Boolean(item?.isWrong);
+                  const isForged = codeStr.includes('FORGED') || codeStr.includes('FAKE');
+
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setPassCodeInput(codeStr);
+                        handleManualVerify(codeStr);
+                      }}
+                      className={`text-left px-2.5 py-1.5 rounded-xl border transition-all truncate cursor-pointer shadow-xs ${
+                        isLiam
+                          ? 'bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 hover:border-amber-400'
+                          : isWrong
+                          ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                          : isForged
+                          ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800 hover:border-rose-400'
+                          : 'bg-white dark:bg-[#111722] border-slate-200 dark:border-slate-800 hover:border-[#3E6CB5] dark:hover:border-[#7EA6E0]'
+                      }`}
+                    >
+                      <div className="font-semibold text-[11px] truncate flex items-center gap-1 text-slate-800 dark:text-slate-200">
+                        <span className="text-[10px]">
+                          {isLiam ? '⚠️' : isWrong ? '⛔' : isForged ? '🚫' : '🎟️'}
+                        </span>
+                        <span className="truncate">{labelStr}</span>
+                      </div>
+                      <div className="text-[9px] font-mono text-slate-500 dark:text-slate-400 truncate mt-0.5">{codeStr}</div>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -619,9 +656,9 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                       <button
                         type="button"
                         onClick={() => {
-                          const targetId = result.registration.event_id;
-                          setActiveEventId(targetId);
-                          void handleManualVerify(passCodeInput || result.registration.qr_pass_code);
+                          const targetId = result.registration?.event_id;
+                          if (targetId) setActiveEventId(targetId);
+                          void handleManualVerify(passCodeInput || result.registration?.qr_pass_code || '');
                         }}
                         className="px-2.5 py-1 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-[10px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-xs font-sans"
                       >
@@ -653,17 +690,17 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                 <div className="bg-white dark:bg-[#171E2B] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px] space-y-1.5 shadow-xs overflow-hidden">
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-slate-500 shrink-0">Attendee:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100 truncate text-right">{result.registration.attendee_name}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 truncate text-right">{result.registration?.attendee_name || 'Attendee'}</span>
                   </div>
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-slate-500 shrink-0">Ticket Tier:</span>
-                    <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold truncate text-right">{result.registration.ticket_type}</span>
+                    <span className="text-[#3E6CB5] dark:text-[#7EA6E0] font-semibold truncate text-right">{result.registration?.ticket_type || 'General Pass'}</span>
                   </div>
                   <div className="flex justify-between items-center gap-2">
                     <span className="text-slate-500 shrink-0">Pass Serial:</span>
-                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold text-[10px] break-all text-right">{result.registration.qr_pass_code}</span>
+                    <span className="font-mono text-slate-700 dark:text-slate-300 font-bold text-[10px] break-all text-right">{result.registration?.qr_pass_code || passCodeInput}</span>
                   </div>
-                  {result.registration.event_title && (
+                  {result.registration?.event_title && (
                     <div className="flex justify-between items-center gap-2">
                       <span className="text-slate-500 shrink-0">Event:</span>
                       <span className="font-medium text-slate-800 dark:text-slate-200 truncate text-right">{result.registration.event_title}</span>

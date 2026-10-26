@@ -27,6 +27,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { QRCheckInScanner } from '../organizer/QRCheckInScanner';
 import { canPersonnelScanTickets } from '../../types';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 export const PersonnelPortal: React.FC = () => {
   const {
@@ -1242,11 +1243,13 @@ export const PersonnelPortal: React.FC = () => {
       )}
 
       {/* Embedded Live QR Scanner Modal */}
-      <QRCheckInScanner
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        eventId={selectedEvent?.id}
-      />
+      <ErrorBoundary fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
+        <QRCheckInScanner
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          eventId={selectedEvent?.id}
+        />
+      </ErrorBoundary>
     </div>
   );
 };
