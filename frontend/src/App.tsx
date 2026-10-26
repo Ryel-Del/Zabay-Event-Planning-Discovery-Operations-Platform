@@ -283,7 +283,7 @@ const MainContent: React.FC = () => {
         onOpenDevConsole={() => setIsDevModalOpen(true)}
       />
       <AuditLogViewer isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
-      <ErrorBoundary fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
+      <ErrorBoundary isModal fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
         <QRCheckInScanner
           isOpen={isScannerOpen}
           initialCode={activeScanCode}

@@ -305,9 +305,8 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     return () => releaseCamera();
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const sampleCodes = useMemo(() => {
+    if (!isOpen) return [];
     const list = Array.isArray(registrations) ? registrations.filter(Boolean) : [];
     const eventPasses = list.filter((r) => r && r.event_id === currentGateEvent?.id);
     const confirmedForEvent = eventPasses.filter((r) => r && r.status === 'confirmed');
@@ -392,7 +391,9 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     });
 
     return items;
-  }, [registrations, currentGateEvent?.id]);
+  }, [isOpen, registrations, currentGateEvent?.id]);
+
+  if (!isOpen) return null;
 
   return (
     <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">

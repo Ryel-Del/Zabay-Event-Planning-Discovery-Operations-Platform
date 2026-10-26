@@ -1243,7 +1243,7 @@ export const PersonnelPortal: React.FC = () => {
       )}
 
       {/* Embedded Live QR Scanner Modal */}
-      <ErrorBoundary fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
+      <ErrorBoundary isModal fallbackTitle="Gate Scanner Encountered An Issue" onReset={() => setIsScannerOpen(false)}>
         <QRCheckInScanner
           isOpen={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
