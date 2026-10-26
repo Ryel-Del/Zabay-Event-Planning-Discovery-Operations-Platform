@@ -76,7 +76,9 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const eventRegistrations = useMemo(() => registrations.filter((r) => r.event_id === selectedEvent.id), [registrations, selectedEvent.id]);
   const activeRegistrations = useMemo(() => eventRegistrations.filter((r) => r.status !== 'cancelled'), [eventRegistrations]);
 
-  const ticketsSold = isLiveBackend && !isDemoMode ? admission.data?.registered_count ?? 0 : Math.max(0, selectedEvent.tickets_sold, activeRegistrations.length);
+  const liveRegistrationMetrics = isLiveBackend && !isDemoMode;
+  const countsAvailable = !liveRegistrationMetrics || admission.data !== null;
+  const ticketsSold = liveRegistrationMetrics ? admission.data?.registered_count ?? 0 : Math.max(0, selectedEvent.tickets_sold, activeRegistrations.length);
   const maxCapacity = Math.max(0, Number(selectedEvent.max_capacity) || 0);
   const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.max(0, Math.round((ticketsSold / maxCapacity) * 100))) : 0;
 
@@ -86,7 +88,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const totalTasksCount = currentLiveData?.task_metrics?.total_tasks ?? eventTasks.length;
   const taskReadiness = totalTasksCount > 0 ? Math.round((completedTasks / totalTasksCount) * 100) : 0;
 
-  const checkedInCount = isLiveBackend && !isDemoMode ? admission.data?.checked_in_count ?? 0 : eventRegistrations.filter((r) => r.status === 'checked_in').length;
+  const checkedInCount = liveRegistrationMetrics ? admission.data?.checked_in_count ?? 0 : eventRegistrations.filter((r) => r.status === 'checked_in').length;
   const attendanceRate = ticketsSold > 0 ? Math.min(100, Math.max(0, Math.round((checkedInCount / ticketsSold) * 100))) : 0;
 
   // Chart 1: Real Hourly Check-in Flow
@@ -289,11 +291,21 @@ const ActiveAnalyticsDashboard: React.FC = () => {
               </span>
             </h2>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Key indicators derived from live registrations, task readiness, and crew assignments for {selectedEvent.title}.
+              Event-specific registration, task, and resource indicators for {selectedEvent.title}.
             </p>
           </div>
         </div>
       </div>
+
+      {liveRegistrationMetrics && admission.error && (
+        <p role="alert" className="text-xs text-rose-700">
+          Registration metrics unavailable: {admission.error}{' '}
+          <button type="button" className="underline" onClick={admission.retry}>Retry metrics</button>
+        </p>
+      )}
+      {liveRegistrationMetrics && admission.loading && (
+        <p role="status" className="text-xs text-stone-500">Loading event registration totals from PostgreSQL...</p>
+      )}
 
       {/* KPI Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -304,9 +316,9 @@ const ActiveAnalyticsDashboard: React.FC = () => {
             <Users className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{capacityPercent}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{countsAvailable ? `${capacityPercent}%` : '—'}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {ticketsSold} / {maxCapacity}
+              {countsAvailable ? ticketsSold : '—'} / {maxCapacity}
             </span>
           </div>
           <div className="w-full bg-stone-200 dark:bg-stone-800 h-1.5 rounded-full overflow-hidden">
@@ -324,10 +336,10 @@ const ActiveAnalyticsDashboard: React.FC = () => {
             <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
               {selectedEvent.ticket_price <= 0
                 ? 'Free'
-                : `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}`}
+                : countsAvailable ? `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}` : 'Unavailable'
             </span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">
-              {selectedEvent.ticket_price <= 0 ? 'Free Event' : `${ticketsSold} Registered`}
+              {selectedEvent.ticket_price <= 0 ? 'Free Event' : countsAvailable ? `${ticketsSold} Registered` : 'Pending data'}
             </span>
           </div>
           <p className="text-[11px] text-stone-500">
@@ -359,13 +371,13 @@ const ActiveAnalyticsDashboard: React.FC = () => {
             <Clock className="w-4 h-4 text-[#C28E3A] dark:text-[#E5BE7E]" />
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{attendanceRate}%</span>
+            <span className="text-2xl font-black text-stone-900 dark:text-stone-100">{countsAvailable ? `${attendanceRate}%` : '—'}</span>
             <span className="text-xs text-stone-600 dark:text-stone-400 font-medium">
-              {checkedInCount} checked in
+              {countsAvailable ? checkedInCount : '—'} checked in
             </span>
           </div>
           <p className="text-[11px] text-stone-500">
-            {checkedInCount > 0 ? `${checkedInCount} verified turnstile admissions` : 'Awaiting gate turnstile check-ins'}
+            {!countsAvailable ? 'Attendance metrics unavailable' : checkedInCount > 0 ? `${checkedInCount} verified admissions` : 'Awaiting gate check-ins'}
           </p>
         </div>
       </div>
