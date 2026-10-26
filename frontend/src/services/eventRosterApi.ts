@@ -18,6 +18,7 @@ export interface EventRosterRow {
 export interface EventRosterSummary {
   total_count: number;
   registered_count: number;
+  pending_count: number;
   cancelled_count: number;
   checked_in_count: number;
   integrity_warning_count: number;
