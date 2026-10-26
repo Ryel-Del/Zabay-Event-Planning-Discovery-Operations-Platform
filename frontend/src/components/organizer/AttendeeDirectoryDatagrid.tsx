@@ -1,207 +1,158 @@
-import React, { useState } from 'react';
-import {
-  Search,
-  CheckCircle2,
-  Clock,
-  Users,
-  Sparkles,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Search, CheckCircle2, Clock, Users, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { admitLivePass } from '../../services/eventRosterApi';
+import { useEventRoster } from '../../hooks/useEventRoster';
 
 interface AttendeeDirectoryDatagridProps {
   onScanPassModal: (code: string) => void;
 }
 
-export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({
-  onScanPassModal,
-}) => {
-  const { registrations, checkInAttendee, selectedEvent, isDevModeUnlocked, loadDemoData } = useApp();
+export const AttendeeDirectoryDatagrid: React.FC<AttendeeDirectoryDatagridProps> = ({ onScanPassModal }) => {
+  const { registrations, checkInAttendee, selectedEvent, isDemoMode, isLiveBackend } = useApp();
+  const live = !isDemoMode && isLiveBackend;
+  const roster = useEventRoster(selectedEvent?.id, live);
   const [search, setSearch] = useState('');
-  const [filterTier, setFilterTier] = useState<string>('all');
+  const [filterTier, setFilterTier] = useState('all');
   const [feedback, setFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [busyCode, setBusyCode] = useState<string | null>(null);
 
-  const eventRegistrations = React.useMemo(() => {
+  useEffect(() => { setFeedback(null); setSearch(''); }, [selectedEvent?.id]);
+
+  const eventRegistrations = useMemo(() => {
     if (!selectedEvent) return [];
-    return registrations.filter((reg) => reg.event_id === selectedEvent.id);
-  }, [registrations, selectedEvent]);
+    if (live) return roster.page?.data || [];
+    return isDemoMode ? registrations.filter(reg => reg.event_id === selectedEvent.id) : [];
+  }, [selectedEvent, live, roster.page, registrations, isDemoMode]);
 
-  const filtered = eventRegistrations.filter((reg) => {
-    const matchesSearch =
-      reg.attendee_name.toLowerCase().includes(search.toLowerCase()) ||
-      reg.attendee_email.toLowerCase().includes(search.toLowerCase()) ||
-      reg.qr_pass_code.toLowerCase().includes(search.toLowerCase());
-    const matchesTier = filterTier === 'all' || reg.ticket_type === filterTier;
-    return matchesSearch && matchesTier;
+  const filtered = eventRegistrations.filter(reg => {
+    const term = search.trim().toLowerCase();
+    const searchable = [reg.attendee_name, reg.attendee_email, reg.qr_pass_code].join(' ').toLowerCase();
+    return searchable.includes(term) && (filterTier === 'all' || reg.ticket_type === filterTier);
   });
 
   const handleQuickAdmit = async (code: string) => {
-    const res = await checkInAttendee(code, selectedEvent?.id);
-    setFeedback({ success: res.success, message: res.message });
+    if (!selectedEvent || busyCode) return;
+    const eventId = selectedEvent.id;
+    setBusyCode(code);
+    setFeedback(null);
+    try {
+      const reply = live
+        ? await admitLivePass(code, eventId)
+        : isDemoMode
+          ? await checkInAttendee(code, eventId)
+          : { success: false, message: 'Live backend unavailable. No admission was recorded.' };
+      setFeedback({ success: reply.success, message: reply.message });
+    } catch {
+      setFeedback({ success: false, message: 'Admission could not be verified. Please retry.' });
+    } finally {
+      setBusyCode(null);
+    }
   };
+
+  const total = live ? (roster.page?.pagination.total ?? 0) : eventRegistrations.length;
+  const canPageBack = live && roster.offset > 0;
+  const canPageForward = live && roster.offset + 50 < total;
 
   return (
     <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-4">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200/80 dark:border-stone-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 dark:border-stone-800 pb-4">
         <div>
           <h2 className="text-base font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#B68366] dark:text-[#D4A58C]" />
-            Attendee Registration & Gate Admittance Directory
+            <Users className="w-4 h-4" /> Event Attendee Directory
           </h2>
           <p className="text-xs text-stone-500">
-            Registrations issued for this event. Ticket verification and gate check-in status updated in real time.
+            {isDemoMode ? 'Browser-local demonstration records (not PostgreSQL).' : 'Authorized event registrations from PostgreSQL; no payment collection.'}
           </p>
         </div>
-
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-stone-500">
-            Showing <strong>{filtered.length}</strong> of {eventRegistrations.length} registrations
-          </span>
-        </div>
+        <span className="text-xs text-stone-500">Showing {filtered.length} of {total} registrations</span>
       </div>
 
-      {feedback && (
-        <div role="status" className={`p-3 rounded-xl border text-xs font-semibold flex items-center gap-2 ${feedback.success ? 'bg-[#EEF3ED] border-[#5F7D5B]/30 text-[#455C42]' : 'bg-rose-50 border-rose-300 text-rose-800'}`}>
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{feedback.message}</span>
+      {feedback && <div role="status" className={feedback.success ? 'text-sm text-green-700' : 'text-sm text-red-700'}>{feedback.message}</div>}
+      {selectedEvent && live && roster.loading && <p role="status" className="text-sm text-stone-500">Loading this event's registrations...</p>}
+      {selectedEvent && live && roster.error && (
+        <div role="alert" className="text-sm text-rose-700">
+          {roster.error} <button type="button" className="underline" onClick={roster.retry}>Retry roster</button>
         </div>
       )}
+      {selectedEvent && !live && !isDemoMode && (
+        <p role="alert" className="text-sm text-amber-700">The live registration directory is unavailable. No attendee roster is confirmed.</p>
+      )}
+      {live && roster.page?.summary.integrity_warning_count ? (
+        <div role="alert" className="text-xs text-amber-700 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" />
+          {roster.page.summary.integrity_warning_count} historical admission record(s) need investigation. No records were automatically changed.
+        </div>
+      ) : null}
 
-      {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Filter by name, email, or pass serial..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#FAF9F5] dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl pl-9 pr-3 py-1.5 text-xs text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-[#B68366]"
-          />
+          <input type="search" aria-label="Filter loaded registrations" placeholder="Filter loaded page by name, email, or pass..."
+            value={search} onChange={event => setSearch(event.target.value)}
+            className="w-full bg-stone-50 dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-lg pl-9 pr-3 py-2 text-xs" />
         </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <select
-            value={filterTier}
-            onChange={(e) => setFilterTier(e.target.value)}
-            className="bg-[#FAF9F5] dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-xl px-3 py-1.5 text-xs text-stone-700 dark:text-stone-300 focus:outline-none"
-          >
-            <option value="all">All Ticket Tiers</option>
-            <option value="General Admission">General Admission</option>
-            <option value="VIP Access">VIP Access</option>
-          </select>
-        </div>
+        <select aria-label="Ticket tier" value={filterTier} onChange={event => setFilterTier(event.target.value)}
+          className="bg-stone-50 dark:bg-[#171513] border border-stone-300 dark:border-stone-700 rounded-lg px-3 py-2 text-xs">
+          <option value="all">All Ticket Tiers</option>
+          <option value="General Admission">General Admission</option>
+          <option value="VIP Access">VIP Access</option>
+        </select>
       </div>
+      {live && <p className="text-xs text-stone-500">Filters apply to the current 50-record page only.</p>}
 
-      {/* Clean High-Density Datagrid */}
-      <div className="overflow-x-auto rounded-xl border border-stone-200/80 dark:border-stone-800/80">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-800">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#FAF9F5] dark:bg-[#171513] text-stone-500 uppercase font-semibold text-[10px] tracking-wider border-b border-stone-200/80 dark:border-stone-800/80">
+          <thead className="bg-stone-50 dark:bg-[#171513] uppercase text-stone-500 text-[10px]">
             <tr>
-              <th className="py-3 px-4">Attendee</th>
-              <th className="py-3 px-4">Ticket Tier</th>
-              <th className="py-3 px-4">Pass Serial</th>
-              <th className="py-3 px-4">Registered Date</th>
-              <th className="py-3 px-4">Payment Recorded</th>
-              <th className="py-3 px-4">Admission Status</th>
-              <th className="py-3 px-4 text-right">Actions</th>
+              <th className="p-3">Attendee</th><th className="p-3">Ticket Tier</th>
+              <th className="p-3">Pass Code</th><th className="p-3">Registered</th>
+              <th className="p-3">Admission</th><th className="p-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-stone-100 dark:divide-stone-800/80 bg-white dark:bg-[#1E1C19]">
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-stone-500">
-                  <Users className="w-8 h-8 text-stone-300 dark:text-stone-600 mx-auto mb-2" />
-                  <p className="font-semibold text-xs text-stone-800 dark:text-stone-200">No Registrations in Active Workspace</p>
-                  <p className="text-[11px] text-stone-400 mt-1 max-w-sm mx-auto">
-                    Registrations issued in this workspace will appear here for camera check-in.
-                  </p>
-                  {isDevModeUnlocked && (
-                    <button
-                      onClick={loadDemoData}
-                      className="mt-3 px-3 py-1.5 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Load Sample Attendee Records</span>
+          <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+            {filtered.map(reg => (
+              <tr key={reg.id}>
+                <td className="p-3"><div className="font-semibold">{reg.attendee_name}</div><div className="text-stone-500">{reg.attendee_email}</div></td>
+                <td className="p-3">{reg.ticket_type}</td>
+                <td className="p-3 font-mono break-all">{reg.qr_pass_code}</td>
+                <td className="p-3">{new Date(reg.registered_at).toLocaleDateString()}</td>
+                <td className="p-3">
+                  <span className="flex items-center gap-1">
+                    {reg.status === 'checked_in' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                    {reg.status === 'checked_in' ? 'Checked in' : reg.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}
+                  </span>
+                  {'integrity_warning' in reg && reg.integrity_warning && (
+                    <span className="text-amber-700 block">Admission record mismatch</span>
+                  )}
+                </td>
+                <td className="p-3 text-right whitespace-nowrap">
+                  <button className="underline mr-3" onClick={() => onScanPassModal(reg.qr_pass_code)}>Inspect</button>
+                  {reg.status === 'confirmed' && (
+                    <button disabled={Boolean(busyCode)} onClick={() => void handleQuickAdmit(reg.qr_pass_code)}
+                      className="bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900 rounded px-3 py-1 disabled:opacity-50">
+                      {busyCode === reg.qr_pass_code ? 'Verifying...' : 'Admit'}
                     </button>
                   )}
                 </td>
               </tr>
-            ) : (
-              filtered.map((reg) => {
-              const isCheckedIn = reg.status === 'checked_in';
-
-              return (
-                <tr
-                  key={reg.id}
-                  className="hover:bg-stone-50/70 dark:hover:bg-stone-800/40 transition-colors"
-                >
-                  <td className="py-3 px-4">
-                    <p className="font-bold text-stone-900 dark:text-stone-100">{reg.attendee_name}</p>
-                    <p className="text-[11px] text-stone-400">{reg.attendee_email}</p>
-                  </td>
-
-                  <td className="py-3 px-4 font-semibold text-stone-700 dark:text-stone-300">
-                    {reg.ticket_type}
-                  </td>
-
-                  <td className="py-3 px-4 font-mono text-[11px] text-stone-600 dark:text-stone-400">
-                    {reg.qr_pass_code}
-                  </td>
-
-                  <td className="py-3 px-4 text-stone-500">
-                    {new Date(reg.registered_at).toLocaleDateString()}
-                  </td>
-
-                  <td className="py-3 px-4 font-bold text-stone-900 dark:text-stone-100">
-                    ₱{reg.amount_paid}
-                  </td>
-
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        isCheckedIn
-                          ? 'bg-[#EEF3ED] text-[#455C42] dark:bg-[#222D21] dark:text-[#A7C2A4]'
-                          : 'bg-[#FBF4E8] text-[#7C5517] dark:bg-[#332615] dark:text-[#E5BE7E]'
-                      }`}
-                    >
-                      {isCheckedIn ? (
-                        <>
-                          <CheckCircle2 className="w-3 h-3" /> Checked In
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-3 h-3" /> {reg.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}
-                        </>
-                      )}
-                    </span>
-                  </td>
-
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => onScanPassModal(reg.qr_pass_code)}
-                        className="px-2.5 py-1 text-[11px] font-semibold text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white bg-[#FAF9F5] dark:bg-[#171513] hover:bg-stone-200 dark:hover:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-800 transition-colors"
-                      >
-                        Inspect
-                      </button>
-
-                      {reg.status === 'confirmed' && (
-                        <button
-                          onClick={() => handleQuickAdmit(reg.qr_pass_code)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-white dark:text-stone-900 bg-stone-900 dark:bg-stone-100 hover:bg-stone-800 dark:hover:bg-white rounded-lg transition-colors cursor-pointer"
-                        >
-                          Admit
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            }))}
+            ))}
+            {!filtered.length && !roster.loading && !roster.error && (live ? Boolean(roster.page) : isDemoMode) && (
+              <tr><td colSpan={6} className="p-10 text-center text-stone-500">
+                {total === 0 ? 'No registrations for this event.' : 'No registrations on this page match the filters.'}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
+      {live && roster.page && (
+        <div className="flex justify-end items-center gap-3 text-xs">
+          <span>{total === 0 ? '0' : roster.offset + 1}–{Math.min(roster.offset + 50, total)} of {total}</span>
+          <button type="button" disabled={!canPageBack || roster.loading} onClick={() => roster.setOffset(Math.max(0, roster.offset - 50))} className="underline disabled:opacity-40">Previous</button>
+          <button type="button" disabled={!canPageForward || roster.loading} onClick={() => roster.setOffset(roster.offset + 50)} className="underline disabled:opacity-40">Next</button>
+          <button type="button" onClick={roster.retry} className="underline">Refresh</button>
+        </div>
+      )}
     </div>
   );
 };
