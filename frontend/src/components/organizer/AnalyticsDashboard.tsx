@@ -336,7 +336,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
             <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
               {selectedEvent.ticket_price <= 0
                 ? 'Free'
-                : countsAvailable ? `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}` : 'Unavailable'
+                : countsAvailable ? `${getCurrencySymbol(selectedEvent.currency)}${totalRevenue.toLocaleString()}` : 'Unavailable'}
             </span>
             <span className="text-xs text-[#5F7D5B] dark:text-[#97B394] font-medium">
               {selectedEvent.ticket_price <= 0 ? 'Free Event' : countsAvailable ? `${ticketsSold} Registered` : 'Pending data'}
