@@ -18,18 +18,21 @@ import { useApp } from '../../context/AppContext';
 import type { OrganizerView } from '../layout/AppSidebar';
 import { CreateEventModal } from './CreateEventModal';
 import { getCurrencySymbol, formatTicketPrice } from '../../utils/currency';
+import { useEventRegistrationSummary } from '../../hooks/useEventRegistrationSummary';
 
 interface OperationsOverviewProps {
   onNavigate: (view: OrganizerView) => void;
 }
 
 export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNavigate }) => {
-  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent, setCurrentRole } = useApp();
+  const { selectedEvent, venues, tasks, registrations, auditLogs, loadDemoData, currentUser, isDevModeUnlocked, deleteEvent, setCurrentRole, isLiveBackend, isDemoMode } = useApp();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [shareToast, setShareToast] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const live = isLiveBackend && !isDemoMode;
+  const admission = useEventRegistrationSummary(selectedEvent?.id, live);
 
   const canManageSelectedEvent = Boolean(
     selectedEvent && (
@@ -131,7 +134,14 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   const completedTasks = eventTasks.filter((t) => t.status === 'completed').length;
   const conflictTasks = eventTasks.filter((t) => t.has_conflict);
   const readinessPercent = eventTasks.length > 0 ? Math.round((completedTasks / eventTasks.length) * 100) : 0;
-  const totalRevenue = selectedEvent.tickets_sold * selectedEvent.ticket_price;
+  const eventRegistrations = registrations.filter(reg => reg.event_id === selectedEvent.id);
+  const localActive = eventRegistrations.filter(reg => reg.status !== 'cancelled');
+  const registeredCount = live ? admission.data?.registered_count ?? null : isDemoMode ? localActive.length : null;
+  const checkedInCount = live ? admission.data?.checked_in_count ?? null : isDemoMode ? localActive.filter(reg => reg.status === 'checked_in').length : null;
+  const maxCapacity = Number(selectedEvent.max_capacity);
+  const capacityPercent = registeredCount !== null && Number.isFinite(maxCapacity) && maxCapacity > 0
+    ? Math.min(100, Math.max(0, Math.round(registeredCount / maxCapacity * 100))) : null;
+  const estimatedTicketValue = registeredCount === null ? null : Math.max(0, Number(selectedEvent.ticket_price) || 0) * registeredCount;
 
   return (
     <div className="space-y-6">
