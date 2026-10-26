@@ -139,13 +139,6 @@ export async function checkInAttendee(req: Request, res: Response, next: NextFun
 
     const registration = regResult.rows[0];
     const actorId = trustedUserId(req);
-    if (actorId) {
-      const ownership = await client.query('SELECT organizer_id FROM events WHERE id = $1', [registration.event_id]);
-      if (ownership.rows[0]?.organizer_id !== actorId) {
-        await client.query('ROLLBACK');
-        return res.status(403).json({ success: false, error: 'Event owner access required' });
-      }
-    }
 
     // Enforce Event Match: Reject ticket if scanned for the wrong event
     if (event_id && registration.event_id !== event_id.trim()) {

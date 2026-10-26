@@ -99,6 +99,22 @@ export async function requireOrganizerOrVenueManagerOrOperator(req: Request, res
     next();
   } catch (err) { next(err); }
 }
+export async function requireGateCheckInAuthorized(req: Request, res: Response, next: NextFunction) {
+  const found = session(req);
+  if (!found) return res.status(401).json({ success: false, error: 'Login required', code: 'UNAUTHORIZED' });
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && (!sameOrigin(req) || req.get('x-csrf-token') !== found.csrf)) {
+    return res.status(403).json({ success: false, error: 'Request verification failed', code: 'FORBIDDEN' });
+  }
+  if (found.identity === 'operator') return next();
+  try {
+    const result = await query('SELECT role FROM users WHERE id = $1', [found.userId]);
+    const role = result.rows[0]?.role;
+    if (role !== 'staff' && role !== 'organizer' && role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'Staff or Organizer access required for gate turnstile check-in', code: 'FORBIDDEN' });
+    }
+    next();
+  } catch (err) { next(err); }
+}
 export const requireEventCreator = requireOrganizerOrOperator;
 export function trustedEventOwner(req: Request) {
   const found = session(req);

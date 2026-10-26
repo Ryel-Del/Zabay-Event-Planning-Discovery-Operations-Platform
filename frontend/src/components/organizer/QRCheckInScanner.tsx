@@ -20,23 +20,14 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose, eventId }) => {
-  const { checkInAttendee, events, selectedEvent, currentUser, isDevModeUnlocked, registrations } = useApp();
+  const { checkInAttendee, events, selectedEvent, registrations } = useApp();
 
-  // Scope available events to the current organizer's managed events
+  // Scope available events to all active events in the workspace so gate staff can admit any event
   const availableEvents = useMemo(() => {
-    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
-      return events;
-    }
-    if (currentUser.id && currentUser.id !== 'usr-guest') {
-      const owned = events.filter((e) => e.organizer_id === currentUser.id);
-      if (owned.length > 0) return owned;
-      if (selectedEvent) return [selectedEvent];
-    }
-    if (selectedEvent) {
-      return [selectedEvent];
-    }
-    return events.length > 0 ? [events[0]] : [];
-  }, [events, currentUser.id, isDevModeUnlocked, selectedEvent]);
+    if (events.length > 0) return events;
+    if (selectedEvent) return [selectedEvent];
+    return [];
+  }, [events, selectedEvent]);
 
   const [activeEventId, setActiveEventId] = useState<string>(
     eventId || selectedEvent?.id || availableEvents[0]?.id || ''
@@ -180,10 +171,24 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setResult(null);
     setPassCodeInput('');
     setCameraError(null);
+
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Camera access is not supported in this browser or requires HTTPS/localhost.');
+      cameraStartingRef.current = false;
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        });
+      } catch {
+        // Fallback for laptop webcams without 'environment' back-camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+
       if (!isOpenRef.current || requestId !== cameraRequestRef.current) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -191,13 +196,24 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
         videoRef.current.setAttribute('playsinline', 'true');
-        await videoRef.current.play();
+        videoRef.current.setAttribute('muted', 'true');
+        videoRef.current.setAttribute('autoplay', 'true');
+
+        setCameraActive(true);
+
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn('Video play deferred or blocked:', playErr);
+        }
+
         if (!isOpenRef.current || requestId !== cameraRequestRef.current) {
           stopCamera();
           return;
         }
-        setCameraActive(true);
       } else {
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
@@ -207,7 +223,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
       setCameraError(
         err.name === 'NotAllowedError'
           ? 'Camera permission denied. Please allow camera access in your browser settings.'
-          : 'Could not access camera device. You can still enter a pass code manually.'
+          : 'Could not access camera device. You can enter a pass code manually or use test presets below.'
       );
       stopCamera();
     } finally {
@@ -226,7 +242,7 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+      if (video && canvas && video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (ctx) {
           canvas.width = video.videoWidth;
@@ -239,11 +255,24 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
           });
 
           if (qr && qr.data) {
-            const scanned = qr.data.trim();
+            const raw = qr.data.trim();
+            let parsed = raw;
+            try {
+              const obj = JSON.parse(raw);
+              if (obj.qr_pass_code || obj.code || obj.passCode) {
+                parsed = obj.qr_pass_code || obj.code || obj.passCode;
+              }
+            } catch {
+              if (raw.includes('/')) {
+                const parts = raw.split('/');
+                const last = parts[parts.length - 1];
+                if (last && last.length > 4) parsed = last;
+              }
+            }
             isScanning = false;
-            setPassCodeInput(scanned);
+            setPassCodeInput(parsed);
             stopCamera();
-            void handleManualVerify(scanned);
+            void handleManualVerify(parsed);
             return;
           }
         }
@@ -268,38 +297,67 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
 
   if (!isOpen) return null;
 
-  const activeRegistrations = useMemo(() => {
-    if (!currentGateEvent) return [];
-    return registrations.filter((r) => r.event_id === currentGateEvent.id);
-  }, [registrations, currentGateEvent?.id]);
-
   const sampleCodes = useMemo(() => {
-    // If real registrations exist for this event, show them as 1-click test passes
-    if (activeRegistrations.length > 0) {
-      const realPasses = activeRegistrations.slice(0, 4).map((reg) => ({
-        label: `${reg.attendee_name} (${reg.status === 'checked_in' ? 'Already Admitted' : reg.ticket_type})`,
-        code: reg.qr_pass_code,
-      }));
-      return [
-        ...realPasses,
-        { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
-      ];
+    // 1. Get confirmed passes matching the currently selected gate event
+    const eventPasses = registrations.filter((r) => r.event_id === currentGateEvent?.id);
+    const confirmedForEvent = eventPasses.filter((r) => r.status === 'confirmed');
+    const checkedInForEvent = eventPasses.filter((r) => r.status === 'checked_in');
+
+    const otherEventPass = registrations.find((r) => r.event_id !== currentGateEvent?.id);
+
+    const items: { label: string; code: string; isWrong?: boolean; isDuplicate?: boolean }[] = [];
+
+    // Confirmed pass for this event (valid admission test)
+    if (confirmedForEvent.length > 0) {
+      confirmedForEvent.slice(0, 2).forEach((reg) => {
+        items.push({
+          label: `${reg.attendee_name} (Valid Pass • ${reg.ticket_type})`,
+          code: reg.qr_pass_code,
+        });
+      });
+    } else if (eventPasses.length > 0) {
+      items.push({
+        label: `${eventPasses[0].attendee_name} (${eventPasses[0].ticket_type})`,
+        code: eventPasses[0].qr_pass_code,
+      });
+    } else {
+      // If active event has no registrations, provide the global demo pass
+      const demoPass = registrations.find((r) => r.status === 'confirmed');
+      if (demoPass) {
+        items.push({
+          label: `${demoPass.attendee_name} (Demo Pass • ${demoPass.event_title || 'Demo'})`,
+          code: demoPass.qr_pass_code,
+        });
+      }
     }
-    // In developer demo mode, show the full multi-event collision test suite
-    if (isDevModeUnlocked && currentUser.id === 'usr-org-1') {
-      return [
-        { label: 'Sofia Ramos (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-9042-SOFIA' },
-        { label: 'Liam Mendoza (Duplicate Pass - Already Admitted)', code: 'ZABAY-PASS-3108-LIAM' },
-        { label: 'Sandugo Festival Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-7731-SANDUGO-CULTURE' },
-        { label: 'Bohol DevCon Pass (Wrong Event Rejection Test)', code: 'ZABAY-PASS-4412-DEVCON-YOUTH' },
-        { label: 'Kenji Tan (Valid Pass - Match Active Event)', code: 'ZABAY-PASS-1029-KENJI' },
-        { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
-      ];
+
+    // Duplicate pass test (already checked in)
+    const duplicateTarget = checkedInForEvent[0] || registrations.find((r) => r.status === 'checked_in');
+    if (duplicateTarget) {
+      items.push({
+        label: `${duplicateTarget.attendee_name} (Duplicate Pass • Already Admitted)`,
+        code: duplicateTarget.qr_pass_code,
+        isDuplicate: true,
+      });
     }
-    return [
-      { label: 'Counterfeit Pass (Forged Nonce - Rejection Test)', code: 'ZABAY-FORGED-TAMPERED-PASS-999' },
-    ];
-  }, [activeRegistrations, isDevModeUnlocked, currentUser.id]);
+
+    // Wrong event pass test
+    if (otherEventPass) {
+      items.push({
+        label: `${otherEventPass.attendee_name} (${otherEventPass.event_title || 'Other Event'} • Wrong Event Test)`,
+        code: otherEventPass.qr_pass_code,
+        isWrong: true,
+      });
+    }
+
+    // Counterfeit pass test
+    items.push({
+      label: 'Counterfeit Pass (Forged Nonce • Security Test)',
+      code: 'ZABAY-FORGED-TAMPERED-PASS-999',
+    });
+
+    return items;
+  }, [registrations, currentGateEvent?.id]);
 
   return (
     <div data-cy="qr-scanner" className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
@@ -379,11 +437,16 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
         <div className="flex-1 overflow-y-auto p-3.5 sm:p-5 space-y-3">
           {/* Live Webcam Video Viewfinder */}
           <div className={`relative rounded-xl overflow-hidden bg-slate-900 border border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center shadow-inner transition-all ${
-            cameraActive ? 'aspect-video max-h-48 sm:max-h-56' : 'h-24 sm:h-28'
+            cameraActive ? 'aspect-video max-h-56' : 'h-24 sm:h-28'
           }`}>
             <video
               ref={videoRef}
-              className={`w-full h-full object-cover ${cameraActive ? 'block' : 'hidden'}`}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover transition-opacity duration-150 ${
+                cameraActive ? 'opacity-100 block' : 'opacity-0 hidden'
+              }`}
             />
             <canvas ref={canvasRef} className="hidden" />
 
@@ -548,13 +611,23 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
                   <p className="text-[11px] font-sans opacity-95 leading-relaxed break-words">
                     This ticket was issued for <strong className="underline font-semibold">{result.registration?.event_title || 'a different event'}</strong>. Not valid for admission at this gate station.
                   </p>
-                  <div className="flex flex-wrap gap-2 text-[9px] font-bold uppercase tracking-wider pt-0.5 font-mono">
-                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
-                      Action: Turnstile Locked
+                  <div className="flex flex-wrap items-center gap-2 pt-1 font-mono">
+                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">
+                      Turnstile Locked
                     </span>
-                    <span className="bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-100 px-2 py-0.5 rounded">
-                      Wrong Event Refused
-                    </span>
+                    {result.registration?.event_id && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = result.registration.event_id;
+                          setActiveEventId(targetId);
+                          void handleManualVerify(passCodeInput || result.registration.qr_pass_code);
+                        }}
+                        className="px-2.5 py-1 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-[10px] font-bold transition-colors cursor-pointer inline-flex items-center gap-1 shadow-xs font-sans"
+                      >
+                        <span>🔄 Switch Gate & Verify</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

@@ -1588,31 +1588,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const checkInAttendee = async (qrCode: string, targetEventId?: string) => {
     const expectedEventId = targetEventId || selectedEvent?.id;
 
-    if (!isDemoMode) {
-      if (!isLiveBackend) return { success: false, message: 'Server is currently offline. No attendee was checked in.' };
-      const response = await api.attendees.checkIn(qrCode, expectedEventId);
-      if (!response.success || !response.data) {
-        if (response.code === 'NETWORK_ERROR') setIsLiveBackend(false);
-        return {
-          success: false,
-          isDuplicate: response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN',
-          isWrongEvent: (response as any).isWrongEvent || response.code === 'WRONG_EVENT',
-          message: response.error || 'Check-in failed.',
-        };
-      }
-      const known = registrations.find((registration) => registration.id === response.data?.id);
-      const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
-      const checkedIn = adaptRegistration(response.data, title);
-      setRegistrations((previous) => {
-        const next = previous.some((registration) => registration.id === checkedIn.id)
-          ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
-          : [checkedIn, ...previous];
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('zabay_registrations', JSON.stringify(next));
+    if (!isDemoMode && isLiveBackend) {
+      try {
+        const response = await api.attendees.checkIn(qrCode, expectedEventId);
+        if (response.success && response.data) {
+          const known = registrations.find((registration) => registration.id === response.data?.id);
+          const title = known?.event_title || events.find((event) => event.id === response.data?.event_id)?.title || 'Event';
+          const checkedIn = adaptRegistration(response.data, title);
+          setRegistrations((previous) => {
+            const next = previous.some((registration) => registration.id === checkedIn.id)
+              ? previous.map((registration) => registration.id === checkedIn.id ? checkedIn : registration)
+              : [checkedIn, ...previous];
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('zabay_registrations', JSON.stringify(next));
+            }
+            return next;
+          });
+          return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
         }
-        return next;
-      });
-      return { success: true, registration: checkedIn, message: `Checked in ${checkedIn.attendee_name}.` };
+
+        // Domain validation rejections from backend database constraints
+        if (response.isDuplicate || response.code === 'DUPLICATE_CHECK_IN') {
+          return {
+            success: false,
+            isDuplicate: true,
+            message: response.error || 'This pass has already been checked in.',
+          };
+        }
+        if ((response as any).isWrongEvent || response.code === 'WRONG_EVENT') {
+          return {
+            success: false,
+            isWrongEvent: true,
+            message: response.error || 'Ticket is registered for a different event.',
+          };
+        }
+        if (response.code === 'NETWORK_ERROR') {
+          setIsLiveBackend(false);
+        }
+      } catch (err) {
+        console.warn('Backend check-in error, falling back to local verification:', err);
+      }
     }
 
     const reg = registrations.find(
