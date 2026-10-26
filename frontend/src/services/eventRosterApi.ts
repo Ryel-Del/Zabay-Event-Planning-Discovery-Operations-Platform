@@ -83,7 +83,7 @@ export async function admitLivePass(code: string, eventId: string): Promise<{ su
   const reply = await api.attendees.checkIn(code, eventId);
   if (reply.success && reply.data?.status === 'checked_in' && reply.data.event_id === eventId) {
     announceAdmission(eventId);
-    return { success: true, message: 'Admission confirmed in PostgreSQL.' };
+    return { success: true, message: `Checked in ${reply.data.attendee_name}. Admission confirmed in PostgreSQL.` };
   }
   return { success: false, message: reply.error || 'Admission was not confirmed by the database.', isDuplicate: reply.code === 'DUPLICATE_CHECK_IN', isWrongEvent: reply.code === 'WRONG_EVENT' };
 }
