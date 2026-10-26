@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import jsQR from 'jsqr';
 import { useApp } from '../../context/AppContext';
+import { admitLivePass } from '../../services/eventRosterApi';
 
 interface QRCheckInScannerProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ interface QRCheckInScannerProps {
 }
 
 export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, initialCode, onClose, eventId }) => {
-  const { checkInAttendee, events, selectedEvent, registrations } = useApp();
+  const { checkInAttendee, events, selectedEvent, registrations, isDemoMode, isLiveBackend } = useApp();
 
   // Scope available events to all active events in the workspace so gate staff can admit any event
   const safeEvents = useMemo(() => (Array.isArray(events) ? events.filter((e) => Boolean(e && e.id)) : []), [events]);
@@ -155,7 +156,11 @@ export const QRCheckInScanner: React.FC<QRCheckInScannerProps> = ({ isOpen, init
     setResult(null);
     setVerifying(true);
     try {
-      const res = await checkInAttendee(rawCode, activeEventId);
+      const res = isDemoMode
+        ? await checkInAttendee(rawCode, activeEventId)
+        : isLiveBackend && activeEventId
+          ? await admitLivePass(rawCode, activeEventId)
+          : { success: false, message: 'Live admission unavailable. No gate entry was recorded.' };
       setResult(res);
       if (res?.success) {
         playAudioFeedback('success');
