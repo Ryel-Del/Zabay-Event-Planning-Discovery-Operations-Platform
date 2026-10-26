@@ -35,8 +35,6 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     auditLogs,
     personnel,
     venues,
-    isDevModeUnlocked,
-    loadDemoData,
     isLiveBackend,
     isDemoMode,
   } = useApp();
