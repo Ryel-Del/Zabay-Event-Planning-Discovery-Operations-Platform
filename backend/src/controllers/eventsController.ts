@@ -267,6 +267,9 @@ export async function getEventAnalytics(req: Request, res: Response, next: NextF
       return res.status(404).json({ success: false, error: 'Event not found' });
     }
     const event = eventResult.rows[0];
+    if (!optionalOperator(req) && event.organizer_id !== trustedUserId(req)) {
+      return res.status(403).json({ success: false, error: 'Not authorized to view this event analytics', code: 'FORBIDDEN' });
+    }
 
     // Registrations by tier and revenue
     const regResult = await query(
