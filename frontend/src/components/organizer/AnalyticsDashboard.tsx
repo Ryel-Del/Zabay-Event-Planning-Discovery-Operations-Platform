@@ -24,6 +24,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { getCurrencySymbol } from '../../utils/currency';
 import { api } from '../../services/api';
+import { useEventRegistrationSummary } from '../../hooks/useEventRegistrationSummary';
 
 const ActiveAnalyticsDashboard: React.FC = () => {
   const {
@@ -37,8 +38,10 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     isDevModeUnlocked,
     loadDemoData,
     isLiveBackend,
+    isDemoMode,
   } = useApp();
   const selectedEvent = selectedEventMaybe!;
+  const admission = useEventRegistrationSummary(selectedEvent.id, isLiveBackend && !isDemoMode);
 
   const [liveData, setLiveData] = useState<any>(null);
   const [isLoadingLive, setIsLoadingLive] = useState(false);
@@ -73,9 +76,9 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const eventRegistrations = useMemo(() => registrations.filter((r) => r.event_id === selectedEvent.id), [registrations, selectedEvent.id]);
   const activeRegistrations = useMemo(() => eventRegistrations.filter((r) => r.status !== 'cancelled'), [eventRegistrations]);
 
-  const ticketsSold = liveData?.tickets_sold ?? Math.max(selectedEvent.tickets_sold, activeRegistrations.length);
-  const maxCapacity = Number(selectedEvent.max_capacity) || 200;
-  const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.round((ticketsSold / maxCapacity) * 100)) : 0;
+  const ticketsSold = isLiveBackend && !isDemoMode ? admission.data?.registered_count ?? 0 : Math.max(0, selectedEvent.tickets_sold, activeRegistrations.length);
+  const maxCapacity = Math.max(0, Number(selectedEvent.max_capacity) || 0);
+  const capacityPercent = maxCapacity > 0 ? Math.min(100, Math.max(0, Math.round((ticketsSold / maxCapacity) * 100))) : 0;
 
   const totalRevenue = useMemo(() => {
     if (selectedEvent.ticket_price <= 0) return 0;
@@ -90,8 +93,8 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const totalTasksCount = liveData?.task_metrics?.total_tasks ?? eventTasks.length;
   const taskReadiness = totalTasksCount > 0 ? Math.round((completedTasks / totalTasksCount) * 100) : 0;
 
-  const checkedInCount = liveData?.checked_in_count ?? eventRegistrations.filter((r) => r.status === 'checked_in').length;
-  const attendanceRate = ticketsSold > 0 ? Math.round((checkedInCount / ticketsSold) * 100) : (activeRegistrations.length > 0 ? Math.round((checkedInCount / activeRegistrations.length) * 100) : 0);
+  const checkedInCount = isLiveBackend && !isDemoMode ? admission.data?.checked_in_count ?? 0 : eventRegistrations.filter((r) => r.status === 'checked_in').length;
+  const attendanceRate = ticketsSold > 0 ? Math.min(100, Math.max(0, Math.round((checkedInCount / ticketsSold) * 100))) : 0;
 
   // Chart 1: Real Hourly Check-in Flow
   const hourlyFlowData = useMemo(() => {
