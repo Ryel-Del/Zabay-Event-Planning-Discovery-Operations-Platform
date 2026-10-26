@@ -35,6 +35,7 @@ async function registrationSummary(eventId: string) {
   const summary = await query(
     'SELECT COUNT(*)::int AS total_count, ' +
     "COUNT(*) FILTER (WHERE r.status <> 'cancelled')::int AS registered_count, " +
+    "COUNT(*) FILTER (WHERE r.status = 'confirmed' AND a.id IS NULL)::int AS pending_count, " +
     "COUNT(*) FILTER (WHERE r.status = 'cancelled')::int AS cancelled_count, " +
     "COUNT(*) FILTER (WHERE r.status = 'checked_in' AND a.id IS NOT NULL AND a.event_id = r.event_id)::int AS checked_in_count, " +
     'COUNT(*) FILTER (WHERE ' + integrityCase + ' IS NOT NULL)::int AS integrity_warning_count ' +
