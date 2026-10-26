@@ -68,7 +68,8 @@ describe('organizer PostgreSQL attendee directory', () => {
     cy.get('[data-cy="roster-empty"]').should('not.exist');
     cy.then(() => { failFirst = false; });
     cy.get('[data-cy="roster-error"]').contains('button', 'Retry roster').click();
-    cy.wait('@rosterFetch').its('response.statusCode').should('eq', 200);
+    // An in-flight StrictMode fetch can leave another captured 503 in the alias queue.
+    // Assert the state visible to the organizer after retry instead of alias order.
     cy.get('[data-cy="roster-empty"]').should('contain.text', 'No registrations for this event.');
     cy.get('[data-cy="roster-error"]').should('not.exist');
   });
