@@ -142,6 +142,8 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
   const capacityPercent = registeredCount !== null && Number.isFinite(maxCapacity) && maxCapacity > 0
     ? Math.min(100, Math.max(0, Math.round(registeredCount / maxCapacity * 100))) : null;
   const estimatedTicketValue = registeredCount === null ? null : Math.max(0, Number(selectedEvent.ticket_price) || 0) * registeredCount;
+  const eventEntityIds = new Set([selectedEvent.id, ...eventTasks.map(task => task.id), ...eventRegistrations.map(reg => reg.id)]);
+  const localEventAuditLogs = auditLogs.filter(log => eventEntityIds.has(log.entity_id));
 
   return (
     <div className="space-y-6">
@@ -498,11 +500,11 @@ export const OperationsOverview: React.FC<OperationsOverviewProps> = ({ onNaviga
               <h3 className="text-xs font-bold text-stone-900 dark:text-stone-100 uppercase tracking-wider">
                 Recent Audit Trail
               </h3>
-              <span className="text-[10px] text-stone-400">Live Activity Stream</span>
+              <span className="text-[10px] text-stone-400">Browser-local activity only</span>
             </div>
 
             <div className="space-y-2.5">
-              {auditLogs.slice(0, 3).map((log) => (
+              {localEventAuditLogs.slice(0, 3).map((log) => (
                 <div
                   key={log.id}
                   className="p-2.5 rounded-xl bg-[#FAF9F5] dark:bg-[#171513] border border-stone-200/80 dark:border-stone-800/80 text-xs space-y-1"
