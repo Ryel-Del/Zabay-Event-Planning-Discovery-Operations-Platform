@@ -42,10 +42,12 @@ const ActiveAnalyticsDashboard: React.FC = () => {
   const admission = useEventRegistrationSummary(selectedEvent.id, isLiveBackend && !isDemoMode);
 
   const [liveData, setLiveData] = useState<any>(null);
+  // An earlier request must never paint another event's metrics after switching workspaces.
+  const currentLiveData = liveData?.event_id === selectedEvent.id ? liveData : null;
   const [isLoadingLive, setIsLoadingLive] = useState(false);
 
   useEffect(() => {
-    if (!selectedEvent?.id || !isLiveBackend) {
+    if (!selectedEvent?.id || !isLiveBackend || isDemoMode) {
       setLiveData(null);
       return;
     }
@@ -67,7 +69,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedEvent?.id, isLiveBackend]);
+  }, [selectedEvent?.id, isLiveBackend, isDemoMode]);
 
   // Real scoped data derivations
   const eventTasks = useMemo(() => tasks.filter((t) => t.event_id === selectedEvent.id), [tasks, selectedEvent.id]);
@@ -80,8 +82,8 @@ const ActiveAnalyticsDashboard: React.FC = () => {
 
   const totalRevenue = useMemo(() => Math.max(0, ticketsSold) * Math.max(0, Number(selectedEvent.ticket_price) || 0), [selectedEvent.ticket_price, ticketsSold]);
 
-  const completedTasks = liveData?.task_metrics?.completed_tasks ?? eventTasks.filter((t) => t.status === 'completed').length;
-  const totalTasksCount = liveData?.task_metrics?.total_tasks ?? eventTasks.length;
+  const completedTasks = currentLiveData?.task_metrics?.completed_tasks ?? eventTasks.filter((t) => t.status === 'completed').length;
+  const totalTasksCount = currentLiveData?.task_metrics?.total_tasks ?? eventTasks.length;
   const taskReadiness = totalTasksCount > 0 ? Math.round((completedTasks / totalTasksCount) * 100) : 0;
 
   const checkedInCount = isLiveBackend && !isDemoMode ? admission.data?.checked_in_count ?? 0 : eventRegistrations.filter((r) => r.status === 'checked_in').length;
@@ -89,7 +91,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
 
   // Chart 1: Real Hourly Check-in Flow
   const hourlyFlowData = useMemo(() => {
-    if (liveData?.hourly_arrivals && Array.isArray(liveData.hourly_arrivals) && liveData.hourly_arrivals.length > 0) {
+    if (currentLiveData?.hourly_arrivals && Array.isArray(liveData.hourly_arrivals) && liveData.hourly_arrivals.length > 0) {
       let cumulative = 0;
       return liveData.hourly_arrivals.map((row: any) => {
         const arrivals = Number(row.arrivals) || 0;
@@ -144,7 +146,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
         cumulative: running,
       };
     });
-  }, [liveData?.hourly_arrivals, auditLogs, eventRegistrations, selectedEvent.id]);
+  }, [currentLiveData?.hourly_arrivals, auditLogs, eventRegistrations, selectedEvent.id]);
 
   // Chart 2: Real Equipment & Resource Allocation
   const resourceData = useMemo(() => {
@@ -223,7 +225,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
 
   // Chart 4: Estimated Ticket Value by Tier
   const revenueTierData = useMemo(() => {
-    if (liveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
+    if (currentLiveData?.revenue_tiers && Array.isArray(liveData.revenue_tiers) && liveData.revenue_tiers.length > 0) {
       const colors = ['#B68366', '#A36B75', '#5F7D5B', '#C28E3A', '#3E6CB5'];
       return liveData.revenue_tiers.map((t: any, index: number) => ({
         name: `${t.name} (${getCurrencySymbol(selectedEvent.currency)}${selectedEvent.ticket_price})`,
@@ -265,7 +267,7 @@ const ActiveAnalyticsDashboard: React.FC = () => {
     }
 
     return [];
-  }, [liveData?.revenue_tiers, activeRegistrations, selectedEvent, ticketsSold]);
+  }, [currentLiveData?.revenue_tiers, activeRegistrations, selectedEvent, ticketsSold]);
 
   return (
     <div className="bg-white dark:bg-[#1E1C19] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-6 shadow-sm space-y-6 transition-colors">
