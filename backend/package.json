@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "npm run build && node --test tests/api.test.js tests/security.test.js tests/production-auth.test.js tests/rate-limit.test.js",
+    "test": "npm run build && node --test tests/api.test.js tests/security.test.js tests/production-auth.test.js tests/rate-limit.test.js tests/event-roster.test.js",
     "test:fresh": "npm run build && node --test tests/fresh-db.test.js"
   },
   "keywords": [
